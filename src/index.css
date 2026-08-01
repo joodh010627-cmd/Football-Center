@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-surface-soft text-ink font-sans antialiased;
+    margin: 0;
+  }
+
+  /* Coach UI is touch-first: kill the tap flash, keep taps snappy. */
+  button {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-md bg-primary px-[18px] py-[10px]
+           text-sm font-medium text-white transition-colors duration-150
+           hover:bg-primary-pressed active:bg-primary-deep
+           disabled:bg-hairline disabled:text-muted;
+  }
+
+  .btn-dark {
+    @apply inline-flex items-center justify-center gap-2 rounded-md bg-ink-deep px-[18px] py-[10px]
+           text-sm font-medium text-white transition-colors duration-150 hover:bg-charcoal;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-hairline-strong
+           bg-transparent px-[18px] py-[10px] text-sm font-medium text-ink
+           transition-colors duration-150 hover:bg-surface;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-sm px-3 py-2 text-sm font-medium
+           text-ink transition-colors duration-150 hover:bg-surface;
+  }
+
+  .card {
+    @apply rounded-lg border border-hairline bg-canvas;
+  }
+
+  .pill-tab {
+    @apply rounded-full border border-hairline px-4 py-2 text-sm font-medium text-steel
+           transition-colors duration-150;
+  }
+
+  .pill-tab-active {
+    @apply border-ink-deep bg-ink-deep text-white;
+  }
+
+  .micro-label {
+    @apply text-[11px] font-semibold uppercase tracking-[1px];
+  }
+}
+
+/* Hide scrollbars on horizontal chip rails without losing scroll. */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

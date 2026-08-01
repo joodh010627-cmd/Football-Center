@@ -1,0 +1,161 @@
+/**
+ * Coach portfolio — the by-product of logging.
+ *
+ * Every block a coach runs is counted here, which turns routine record-keeping
+ * into a personal training résumé.
+ */
+
+import { Award, BarChart3, Dumbbell, Layers } from 'lucide-react';
+import { useApp } from '@/store/AppContext';
+import { buildCoachPortfolio, classesForCoach, studentsInClass } from '@/data/selectors';
+import { formatPercent } from '@/lib/format';
+import { ProgressBar } from '@/components/ui/ProgressBar';
+import { StatTile } from '@/components/ui/StatTile';
+import { Badge } from '@/components/ui/Badge';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { CATEGORY_META } from './TrainingBlockCard';
+
+export function PortfolioScreen() {
+  const { state, slice, getCoach } = useApp();
+  const coach = getCoach(state.currentCoachId);
+  const portfolio = buildCoachPortfolio(slice, state.currentCoachId);
+
+  const myClasses = classesForCoach(state.classes, state.currentCoachId);
+  const studentCount = myClasses.reduce(
+    (sum, c) => sum + studentsInClass(state.students, c.id).length,
+    0,
+  );
+
+  const totalLogs = state.attendanceLogs.filter(
+    (l) => l.coachId === state.currentCoachId,
+  ).length;
+
+  const maxUsage = portfolio.blockUsage[0]?.count ?? 1;
+
+  return (
+    <div className="h-full overflow-y-auto bg-surface-soft pb-24">
+      <header className="border-b border-hairline bg-canvas px-5 pb-5 pt-6">
+        <div className="flex items-center gap-3">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-tint-lavender text-[17px] font-semibold text-brand-purple-800">
+            {coach?.name.slice(-2)}
+          </span>
+          <div className="min-w-0">
+            <h1 className="text-[20px] font-semibold leading-[1.3] text-ink">
+              {coach?.name} 코치
+            </h1>
+            <p className="text-[13px] text-slate">
+              담당 {myClasses.length}개 클래스 · 원생 {studentCount}명
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {coach?.certifications.map((c) => (
+            <Badge key={c} tone="sky">
+              {c}
+            </Badge>
+          ))}
+        </div>
+      </header>
+
+      <div className="space-y-5 px-5 py-5">
+        <div className="grid grid-cols-2 gap-2">
+          <StatTile
+            label="설계한 세션"
+            value={portfolio.sessionCount}
+            unit="회"
+            icon={Layers}
+            tint="lavender"
+          />
+          <StatTile
+            label="누적 기록"
+            value={totalLogs}
+            unit="건"
+            icon={BarChart3}
+            tint="mint"
+          />
+        </div>
+
+        <section className="card p-5">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="flex items-center gap-1.5 text-[15px] font-semibold text-ink">
+              <Award size={15} className="text-primary" />
+              표준 커리큘럼 준수율
+            </h2>
+            <span className="text-[17px] font-semibold tracking-[-0.3px] text-ink">
+              {formatPercent(portfolio.coreCurriculumRate)}
+            </span>
+          </div>
+          <ProgressBar
+            className="mt-3"
+            value={portfolio.coreCurriculumRate}
+            target={0.6}
+            barClassName={portfolio.coreCurriculumRate >= 0.6 ? 'bg-brand-green' : 'bg-brand-orange'}
+          />
+          <p className="mt-2 text-[12px] leading-[1.5] text-slate">
+            본원 목표는 60%입니다. 표준 블록 사용 비율이 높을수록 코치가 바뀌어도 수업 품질이
+            유지됩니다.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-2.5 text-[11px] font-semibold uppercase tracking-[1px] text-stone">
+            카테고리 구성
+          </h2>
+          <div className="card divide-y divide-hairline-soft">
+            {(['warmup', 'skill', 'game'] as const).map((category) => {
+              const meta = CATEGORY_META[category];
+              const count = portfolio.categoryMix[category];
+              const total = Object.values(portfolio.categoryMix).reduce((a, b) => a + b, 0) || 1;
+              return (
+                <div key={category} className="flex items-center gap-3 px-4 py-3">
+                  <span className={`h-2 w-2 shrink-0 rounded-full ${meta.bar}`} />
+                  <span className="w-20 shrink-0 text-[14px] font-medium text-charcoal">
+                    {meta.label}
+                  </span>
+                  <ProgressBar value={count / total} barClassName={meta.bar} />
+                  <span className="w-10 shrink-0 text-right text-[13px] font-semibold text-ink">
+                    {count}회
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        <section>
+          <h2 className="mb-2.5 text-[11px] font-semibold uppercase tracking-[1px] text-stone">
+            자주 사용한 블록
+          </h2>
+          {portfolio.blockUsage.length > 0 ? (
+            <div className="card divide-y divide-hairline-soft">
+              {portfolio.blockUsage.slice(0, 8).map(({ block, count }) => (
+                <div key={block.id} className="px-4 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="min-w-0 truncate text-[14px] font-medium text-ink">
+                      {block.title}
+                    </span>
+                    <span className="shrink-0 text-[13px] font-semibold text-primary">
+                      {count}회
+                    </span>
+                  </div>
+                  <ProgressBar
+                    className="mt-2"
+                    value={count / maxUsage}
+                    barClassName={CATEGORY_META[block.category].bar}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              icon={Dumbbell}
+              title="아직 설계한 세션이 없습니다"
+              description="훈련 블록으로 수업을 설계하면 이곳에 자동으로 쌓입니다."
+            />
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}
