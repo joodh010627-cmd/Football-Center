@@ -15,8 +15,9 @@ interface StudentLogCardProps {
   student: Student;
   status: AttendanceStatus;
   tags: string[];
-  expanded: boolean;
-  onToggleExpand: () => void;
+  /** Selected = expanded inline on mobile, shown in the side panel on desktop. */
+  selected: boolean;
+  onSelect: () => void;
   onCycleStatus: () => void;
   onToggleTag: (tag: string) => void;
 }
@@ -25,8 +26,8 @@ export function StudentLogCard({
   student,
   status,
   tags,
-  expanded,
-  onToggleExpand,
+  selected,
+  onSelect,
   onCycleStatus,
   onToggleTag,
 }: StudentLogCardProps) {
@@ -37,7 +38,7 @@ export function StudentLogCard({
     <div
       className={cn(
         'overflow-hidden rounded-lg border bg-canvas transition-shadow duration-150',
-        expanded ? 'border-primary shadow-card' : 'border-hairline',
+        selected ? 'border-primary shadow-card' : 'border-hairline',
       )}
     >
       <div className="flex items-stretch">
@@ -46,7 +47,7 @@ export function StudentLogCard({
 
         <button
           type="button"
-          onClick={onToggleExpand}
+          onClick={onSelect}
           className="flex min-w-0 flex-1 items-center gap-3 py-3 pl-3 pr-2 text-left"
         >
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface text-[15px] font-semibold text-charcoal">
@@ -68,8 +69,8 @@ export function StudentLogCard({
           <ChevronDown
             size={16}
             className={cn(
-              'shrink-0 text-stone transition-transform duration-150',
-              expanded && 'rotate-180',
+              'shrink-0 text-stone transition-transform duration-150 lg:hidden',
+              selected && 'rotate-180',
             )}
           />
         </button>
@@ -80,7 +81,7 @@ export function StudentLogCard({
           onClick={onCycleStatus}
           aria-label={`${student.name} 출결 상태: ${ATTENDANCE_LABEL[status]}. 탭하여 ${ATTENDANCE_LABEL[NEXT_STATUS[status]]}(으)로 변경`}
           className={cn(
-            'my-2 mr-2 flex w-[62px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-md border-2 text-[13px] font-semibold transition-transform duration-150 active:scale-90',
+            'my-2 mr-2 flex w-[62px] shrink-0 items-center justify-center rounded-md border-2 text-[13px] font-semibold transition-transform duration-150 active:scale-90',
             style.ring,
             style.text,
           )}
@@ -89,8 +90,10 @@ export function StudentLogCard({
         </button>
       </div>
 
-      {expanded && (
-        <div className="animate-fade-in border-t border-hairline bg-surface-soft px-3 py-3">
+      {/* Inline expansion is the mobile affordance only — on desktop the tag
+          rail lives in the persistent side panel instead. */}
+      {selected && (
+        <div className="animate-fade-in border-t border-hairline bg-surface-soft px-3 py-3 lg:hidden">
           {status === 'present' ? (
             <TagRail selected={tags} onToggle={onToggleTag} />
           ) : (

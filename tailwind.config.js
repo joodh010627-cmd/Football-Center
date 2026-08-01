@@ -17,6 +17,19 @@ export default {
           deep: '#070f24',
           mid: '#1a2a52',
         },
+        /** Pitch greens — the hero band reads as a floodlit field from above. */
+        pitch: {
+          DEFAULT: '#0a3d2f',
+          deep: '#052a1f',
+          mid: '#0f5240',
+          stripe: '#0c4636',
+        },
+        /** High-contrast accents for figures sitting on the dark pitch. */
+        accent: {
+          lime: '#c8f169',
+          amber: '#ffd84d',
+          alert: '#ff8272',
+        },
         link: {
           DEFAULT: '#0075de',
           pressed: '#005bab',

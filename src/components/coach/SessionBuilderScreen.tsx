@@ -3,12 +3,13 @@
  *
  * Three fixed slots (warmup / skill / game). A coach taps a slot to focus it,
  * then taps a library card to fill it — two touches per block, or one touch
- * total via [빠른 구성]. Drag-and-drop is wired for tablet/desktop, but every
- * action is reachable by tap alone because this runs pitch-side.
+ * total via [빠른 구성]. On desktop the slots pin to a sticky left column and
+ * the library grids out beside them; drag-and-drop is available from the card
+ * handle. Every action stays reachable by tap alone.
  */
 
 import { useMemo, useState } from 'react';
-import { Check, ChevronRight, Play, Sparkles, Trash2, X } from 'lucide-react';
+import { Check, Play, Sparkles, Trash2, X } from 'lucide-react';
 import type { Class, TrainingBlock, TrainingCategory } from '@/types';
 import { useApp } from '@/store/AppContext';
 import { TODAY } from '@/data/mockData';
@@ -77,9 +78,9 @@ export function SessionBuilderScreen({ cls, onStartSession, onBack }: SessionBui
   };
 
   return (
-    <div className="flex h-full flex-col">
-      {/* --- Header --------------------------------------------------- */}
-      <header className="shrink-0 border-b border-hairline bg-canvas px-5 pb-4 pt-5">
+    <div>
+      {/* --- Header ---------------------------------------------------- */}
+      <header className="border-b border-hairline bg-canvas px-5 pb-5 pt-6 sm:px-8 lg:px-10">
         <button
           type="button"
           onClick={onBack}
@@ -88,161 +89,180 @@ export function SessionBuilderScreen({ cls, onStartSession, onBack }: SessionBui
           ← 클래스 선택
         </button>
 
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="truncate text-[22px] font-semibold leading-[1.3] tracking-[-0.3px] text-ink">
+            <h1 className="text-[24px] font-semibold leading-[1.25] tracking-[-0.4px] text-ink lg:text-[30px]">
               {cls.title}
             </h1>
-            <p className="mt-0.5 text-[13px] text-slate">
-              {formatDateKo(TODAY)} · {cls.venue}
+            <p className="mt-1 text-[13px] text-slate lg:text-sm">
+              {formatDateKo(TODAY)} · {cls.venue} · {cls.ageGroup}
             </p>
           </div>
+
           <span
             className={cn(
-              'shrink-0 rounded-sm px-2 py-1 text-[12px] font-semibold',
+              'shrink-0 rounded-md px-3 py-2 text-[13px] font-semibold',
               totalMin > cls.schedule.durationMin
                 ? 'bg-tint-peach text-brand-orange-deep'
                 : 'bg-surface text-charcoal',
             )}
           >
-            {totalMin}분 / {cls.schedule.durationMin}분
+            구성 {totalMin}분 / 수업 {cls.schedule.durationMin}분
           </span>
         </div>
 
         <button
           type="button"
           onClick={quickBuild}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-md bg-tint-yellow-bold px-4 py-2.5 text-sm font-semibold text-charcoal transition-transform active:scale-[0.98]"
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-md bg-tint-yellow-bold px-4 py-2.5 text-sm font-semibold text-charcoal transition-transform active:scale-[0.99] lg:w-auto lg:px-5"
         >
           <Sparkles size={15} strokeWidth={2.3} />
           빠른 구성 — {cls.ageGroup} 표준 커리큘럼 자동 채우기
         </button>
       </header>
 
-      {/* --- Slots ----------------------------------------------------- */}
-      <div className="shrink-0 space-y-2 bg-surface-soft px-5 py-4">
-        {SLOT_ORDER.map((category, index) => {
-          const meta = CATEGORY_META[category];
-          const blockId = draftSlots[category];
-          const block = blockId ? getBlock(blockId) : undefined;
-          const isFocused = focused === category;
+      {/* --- Slots + library ------------------------------------------- */}
+      <div className="px-5 py-6 sm:px-8 lg:px-10">
+        <div className="grid gap-6 lg:grid-cols-[380px_1fr] lg:items-start">
+          {/* Slots */}
+          <div className="space-y-2 lg:sticky lg:top-6">
+            <h2 className="text-[11px] font-semibold uppercase tracking-[1px] text-stone">
+              오늘의 세션 구성
+            </h2>
 
-          return (
-            <button
-              key={category}
-              type="button"
-              onClick={() => setFocused(category)}
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = 'copy';
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                const id = e.dataTransfer.getData('text/block-id');
-                const dropped = getBlock(id);
-                if (dropped && dropped.category === category) fillSlot(category, dropped);
-              }}
-              className={cn(
-                'flex w-full items-center gap-3 rounded-lg border-2 border-dashed p-3 text-left transition-all duration-150',
-                block
-                  ? 'border-solid border-hairline bg-canvas'
-                  : 'border-hairline-strong bg-canvas/40',
-                isFocused && !block && 'border-primary bg-tint-lavender/40',
-                isFocused && block && 'ring-1 ring-primary',
-              )}
-            >
-              <span
-                className={cn(
-                  'flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-md text-[11px] font-semibold',
-                  meta.tint,
-                  meta.accent,
-                )}
-              >
-                {block ? <Check size={18} strokeWidth={2.6} /> : index + 1}
-              </span>
+            {SLOT_ORDER.map((category, index) => {
+              const meta = CATEGORY_META[category];
+              const blockId = draftSlots[category];
+              const block = blockId ? getBlock(blockId) : undefined;
+              const isFocused = focused === category;
 
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center gap-1.5">
-                  <span className={cn('text-[11px] font-semibold uppercase tracking-[1px]', meta.accent)}>
-                    {meta.label}
-                  </span>
-                  <span className="text-[11px] font-medium text-stone">
-                    권장 {meta.defaultMin}분
-                  </span>
-                </span>
-                <span className="mt-0.5 block truncate text-[15px] font-semibold text-ink">
-                  {block ? block.title : '탭하여 블록 선택'}
-                </span>
-              </span>
-
-              {block ? (
-                <span
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`${meta.label} 블록 비우기`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    dispatch({ type: 'builder/setSlot', category, blockId: null });
-                    setFocused(category);
+              return (
+                /* A div, not a button — it holds its own buttons, and nesting
+                   interactive elements makes clicks ambiguous. */
+                <div
+                  key={category}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'copy';
                   }}
-                  onKeyDown={(e) => {
-                    if (e.key !== 'Enter' && e.key !== ' ') return;
-                    e.stopPropagation();
-                    dispatch({ type: 'builder/setSlot', category, blockId: null });
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const id = e.dataTransfer.getData('text/block-id');
+                    const dropped = getBlock(id);
+                    if (dropped && dropped.category === category) fillSlot(category, dropped);
                   }}
-                  className="shrink-0 rounded-sm p-2 text-stone transition-colors hover:bg-surface hover:text-error"
+                  className={cn(
+                    'flex items-center gap-3 rounded-lg border-2 border-dashed p-3 transition-all duration-150',
+                    block ? 'border-solid border-hairline bg-canvas' : 'border-hairline-strong bg-canvas/50',
+                    isFocused && !block && 'border-primary bg-tint-lavender/40',
+                    isFocused && block && 'ring-1 ring-primary',
+                  )}
                 >
-                  <X size={16} />
-                </span>
-              ) : (
-                <ChevronRight size={18} className="shrink-0 text-stone" />
-              )}
-            </button>
-          );
-        })}
+                  <button
+                    type="button"
+                    onClick={() => setFocused(category)}
+                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                  >
+                    <span
+                      className={cn(
+                        'flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-[13px] font-semibold',
+                        meta.tint,
+                        meta.accent,
+                      )}
+                    >
+                      {block ? <Check size={18} strokeWidth={2.6} /> : index + 1}
+                    </span>
 
-        {filledCount > 0 && (
-          <button
-            type="button"
-            onClick={() => dispatch({ type: 'builder/clear' })}
-            className="flex items-center gap-1.5 pt-1 text-[13px] font-medium text-steel transition-colors hover:text-error"
-          >
-            <Trash2 size={13} />
-            전체 비우기
-          </button>
-        )}
-      </div>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center gap-1.5">
+                        <span className={cn('text-[11px] font-semibold uppercase tracking-[1px]', meta.accent)}>
+                          {meta.label}
+                        </span>
+                        <span className="text-[11px] font-medium text-stone">
+                          권장 {meta.defaultMin}분
+                        </span>
+                      </span>
+                      <span className="mt-0.5 block truncate text-[15px] font-semibold text-ink">
+                        {block ? block.title : '탭하여 블록 선택'}
+                      </span>
+                    </span>
+                  </button>
 
-      {/* --- Library --------------------------------------------------- */}
-      <div className="min-h-0 flex-1 overflow-y-auto bg-surface-soft px-5 pb-40">
-        <div className="sticky top-0 z-10 -mx-5 flex gap-2 bg-surface-soft px-5 pb-3 pt-1">
-          {SLOT_ORDER.map((category) => (
+                  {block && (
+                    <button
+                      type="button"
+                      aria-label={`${meta.label} 블록 비우기`}
+                      onClick={() => {
+                        dispatch({ type: 'builder/setSlot', category, blockId: null });
+                        setFocused(category);
+                      }}
+                      className="shrink-0 rounded-sm p-2 text-stone transition-colors hover:bg-surface hover:text-error"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+
+            {filledCount > 0 && (
+              <button
+                type="button"
+                onClick={() => dispatch({ type: 'builder/clear' })}
+                className="flex items-center gap-1.5 pt-1 text-[13px] font-medium text-steel transition-colors hover:text-error"
+              >
+                <Trash2 size={13} />
+                전체 비우기
+              </button>
+            )}
+
+            {/* Desktop CTA sits with the slots it commits. */}
             <button
-              key={category}
               type="button"
-              onClick={() => setFocused(category)}
-              className={cn('pill-tab flex-1', focused === category && 'pill-tab-active')}
+              disabled={filledCount === 0}
+              onClick={handleStart}
+              className="btn-primary mt-4 hidden w-full py-3.5 text-[15px] lg:flex"
             >
-              {CATEGORY_META[category].label}
+              <Play size={16} strokeWidth={2.5} fill="currentColor" />
+              수업 시작 &amp; 출결 기록 ({filledCount}/3)
             </button>
-          ))}
-        </div>
+          </div>
 
-        <div className="space-y-2">
-          {library.map((block) => (
-            <TrainingBlockCard
-              key={block.id}
-              block={block}
-              selected={draftSlots[focused] === block.id}
-              offAge={!block.ageGroups.includes(cls.ageGroup)}
-              onSelect={(b) => fillSlot(focused, b)}
-            />
-          ))}
+          {/* Library */}
+          <div>
+            <div className="mb-3 flex gap-2">
+              {SLOT_ORDER.map((category) => (
+                <button
+                  key={category}
+                  type="button"
+                  onClick={() => setFocused(category)}
+                  className={cn(
+                    'pill-tab flex-1 lg:flex-none',
+                    focused === category && 'pill-tab-active',
+                  )}
+                >
+                  {CATEGORY_META[category].label}
+                </button>
+              ))}
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+              {library.map((block) => (
+                <TrainingBlockCard
+                  key={block.id}
+                  block={block}
+                  selected={draftSlots[focused] === block.id}
+                  offAge={!block.ageGroups.includes(cls.ageGroup)}
+                  onSelect={(b) => fillSlot(focused, b)}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* --- Commit ---------------------------------------------------- */}
-      <div className="absolute inset-x-0 bottom-[68px] z-20 border-t border-hairline bg-canvas px-5 py-3 shadow-[0_-4px_12px_rgba(15,15,15,0.06)]">
+      {/* --- Mobile CTA ------------------------------------------------ */}
+      <div className="sticky bottom-16 z-30 border-t border-hairline bg-canvas px-5 py-3 shadow-[0_-4px_12px_rgba(15,15,15,0.06)] sm:px-8 lg:hidden">
         <button
           type="button"
           disabled={filledCount === 0}

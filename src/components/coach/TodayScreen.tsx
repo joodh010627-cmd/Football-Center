@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { AlertTriangle, CalendarDays, ChevronRight, MapPin, Users } from 'lucide-react';
 import type { Class } from '@/types';
 import { useApp } from '@/store/AppContext';
@@ -5,6 +6,7 @@ import { TODAY } from '@/data/mockData';
 import { classesForCoach, daysUntilNextSession, studentsInClass } from '@/data/selectors';
 import { formatDateKo, formatSchedule } from '@/lib/format';
 import { cn } from '@/lib/cn';
+import { PitchBackdrop } from '@/components/ui/PitchBackdrop';
 
 export function TodayScreen({ onPickClass }: { onPickClass: (cls: Class) => void }) {
   const { state, getCoach } = useApp();
@@ -18,26 +20,39 @@ export function TodayScreen({ onPickClass }: { onPickClass: (cls: Class) => void
   const todays = myClasses.filter((c) => c.inDays === 0);
   const upcoming = myClasses.filter((c) => c.inDays !== 0);
 
-  return (
-    <div className="h-full overflow-y-auto bg-surface-soft pb-24">
-      <header className="relative overflow-hidden bg-navy px-5 pb-7 pt-8 text-white">
-        <span className="absolute -right-6 -top-8 h-28 w-28 rounded-full bg-brand-purple/25 blur-xl" />
-        <span className="absolute right-10 top-16 h-3 w-3 rounded-full bg-brand-yellow" />
-        <span className="absolute right-24 top-9 h-2 w-2 rounded-full bg-brand-pink" />
-        <span className="absolute right-16 top-28 h-2.5 w-2.5 rounded-full bg-brand-teal" />
+  const totalStudents = myClasses.reduce(
+    (sum, { cls }) => sum + studentsInClass(state.students, cls.id).length,
+    0,
+  );
 
-        <p className="relative text-[13px] font-medium text-on-dark-muted">{formatDateKo(TODAY)}</p>
-        <h1 className="relative mt-1 text-[28px] font-semibold leading-[1.2] tracking-[-0.5px]">
-          안녕하세요, {coach?.name ?? ''} 코치님
-        </h1>
-        <p className="relative mt-2 max-w-[280px] text-sm leading-[1.5] text-on-dark-muted">
-          {todays.length > 0
-            ? `오늘 수업 ${todays.length}개가 예정되어 있습니다. 블록을 골라 15초 만에 설계하세요.`
-            : '오늘은 예정된 수업이 없습니다. 다음 수업을 미리 설계해 두세요.'}
-        </p>
+  return (
+    <div>
+      <header className="relative overflow-hidden px-5 pb-8 pt-8 text-white sm:px-8 lg:px-10 lg:pb-10 lg:pt-12">
+        <PitchBackdrop />
+
+        <div className="relative">
+          <p className="text-[13px] font-medium text-white/60">{formatDateKo(TODAY)}</p>
+          <h1 className="mt-2 text-[26px] font-semibold leading-[1.2] tracking-[-0.5px] lg:text-[36px]">
+            안녕하세요, {coach?.name ?? ''} 코치님
+          </h1>
+          <p className="mt-2 max-w-lg text-sm leading-[1.55] text-white/70 lg:text-[15px]">
+            {todays.length > 0
+              ? `오늘 수업 ${todays.length}개가 예정되어 있습니다. 블록을 골라 15초 만에 설계하세요.`
+              : '오늘은 예정된 수업이 없습니다. 다음 수업을 미리 설계해 두세요.'}
+          </p>
+
+          <div className="mt-5 flex gap-2.5">
+            <span className="rounded-md bg-white/10 px-3 py-2 text-[13px] font-semibold backdrop-blur-sm">
+              담당 {myClasses.length}개 반
+            </span>
+            <span className="rounded-md bg-white/10 px-3 py-2 text-[13px] font-semibold backdrop-blur-sm">
+              원생 {totalStudents}명
+            </span>
+          </div>
+        </div>
       </header>
 
-      <div className="space-y-5 px-5 py-5">
+      <div className="space-y-7 px-5 py-6 sm:px-8 lg:px-10 lg:py-8">
         {todays.length > 0 && (
           <Section label="오늘의 수업">
             {todays.map(({ cls, inDays }) => (
@@ -58,13 +73,11 @@ export function TodayScreen({ onPickClass }: { onPickClass: (cls: Class) => void
   );
 }
 
-function Section({ label, children }: { label: string; children: React.ReactNode }) {
+function Section({ label, children }: { label: string; children: ReactNode }) {
   return (
     <section>
-      <h2 className="mb-2.5 text-[11px] font-semibold uppercase tracking-[1px] text-stone">
-        {label}
-      </h2>
-      <div className="space-y-2">{children}</div>
+      <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[1px] text-stone">{label}</h2>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{children}</div>
     </section>
   );
 }
@@ -92,7 +105,7 @@ function ClassCard({
       type="button"
       onClick={() => onPick(cls)}
       className={cn(
-        'w-full rounded-lg border bg-canvas p-4 text-left transition-all duration-150 active:scale-[0.99]',
+        'w-full rounded-lg border bg-canvas p-4 text-left transition-all duration-150 hover:-translate-y-0.5 hover:shadow-card active:translate-y-0',
         isToday ? 'border-primary/40 shadow-card' : 'border-hairline',
       )}
     >
@@ -138,7 +151,7 @@ function ClassCard({
           </span>
         )}
         <span className="ml-auto text-[13px] font-semibold text-primary">
-          {isToday ? '수업 설계 시작 →' : '미리 설계 →'}
+          {isToday ? '수업 설계 →' : '미리 설계 →'}
         </span>
       </div>
     </button>

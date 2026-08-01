@@ -3,10 +3,11 @@
  *
  * Reading order is deliberate: what needs action (churn alerts) sits above
  * what needs watching (margins), which sits above what needs governing
- * (curriculum standardisation).
+ * (curriculum standardisation). The KPI tiles double as jump links into
+ * whichever section explains the number.
  */
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   ClipboardCheck,
   Coins,
@@ -21,11 +22,16 @@ import { TODAY } from '@/data/mockData';
 import { buildKpis } from '@/data/selectors';
 import { formatDateKo, formatPercent, formatWonCompact } from '@/lib/format';
 import { StatTile } from '@/components/ui/StatTile';
+import { PitchBackdrop } from '@/components/ui/PitchBackdrop';
 import { ChurnAlertPanel } from './ChurnAlertPanel';
 import { ClassPerformanceTable } from './ClassPerformanceTable';
 import { CurriculumPanel } from './CurriculumPanel';
+import { RosterPanel } from './RosterPanel';
 import { StudentDetailModal } from './StudentDetailModal';
 import { RecentActivityPanel } from './RecentActivityPanel';
+
+/** Sticky headers would otherwise clip the section title on jump. */
+const SCROLL_OFFSET = 16;
 
 export function AdminDashboard() {
   const { slice, state } = useApp();
@@ -34,100 +40,104 @@ export function AdminDashboard() {
   const kpis = useMemo(() => buildKpis(slice), [slice]);
   const totalStudents = state.students.length;
 
+  const jumpTo = useCallback((id: string) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const y = el.getBoundingClientRect().top + window.scrollY - SCROLL_OFFSET;
+    window.scrollTo({ top: y, behavior: 'smooth' });
+  }, []);
+
   return (
     <div className="min-h-screen bg-surface-soft">
-      {/* --- Navy hero band ------------------------------------------- */}
-      <header className="relative overflow-hidden bg-navy px-6 pb-24 pt-10 text-white lg:px-10">
-        <span className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-brand-purple/20 blur-3xl" />
-        <span className="pointer-events-none absolute right-[12%] top-10 h-3 w-3 rounded-full bg-brand-yellow" />
-        <span className="pointer-events-none absolute right-[20%] top-24 h-2.5 w-2.5 rounded-full bg-brand-pink" />
-        <span className="pointer-events-none absolute right-[28%] top-14 h-2 w-2 rounded-full bg-brand-teal" />
-        <span className="pointer-events-none absolute left-[8%] top-20 h-2 w-2 rounded-full bg-brand-green" />
+      {/* --- Pitch hero band ------------------------------------------- */}
+      <header className="relative overflow-hidden px-5 pb-24 pt-10 text-white sm:px-8 lg:px-10 lg:pt-14">
+        <PitchBackdrop />
 
         <div className="relative mx-auto max-w-[1280px]">
-          <p className="text-[13px] font-medium text-on-dark-muted">
+          <p className="text-[13px] font-medium text-white/60">
             {formatDateKo(TODAY)} · 대표 대시보드
           </p>
-          <h1 className="mt-2 text-[36px] font-semibold leading-[1.15] tracking-[-1px] lg:text-[48px]">
-            오늘 챙겨야 할 원생 {kpis.atRiskStudents}명,
+
+          <h1 className="mt-3 text-[30px] font-semibold leading-[1.16] tracking-[-0.8px] sm:text-[40px] lg:text-[52px]">
+            오늘 챙겨야 할 원생{' '}
+            <em className="not-italic text-accent-alert text-[46px] leading-none sm:text-[62px] lg:text-[82px]">
+              {kpis.atRiskStudents}
+            </em>
+            명,
             <br />
-            지켜야 할 매출 {formatWonCompact(kpis.monthlyRevenue)}원.
+            지켜야 할 매출{' '}
+            <em className="not-italic text-accent-amber text-[46px] leading-none sm:text-[62px] lg:text-[82px]">
+              {formatWonCompact(kpis.monthlyRevenue)}
+            </em>
+            원.
           </h1>
-          <p className="mt-3 max-w-xl text-[16px] leading-[1.55] text-on-dark-muted">
-            출결·결제·특이사항·학부모 소통 이력이 한 곳에 모입니다. 현장 노동이 아니라 숫자로
-            운영하세요.
+
+          <p className="mt-4 max-w-xl text-[15px] leading-[1.55] text-white/70 lg:text-[16px]">
+            출결·결제·특이사항·학부모 소통 이력이 한 곳에 모입니다.
           </p>
         </div>
       </header>
 
-      {/* --- KPI row overlapping the band ----------------------------- */}
-      {/* `relative` is load-bearing: the hero band is positioned, so a static
+      {/* --- KPI row overlapping the band -----------------------------
+          `relative` is load-bearing: the hero band is positioned, so a static
           grid here would paint underneath it instead of overlapping. */}
-      <div className="relative z-10 mx-auto -mt-16 max-w-[1280px] px-6 lg:px-10">
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
+      <div className="relative z-10 mx-auto -mt-16 max-w-[1280px] px-5 sm:px-8 lg:px-10">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
           <StatTile
-            label="재원생"
-            value={kpis.activeStudents}
-            unit={`/ ${totalStudents}명`}
-            icon={Users}
-            tint="canvas"
-            className="shadow-card"
-            caption="정상 출석 중"
+            label="재원생" value={kpis.activeStudents} unit={`/ ${totalStudents}명`}
+            icon={Users} tint="canvas" className="shadow-card" caption="정상 출석 중"
+            onClick={() => jumpTo('roster')}
           />
           <StatTile
-            label="이탈 위험군"
-            value={kpis.atRiskStudents}
-            unit="명"
-            icon={UserCheck}
-            tint="rose"
-            className="shadow-card"
-            caption="즉시 개입 필요"
+            label="이탈 위험군" value={kpis.atRiskStudents} unit="명"
+            icon={UserCheck} tint="rose" className="shadow-card" caption="즉시 개입 필요"
+            onClick={() => jumpTo('alerts')}
           />
           <StatTile
-            label="월 매출"
-            value={formatWonCompact(kpis.monthlyRevenue)}
-            unit="원"
-            icon={Coins}
-            tint="canvas"
-            className="shadow-card"
+            label="월 매출" value={formatWonCompact(kpis.monthlyRevenue)} unit="원"
+            icon={Coins} tint="canvas" className="shadow-card"
             caption={`공헌이익 ${formatWonCompact(kpis.monthlyMargin)}원`}
+            onClick={() => jumpTo('classes')}
           />
           <StatTile
-            label="평균 출석률"
-            value={formatPercent(kpis.averageAttendanceRate)}
-            icon={TrendingUp}
-            tint="canvas"
-            className="shadow-card"
-            caption="최근 30일"
+            label="평균 출석률" value={formatPercent(kpis.averageAttendanceRate)}
+            icon={TrendingUp} tint="canvas" className="shadow-card" caption="최근 30일"
+            onClick={() => jumpTo('activity')}
           />
           <StatTile
-            label="평균 재등록률"
-            value={formatPercent(kpis.averageRetentionRate)}
-            icon={Repeat2}
-            tint="canvas"
-            className="shadow-card"
-            caption="직전 사이클"
+            label="평균 재등록률" value={formatPercent(kpis.averageRetentionRate)}
+            icon={Repeat2} tint="canvas" className="shadow-card" caption="직전 사이클"
+            onClick={() => jumpTo('classes')}
           />
           <StatTile
-            label="기록 충실도"
-            value={formatPercent(kpis.logCoverageRate)}
-            icon={ClipboardCheck}
-            tint="mint"
-            className="shadow-card"
-            caption="태그·코멘트 입력률"
+            label="기록 충실도" value={formatPercent(kpis.logCoverageRate)}
+            icon={ClipboardCheck} tint="mint" className="shadow-card" caption="태그·코멘트 입력률"
+            onClick={() => jumpTo('curriculum')}
           />
         </div>
       </div>
 
       {/* --- Body ------------------------------------------------------ */}
-      <main className="mx-auto max-w-[1280px] space-y-8 px-6 py-10 lg:px-10">
-        <ChurnAlertPanel onInspect={setInspected} />
+      <main className="mx-auto max-w-[1280px] space-y-8 px-5 py-10 sm:px-8 lg:px-10">
+        <section id="alerts" className="scroll-mt-4">
+          <ChurnAlertPanel onInspect={setInspected} />
+        </section>
 
-        <ClassPerformanceTable />
+        <section id="classes" className="scroll-mt-4">
+          <ClassPerformanceTable />
+        </section>
+
+        <section id="roster" className="scroll-mt-4">
+          <RosterPanel onInspect={setInspected} />
+        </section>
 
         <div className="grid gap-6 lg:grid-cols-[1.15fr_1fr]">
-          <CurriculumPanel />
-          <RecentActivityPanel onInspect={setInspected} />
+          <section id="curriculum" className="scroll-mt-4">
+            <CurriculumPanel />
+          </section>
+          <section id="activity" className="scroll-mt-4">
+            <RecentActivityPanel onInspect={setInspected} />
+          </section>
         </div>
       </main>
 

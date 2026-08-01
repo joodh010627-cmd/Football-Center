@@ -36,8 +36,10 @@ export function Modal({
   return (
     <div
       className={cn(
-        'absolute inset-0 z-50 flex animate-fade-in bg-ink-deep/45 p-4',
-        variant === 'sheet' ? 'items-end p-0' : 'items-center justify-center',
+        'fixed inset-0 z-50 flex animate-fade-in bg-ink-deep/45 p-4',
+        variant === 'sheet'
+          ? 'items-end justify-center p-0 sm:items-center sm:p-4'
+          : 'items-center justify-center',
       )}
       onClick={onClose}
       role="presentation"
@@ -49,7 +51,7 @@ export function Modal({
         className={cn(
           'flex max-h-full w-full flex-col overflow-hidden bg-canvas shadow-modal',
           variant === 'sheet'
-            ? 'animate-slide-up rounded-t-2xl'
+            ? 'animate-slide-up rounded-t-2xl sm:max-w-lg sm:rounded-lg'
             : 'max-w-lg animate-pop-in rounded-lg',
           className,
         )}
