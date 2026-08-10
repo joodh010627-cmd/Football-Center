@@ -56,8 +56,42 @@ export function AppShell({
   railFooter,
   children,
 }: AppShellProps) {
+  const roleSwitch = (compact = false) => (
+    <div className="flex gap-1 rounded-full border border-white/12 bg-white/[0.06] p-1">
+      {ROLE_OPTIONS.map(({ key, label, icon: Icon }) => (
+        <button
+          key={key}
+          type="button"
+          onClick={() => onRoleChange(key)}
+          className={cn(
+            'flex items-center justify-center gap-1.5 rounded-full font-semibold transition-colors duration-200',
+            compact ? 'px-3 py-1.5 text-[12px]' : 'flex-1 py-2 text-[12.5px]',
+            role === key ? 'bg-gold text-pitch-deep' : 'text-white/60 hover:text-white',
+          )}
+        >
+          <Icon size={13} strokeWidth={2.4} />
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-surface-soft">
+      {/* --- Mobile top bar ------------------------------------------
+          Stands in for the rail below `lg`: it carries the brand and the role
+          switch, and keeps both out of the page header's way. */}
+      <header className="sticky top-0 z-40 flex h-14 items-center justify-between gap-3 bg-pitch-deep px-4 text-white lg:hidden">
+        <span className="flex min-w-0 items-center gap-2">
+          <Crest className="h-6 w-6 shrink-0 text-gold" />
+          <span className="truncate text-[13px] font-bold tracking-[0.16em]">FC GROWTH</span>
+          <span className="hidden shrink-0 text-[10px] font-semibold uppercase tracking-label text-white/40 min-[400px]:inline">
+            {roleLabel}
+          </span>
+        </span>
+        {roleSwitch(true)}
+      </header>
+
       <div className="mx-auto flex w-full max-w-[1440px]">
         {/* --- Desktop rail ------------------------------------------- */}
         <aside className="grain sticky top-0 hidden h-screen w-[264px] shrink-0 flex-col overflow-hidden bg-pitch-deep px-4 py-7 text-white lg:flex">
@@ -93,49 +127,11 @@ export function AppShell({
 
           {/* Prototype-only role jump. In production the role comes from the
               session and each user only ever sees one of these. */}
-          <div className="relative mt-auto pt-6">
-            <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-label text-white/35">
-              화면 전환 (시연용)
-            </p>
-            <div className="flex gap-1 rounded-full border border-white/12 bg-white/[0.06] p-1">
-              {ROLE_OPTIONS.map(({ key, label, icon: Icon }) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => onRoleChange(key)}
-                  className={cn(
-                    'flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 text-[12.5px] font-semibold transition-colors duration-200',
-                    role === key ? 'bg-gold text-pitch-deep' : 'text-white/60 hover:text-white',
-                  )}
-                >
-                  <Icon size={13} strokeWidth={2.4} />
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <div className="relative mt-auto pt-6">{roleSwitch()}</div>
         </aside>
 
         {/* --- Content ------------------------------------------------- */}
         <main className="min-w-0 flex-1 pb-24 lg:pb-0">{children}</main>
-      </div>
-
-      {/* --- Mobile role switch -------------------------------------- */}
-      <div className="fixed right-3 top-3 z-[60] flex items-center gap-0.5 rounded-full border border-white/12 bg-pitch-deep/90 p-1 shadow-card backdrop-blur lg:hidden">
-        {ROLE_OPTIONS.map(({ key, label, icon: Icon }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => onRoleChange(key)}
-            className={cn(
-              'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition-colors duration-200',
-              role === key ? 'bg-gold text-pitch-deep' : 'text-white/65',
-            )}
-          >
-            <Icon size={13} strokeWidth={2.4} />
-            {label}
-          </button>
-        ))}
       </div>
 
       {/* --- Mobile bottom nav ---------------------------------------- */}

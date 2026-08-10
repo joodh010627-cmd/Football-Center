@@ -6,7 +6,6 @@ import { TODAY } from '@/data/mockData';
 import { classesForCoach, daysUntilNextSession, studentsInClass } from '@/data/selectors';
 import { formatDateKo, formatSchedule } from '@/lib/format';
 import { cn } from '@/lib/cn';
-import { PitchBackdrop } from '@/components/ui/PitchBackdrop';
 
 export function TodayScreen({ onPickClass }: { onPickClass: (cls: Class) => void }) {
   const { state, getCoach } = useApp();
@@ -27,27 +26,25 @@ export function TodayScreen({ onPickClass }: { onPickClass: (cls: Class) => void
 
   return (
     <div>
-      <header className="grain relative overflow-hidden px-5 pb-9 pt-10 text-white sm:px-8 lg:px-12 lg:pb-12 lg:pt-14">
-        <PitchBackdrop />
+      <header className="relative overflow-hidden border-b border-hairline bg-canvas px-5 pb-8 pt-10 sm:px-8 lg:px-12 lg:pb-9 lg:pt-14">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(115%_150%_at_92%_-10%,#EDF2EE_0%,transparent_60%)]" />
 
         <div className="relative">
-          <p className="text-[11px] font-semibold uppercase tracking-label text-gold">
-            {formatDateKo(TODAY)}
-          </p>
-          <h1 className="mt-3 text-[27px] font-semibold leading-[1.16] tracking-tightest lg:text-[38px]">
+          <p className="eyebrow-ink">{formatDateKo(TODAY)}</p>
+          <h1 className="mt-3 text-[27px] font-semibold leading-[1.16] tracking-tightest text-ink lg:text-[38px]">
             안녕하세요, {coach?.name ?? ''} 코치님
           </h1>
-          <p className="mt-3 max-w-lg text-sm leading-[1.7] text-white/60 lg:text-[15px]">
+          <p className="mt-3 max-w-lg text-sm leading-[1.7] text-slate lg:text-[15px]">
             {todays.length > 0
               ? `오늘 수업 ${todays.length}개가 예정되어 있습니다. 블록을 골라 15초 만에 설계하세요.`
               : '오늘은 예정된 수업이 없습니다. 다음 수업을 미리 설계해 두세요.'}
           </p>
 
           <div className="mt-6 flex gap-2">
-            <span className="rounded-full border border-white/15 bg-white/[0.08] px-4 py-2 text-[13px] font-semibold backdrop-blur-sm">
+            <span className="rounded-full border border-hairline bg-surface-soft px-4 py-2 text-[13px] font-semibold text-charcoal">
               담당 {myClasses.length}개 반
             </span>
-            <span className="rounded-full border border-white/15 bg-white/[0.08] px-4 py-2 text-[13px] font-semibold backdrop-blur-sm">
+            <span className="rounded-full border border-hairline bg-surface-soft px-4 py-2 text-[13px] font-semibold text-charcoal">
               원생 {totalStudents}명
             </span>
           </div>

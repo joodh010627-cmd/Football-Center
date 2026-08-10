@@ -44,18 +44,8 @@ export function BootScreen({ onDone }: { onDone?: () => void }) {
         leaving ? 'animate-boot-out' : ''
       }`}
     >
-      {/* Faint centre-circle mark, echoing the pitch backdrop used in the app. */}
-      <svg
-        className="pointer-events-none absolute left-1/2 top-1/2 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 opacity-[0.09]"
-        viewBox="0 0 200 200"
-        fill="none"
-        stroke="#ffffff"
-        strokeWidth="0.7"
-      >
-        <circle cx="100" cy="100" r="62" />
-        <circle cx="100" cy="100" r="94" />
-        <line x1="0" y1="100" x2="200" y2="100" />
-      </svg>
+      {/* Soft halo behind the crest — depth without any imagery. */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(45%_38%_at_50%_44%,rgba(198,166,100,0.14)_0%,transparent_70%)]" />
 
       <div className="relative flex flex-col items-center px-8 text-center text-white">
         <Crest className="h-[62px] w-[62px] animate-crest-in text-gold" />

@@ -31,7 +31,6 @@ import { formatDateKo, formatPercent, formatWon, formatWonCompact } from '@/lib/
 import { cn } from '@/lib/cn';
 import { AppShell, type ShellNavItem } from '@/components/AppShell';
 import { StatTile } from '@/components/ui/StatTile';
-import { PitchBackdrop } from '@/components/ui/PitchBackdrop';
 import { ChurnAlertPanel } from './ChurnAlertPanel';
 import { ClassPerformanceTable } from './ClassPerformanceTable';
 import { CurriculumPanel } from './CurriculumPanel';
@@ -180,39 +179,34 @@ function Overview({
 
   return (
     <>
-      {/* --- Pitch hero band ------------------------------------------- */}
-      <header className="grain relative overflow-hidden px-5 pb-24 pt-12 text-white sm:px-8 lg:px-12 lg:pt-16">
-        <PitchBackdrop />
+      {/* --- Statement header ------------------------------------------
+          Light, not dark. A dark band here sat directly against the dark rail
+          and the two merged into one slab; giving the content column its own
+          white plane is what makes the rail read as a rail. */}
+      <header className="relative overflow-hidden border-b border-hairline bg-canvas px-5 pb-10 pt-12 sm:px-8 lg:px-12 lg:pb-12 lg:pt-16">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(115%_150%_at_92%_-10%,#EDF2EE_0%,transparent_60%)]" />
 
         <div className="relative">
-          <p className="text-[11px] font-semibold uppercase tracking-label text-gold">
-            {formatDateKo(TODAY)} · Owner dashboard
-          </p>
+          <p className="eyebrow-ink">{formatDateKo(TODAY)} · Owner dashboard</p>
 
-          <h1 className="mt-4 text-[30px] font-semibold leading-[1.14] tracking-tightest sm:text-[42px] lg:text-[54px]">
+          <h1 className="mt-4 text-[29px] font-semibold leading-[1.18] tracking-tightest text-ink sm:text-[40px] lg:text-[50px]">
             오늘 챙겨야 할 원생{' '}
-            <em className="not-italic text-accent-alert text-[46px] leading-none sm:text-[64px] lg:text-[84px]">
-              {kpis.atRiskStudents}
-            </em>
-            명,
+            <em className="not-italic text-error">{kpis.atRiskStudents}</em>명,
             <br />
             지켜야 할 매출{' '}
-            <em className="not-italic text-gold text-[46px] leading-none sm:text-[64px] lg:text-[84px]">
-              {formatWonCompact(kpis.monthlyRevenue)}
-            </em>
-            원.
+            <em className="not-italic text-primary">{formatWonCompact(kpis.monthlyRevenue)}</em>원.
           </h1>
 
-          <p className="mt-5 max-w-xl text-[15px] leading-[1.75] text-white/60 lg:text-[16px]">
+          <p className="mt-5 max-w-xl text-[15px] leading-[1.75] text-slate lg:text-[16px]">
             출결·결제·특이사항·학부모 소통 이력이 한 곳에 모입니다. 감이 아니라 기록으로 운영하세요.
           </p>
+
+          <div className="mt-8 h-px w-14 bg-gold" />
         </div>
       </header>
 
-      {/* --- KPI row overlapping the band -----------------------------
-          `relative` is load-bearing: the hero band is positioned, so a static
-          grid here would paint underneath it instead of overlapping. */}
-      <div className="relative z-10 -mt-16 px-5 sm:px-8 lg:px-12">
+      {/* --- KPI row --------------------------------------------------- */}
+      <div className="px-5 pt-7 sm:px-8 lg:px-12 lg:pt-9">
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
           <StatTile
             label="재원생" value={kpis.activeStudents} unit={`/ ${totalStudents}명`}
@@ -249,7 +243,7 @@ function Overview({
       </div>
 
       {/* --- Briefs ---------------------------------------------------- */}
-      <div className="grid gap-5 px-5 py-8 sm:px-8 lg:grid-cols-[1.25fr_1fr] lg:px-12 lg:py-10">
+      <div className="grid gap-5 px-5 pb-9 pt-5 sm:px-8 lg:grid-cols-[1.25fr_1fr] lg:px-12 lg:pb-12 lg:pt-6">
         <BriefCard
           icon={AlertTriangle}
           tone="alert"
@@ -355,7 +349,10 @@ function Overview({
 // Chrome
 // ---------------------------------------------------------------------------
 
-/** Section wrapper: eyebrow + tight title, matching the public site's heads. */
+/**
+ * Section wrapper. The white header band is the same device the overview uses,
+ * so every section starts on the same plane and the green rail keeps its edge.
+ */
 function ViewFrame({
   eyebrow,
   title,
@@ -368,14 +365,16 @@ function ViewFrame({
   children: ReactNode;
 }) {
   return (
-    <div className="px-5 py-8 sm:px-8 lg:px-12 lg:py-12">
-      <header className="mb-6 max-w-2xl">
-        <p className="eyebrow-ink">{eyebrow}</p>
-        <h1 className="mt-2.5 h-section">{title}</h1>
-        <p className="mt-3 text-[14px] leading-[1.7] text-slate lg:text-[15px]">{description}</p>
+    <>
+      <header className="border-b border-hairline bg-canvas px-5 pb-7 pt-10 sm:px-8 lg:px-12 lg:pb-8 lg:pt-12">
+        <div className="max-w-2xl">
+          <p className="eyebrow-ink">{eyebrow}</p>
+          <h1 className="mt-2.5 h-section">{title}</h1>
+          <p className="mt-3 text-[14px] leading-[1.7] text-slate lg:text-[15px]">{description}</p>
+        </div>
       </header>
-      {children}
-    </div>
+      <div className="px-5 py-7 sm:px-8 lg:px-12 lg:py-9">{children}</div>
+    </>
   );
 }
 
