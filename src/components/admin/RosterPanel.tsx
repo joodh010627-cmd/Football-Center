@@ -24,7 +24,7 @@ const STATUS_FILTERS: Array<{ key: StudentStatus | 'all'; label: string }> = [
 
 const STATUS_STYLE: Record<StudentStatus, string> = {
   active: 'bg-tint-mint text-brand-green',
-  at_risk: 'bg-[#fde2e2] text-error',
+  at_risk: 'bg-tint-alert text-error',
   inactive: 'bg-tint-gray text-steel',
 };
 
@@ -56,9 +56,9 @@ export function RosterPanel({ onInspect }: { onInspect: (s: Student) => void }) 
     <div className="overflow-hidden rounded-lg border border-hairline bg-canvas">
       <header className="flex flex-wrap items-end justify-between gap-4 border-b border-hairline px-5 py-5 sm:px-6">
         <div>
-          <h2 className="flex items-center gap-2 text-[20px] font-semibold leading-[1.3] tracking-[-0.3px] text-ink sm:text-[22px]">
-            <Users size={19} className="text-primary" />
-            원생 명단
+          <h2 className="flex items-center gap-2 text-[17px] font-semibold tracking-[-0.02em] text-ink">
+            <Users size={17} className="text-primary" />
+            전체 명부
           </h2>
           <p className="mt-1 text-sm text-slate">
             총 {state.students.length}명 · 이탈 위험도 높은 순
@@ -71,7 +71,7 @@ export function RosterPanel({ onInspect }: { onInspect: (s: Student) => void }) 
             setClassId(e.target.value);
             setLimit(PAGE_SIZE);
           }}
-          className="h-10 rounded-md border border-hairline-strong bg-canvas px-3 text-sm text-ink"
+          className="h-10 rounded-full border border-hairline-strong bg-canvas px-4 text-sm text-ink"
         >
           <option value="all">전체 클래스</option>
           {state.classes.map((c) => (
@@ -101,7 +101,7 @@ export function RosterPanel({ onInspect }: { onInspect: (s: Student) => void }) 
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] border-collapse text-sm">
           <thead>
-            <tr className="border-b border-hairline bg-surface-soft text-[12px] uppercase tracking-[0.5px] text-steel">
+            <tr className="border-b border-hairline bg-surface-soft text-[12px] uppercase tracking-wide text-steel">
               <th className="px-5 py-3 text-left font-semibold">원생</th>
               <th className="px-5 py-3 text-left font-semibold">클래스</th>
               <th className="px-5 py-3 text-center font-semibold">상태</th>

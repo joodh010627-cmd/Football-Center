@@ -27,6 +27,12 @@ export type TrainingCategory = 'warmup' | 'skill' | 'game';
 /** Weekday index, 0 = Sunday … 6 = Saturday (matches `Date.getDay()`). */
 export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
+/**
+ * Which of the two interfaces is on screen. In production this comes from the
+ * session and each user only ever sees one; the prototype lets you switch.
+ */
+export type Role = 'admin' | 'coach';
+
 // ---------------------------------------------------------------------------
 // Entities
 // ---------------------------------------------------------------------------

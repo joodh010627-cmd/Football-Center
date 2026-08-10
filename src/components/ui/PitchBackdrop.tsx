@@ -29,7 +29,7 @@ export function PitchBackdrop({ className }: { className?: string }) {
         className="absolute inset-0 opacity-70"
         style={{
           backgroundImage:
-            'repeating-linear-gradient(90deg, #0c4636 0px, #0c4636 64px, #0a3d2f 64px, #0a3d2f 128px)',
+            'repeating-linear-gradient(90deg, #00351F 0px, #00351F 64px, #002816 64px, #002816 128px)',
         }}
       />
 
@@ -72,7 +72,7 @@ export function PitchBackdrop({ className }: { className?: string }) {
       </svg>
 
       {/* Vignette — keeps headline contrast steady over the markings. */}
-      <div className="absolute inset-0 bg-gradient-to-r from-pitch-deep via-pitch-deep/80 to-pitch-deep/30" />
+      <div className="absolute inset-0 bg-gradient-to-r from-pitch-deep via-pitch-deep/85 to-pitch-deep/40" />
       <div className="absolute inset-0 bg-gradient-to-t from-pitch-deep/70 via-transparent to-pitch-deep/40" />
     </div>
   );

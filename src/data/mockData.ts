@@ -191,30 +191,34 @@ const CLASS_HEADCOUNT: Record<ID, number> = {
 /**
  * Students who carry a narrative — these are the ones the owner will actually
  * see in the Red Alert queue, so their memos explain the churn in plain words.
+ *
+ * The at-risk archetypes (`ghost` / `fading` / `injured`) are capped at ten on
+ * purpose: this is a demo, and a queue you can read without scrolling makes the
+ * point better than a hundred rows. Everyone else is deliberately healthy.
  */
 const featuredSeeds: StudentSeed[] = [
   { name: '정라온', classId: 'class-1', parentName: '정우진', archetype: 'fading', monthsEnrolled: 4, monthlyFee: 220_000, memo: '태권도 학원과 시간 겹침 상담 있었음' },
-  { name: '이시온', classId: 'class-1', parentName: '이정민', archetype: 'wobbly', monthsEnrolled: 5, monthlyFee: 220_000, memo: '땀 알레르기 — 여름철 수분 보충 자주 필요' },
+  { name: '이시온', classId: 'class-1', parentName: '이정민', archetype: 'steady', monthsEnrolled: 5, monthlyFee: 220_000, memo: '땀 알레르기 — 여름철 수분 보충 자주 필요' },
   { name: '박시우', classId: 'class-2', parentName: '박진욱', archetype: 'injured', monthsEnrolled: 8, monthlyFee: 270_000, memo: '발목 인대 염좌 — 지난달부터 재활 중' },
-  { name: '신도현', classId: 'class-2', parentName: '신유정', archetype: 'fading', monthsEnrolled: 6, monthlyFee: 270_000, memo: '형이 U13반 퇴원 후 출석 급감' },
+  { name: '신도현', classId: 'class-2', parentName: '신유정', archetype: 'steady', monthsEnrolled: 6, monthlyFee: 270_000 },
   { name: '서지안', classId: 'class-2', parentName: '서동혁', archetype: 'ghost', monthsEnrolled: 5, monthlyFee: 270_000, memo: '3주째 무단 결석 — 학부모 연락 두절' },
   { name: '송재이', classId: 'class-3', parentName: '송기훈', archetype: 'fading', monthsEnrolled: 9, monthlyFee: 320_000, memo: '중학 입시 학원 시작 — 주 1회 전환 문의' },
   { name: '고은성', classId: 'class-3', parentName: '고아름', archetype: 'ghost', monthsEnrolled: 8, monthlyFee: 320_000, memo: '타 아카데미 이적 소문' },
-  { name: '표승우', classId: 'class-3', parentName: '표건희', archetype: 'injured', monthsEnrolled: 7, monthlyFee: 320_000, memo: '성장통 — 러닝 볼륨 조절 요청' },
+  { name: '표승우', classId: 'class-3', parentName: '표건희', archetype: 'steady', monthsEnrolled: 7, monthlyFee: 320_000, memo: '성장통 — 러닝 볼륨 조절 요청' },
   { name: '차은호', classId: 'class-4', parentName: '차보람', archetype: 'fading', monthsEnrolled: 11, monthlyFee: 380_000, memo: '주 3회 부담 호소 — 학업 병행 어려움' },
   { name: '백승현', classId: 'class-4', parentName: '백지우', archetype: 'ghost', monthsEnrolled: 10, monthlyFee: 380_000, memo: '엘리트 선발 탈락 후 동기 저하' },
-  { name: '방시안', classId: 'class-5', parentName: '방규리', archetype: 'fading', monthsEnrolled: 3, monthlyFee: 150_000, memo: '주말 가족 일정과 상시 충돌' },
+  { name: '방시안', classId: 'class-5', parentName: '방규리', archetype: 'steady', monthsEnrolled: 3, monthlyFee: 150_000 },
   { name: '탁이든', classId: 'class-5', parentName: '탁영주', archetype: 'ghost', monthsEnrolled: 3, monthlyFee: 150_000, memo: '체험 후 등록했으나 2주째 미출석' },
-  { name: '설가온', classId: 'class-5', parentName: '설민아', archetype: 'fading', monthsEnrolled: 4, monthlyFee: 150_000, memo: '셔틀버스 노선 미포함 지역' },
-  { name: '명현서', classId: 'class-6', parentName: '명수철', archetype: 'wobbly', monthsEnrolled: 6, monthlyFee: 400_000 },
-  { name: '천유안', classId: 'class-7', parentName: '천서윤', archetype: 'wobbly', monthsEnrolled: 4, monthlyFee: 220_000 },
-  { name: '봉재하', classId: 'class-8', parentName: '봉세영', archetype: 'ghost', monthsEnrolled: 5, monthlyFee: 200_000, memo: '주말 리그 출전 기회 불만 제기' },
-  { name: '단시우', classId: 'class-8', parentName: '단재훈', archetype: 'fading', monthsEnrolled: 4, monthlyFee: 200_000, memo: '학부모 단톡방 이탈' },
-  { name: '나윤재', classId: 'class-9', parentName: '나경호', archetype: 'fading', monthsEnrolled: 5, monthlyFee: 280_000, memo: '수영 강습으로 요일 변경 요청' },
-  { name: '피정후', classId: 'class-10', parentName: '피상현', archetype: 'ghost', monthsEnrolled: 6, monthlyFee: 360_000, memo: '전술 수업 난이도 부담 호소' },
-  { name: '옥서진', classId: 'class-10', parentName: '옥진하', archetype: 'injured', monthsEnrolled: 9, monthlyFee: 360_000, memo: '무릎 슬개건염 — 4주 휴식 권고' },
+  { name: '설가온', classId: 'class-5', parentName: '설민아', archetype: 'steady', monthsEnrolled: 4, monthlyFee: 150_000 },
+  { name: '명현서', classId: 'class-6', parentName: '명수철', archetype: 'steady', monthsEnrolled: 6, monthlyFee: 400_000 },
+  { name: '천유안', classId: 'class-7', parentName: '천서윤', archetype: 'steady', monthsEnrolled: 4, monthlyFee: 220_000 },
+  { name: '봉재하', classId: 'class-8', parentName: '봉세영', archetype: 'steady', monthsEnrolled: 5, monthlyFee: 200_000 },
+  { name: '단시우', classId: 'class-8', parentName: '단재훈', archetype: 'steady', monthsEnrolled: 4, monthlyFee: 200_000 },
+  { name: '나윤재', classId: 'class-9', parentName: '나경호', archetype: 'steady', monthsEnrolled: 5, monthlyFee: 280_000, memo: '수영 강습으로 요일 변경 요청' },
+  { name: '피정후', classId: 'class-10', parentName: '피상현', archetype: 'steady', monthsEnrolled: 6, monthlyFee: 360_000 },
+  { name: '옥서진', classId: 'class-10', parentName: '옥진하', archetype: 'injured', monthsEnrolled: 4, monthlyFee: 360_000, memo: '무릎 슬개건염 — 4주 휴식 권고' },
   { name: '변하람', classId: 'class-11', parentName: '변도경', archetype: 'fading', monthsEnrolled: 7, monthlyFee: 450_000, memo: '고입 실기 일정으로 개인 레슨 전환 검토' },
-  { name: '두리안', classId: 'class-12', parentName: '두정민', archetype: 'wobbly', monthsEnrolled: 3, monthlyFee: 180_000 },
+  { name: '두리안', classId: 'class-12', parentName: '두정민', archetype: 'steady', monthsEnrolled: 3, monthlyFee: 180_000 },
 ];
 
 const SURNAMES = ['김', '이', '박', '최', '정', '강', '조', '윤', '장', '임', '한', '오', '서', '신', '권', '황', '안', '송', '전', '홍', '유', '고', '문', '양', '손', '배', '백', '허', '남', '심', '노', '하', '곽', '성', '주', '구', '진', '지', '엄', '채'];
@@ -224,8 +228,11 @@ const GIVEN_NAMES = ['하준', '서준', '도윤', '시우', '은우', '지호',
 const PARENT_GIVEN = ['민석', '예린', '성호', '정민', '다혜', '우진', '소영', '현수', '가영', '준영', '태윤', '혜진', '민서', '유정', '현우', '지아', '채원', '동혁', '은별', '수민', '상우', '선아', '기훈', '보경', '민호', '아름', '지환', '유경', '승철', '소라', '건희', '경민', '보람', '현빈', '지우', '수진', '정한', '혜원', '지훈', '나연'];
 
 /**
- * Fills each class up to its headcount. Archetypes follow a fixed distribution
- * so the at-risk population stays realistic (~15–20%) rather than random.
+ * Fills each class up to its headcount.
+ *
+ * The generated remainder is intentionally healthy — only `featuredSeeds` may
+ * be at risk, which is what keeps the alert queue at ten readable rows. `wobbly`
+ * students still land in the 관찰 band, so the score column isn't all green.
  */
 function buildRoster(): StudentSeed[] {
   const rand = makeRandom(777_2026);
@@ -234,10 +241,9 @@ function buildRoster(): StudentSeed[] {
 
   // Weighted archetype pool for the generated remainder.
   const pool: Archetype[] = [
-    ...Array<Archetype>(9).fill('solid'),
-    ...Array<Archetype>(7).fill('steady'),
-    ...Array<Archetype>(3).fill('wobbly'),
-    'fading',
+    ...Array<Archetype>(10).fill('solid'),
+    ...Array<Archetype>(8).fill('steady'),
+    ...Array<Archetype>(2).fill('wobbly'),
   ];
 
   for (const cls of classSeeds) {
@@ -458,9 +464,11 @@ function generateHistory() {
     const lastAttendanceDate = lastPresent ?? enrolledAt;
 
     // Parent contact cadence degrades for the archetypes we want flagged —
-    // "the coach stopped reporting" is itself a churn signal.
+    // "the coach stopped reporting" is itself a churn signal. Injured students
+    // count too: a child sitting out is exactly the one who quietly drifts off
+    // when nobody calls home.
     const contactGapDays =
-      seed.archetype === 'ghost' || seed.archetype === 'fading'
+      seed.archetype === 'ghost' || seed.archetype === 'fading' || seed.archetype === 'injured'
         ? 18 + Math.floor(rand() * 22)
         : 2 + Math.floor(rand() * 12);
 

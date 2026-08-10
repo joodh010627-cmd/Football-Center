@@ -80,7 +80,7 @@ export function SessionBuilderScreen({ cls, onStartSession, onBack }: SessionBui
   return (
     <div>
       {/* --- Header ---------------------------------------------------- */}
-      <header className="border-b border-hairline bg-canvas px-5 pb-5 pt-6 sm:px-8 lg:px-10">
+      <header className="border-b border-hairline bg-canvas px-5 pb-5 pt-6 sm:px-8 lg:px-12">
         <button
           type="button"
           onClick={onBack}
@@ -91,7 +91,7 @@ export function SessionBuilderScreen({ cls, onStartSession, onBack }: SessionBui
 
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="text-[24px] font-semibold leading-[1.25] tracking-[-0.4px] text-ink lg:text-[30px]">
+            <h1 className="text-[25px] font-semibold leading-[1.2] tracking-tightest text-ink lg:text-[32px]">
               {cls.title}
             </h1>
             <p className="mt-1 text-[13px] text-slate lg:text-sm">
@@ -122,11 +122,11 @@ export function SessionBuilderScreen({ cls, onStartSession, onBack }: SessionBui
       </header>
 
       {/* --- Slots + library ------------------------------------------- */}
-      <div className="px-5 py-6 sm:px-8 lg:px-10">
+      <div className="px-5 py-6 sm:px-8 lg:px-12">
         <div className="grid gap-6 lg:grid-cols-[380px_1fr] lg:items-start">
           {/* Slots */}
           <div className="space-y-2 lg:sticky lg:top-6">
-            <h2 className="text-[11px] font-semibold uppercase tracking-[1px] text-stone">
+            <h2 className="eyebrow-ink">
               오늘의 세션 구성
             </h2>
 
@@ -175,7 +175,7 @@ export function SessionBuilderScreen({ cls, onStartSession, onBack }: SessionBui
 
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center gap-1.5">
-                        <span className={cn('text-[11px] font-semibold uppercase tracking-[1px]', meta.accent)}>
+                        <span className={cn('text-[11px] font-semibold uppercase tracking-label', meta.accent)}>
                           {meta.label}
                         </span>
                         <span className="text-[11px] font-medium text-stone">
@@ -262,7 +262,7 @@ export function SessionBuilderScreen({ cls, onStartSession, onBack }: SessionBui
       </div>
 
       {/* --- Mobile CTA ------------------------------------------------ */}
-      <div className="sticky bottom-16 z-30 border-t border-hairline bg-canvas px-5 py-3 shadow-[0_-4px_12px_rgba(15,15,15,0.06)] sm:px-8 lg:hidden">
+      <div className="sticky bottom-14 z-30 border-t border-hairline bg-canvas px-5 py-3 shadow-[0_-4px_12px_rgba(14,19,16,0.06)] sm:px-8 lg:hidden">
         <button
           type="button"
           disabled={filledCount === 0}

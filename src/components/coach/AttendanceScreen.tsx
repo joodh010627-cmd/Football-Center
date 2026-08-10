@@ -113,7 +113,7 @@ export function AttendanceScreen({ cls, onDone, onBack }: AttendanceScreenProps)
 
   return (
     <div>
-      <header className="border-b border-hairline bg-canvas px-5 pb-4 pt-6 sm:px-8 lg:px-10">
+      <header className="border-b border-hairline bg-canvas px-5 pb-4 pt-6 sm:px-8 lg:px-12">
         <button
           type="button"
           onClick={onBack}
@@ -122,7 +122,7 @@ export function AttendanceScreen({ cls, onDone, onBack }: AttendanceScreenProps)
           ← 훈련 설계
         </button>
 
-        <h1 className="text-[24px] font-semibold leading-[1.25] tracking-[-0.4px] text-ink lg:text-[30px]">
+        <h1 className="text-[25px] font-semibold leading-[1.2] tracking-tightest text-ink lg:text-[32px]">
           출결 &amp; 행동 기록
         </h1>
         <p className="mt-1 text-[13px] text-slate lg:text-sm">
@@ -133,7 +133,7 @@ export function AttendanceScreen({ cls, onDone, onBack }: AttendanceScreenProps)
           <span className="flex-1 rounded-md bg-tint-mint px-2 py-2 text-center text-[13px] font-semibold text-brand-green">
             출석 {counts.present}
           </span>
-          <span className="flex-1 rounded-md bg-[#fde2e2] px-2 py-2 text-center text-[13px] font-semibold text-error">
+          <span className="flex-1 rounded-md bg-tint-alert px-2 py-2 text-center text-[13px] font-semibold text-error">
             결석 {counts.absent}
           </span>
           <span className="flex-1 rounded-md bg-tint-peach px-2 py-2 text-center text-[13px] font-semibold text-brand-orange-deep">
@@ -142,7 +142,7 @@ export function AttendanceScreen({ cls, onDone, onBack }: AttendanceScreenProps)
         </div>
       </header>
 
-      <div className="px-5 py-6 sm:px-8 lg:px-10">
+      <div className="px-5 py-6 sm:px-8 lg:px-12">
         <div className="grid gap-6 lg:grid-cols-[1fr_380px] lg:items-start">
           {/* Roster */}
           <div>
@@ -229,7 +229,7 @@ export function AttendanceScreen({ cls, onDone, onBack }: AttendanceScreenProps)
       </div>
 
       {/* Mobile submit */}
-      <div className="sticky bottom-16 z-30 border-t border-hairline bg-canvas px-5 py-3 shadow-[0_-4px_12px_rgba(15,15,15,0.06)] sm:px-8 lg:hidden">
+      <div className="sticky bottom-14 z-30 border-t border-hairline bg-canvas px-5 py-3 shadow-[0_-4px_12px_rgba(14,19,16,0.06)] sm:px-8 lg:hidden">
         {submitBar}
       </div>
 

@@ -51,8 +51,8 @@ export const ATTENDANCE_STYLE: Record<
     text: 'text-brand-green',
   },
   absent: {
-    chip: 'bg-[#fde2e2] text-error',
-    ring: 'border-error bg-[#fde2e2]',
+    chip: 'bg-tint-alert text-error',
+    ring: 'border-error bg-tint-alert',
     dot: 'bg-error',
     text: 'text-error',
   },

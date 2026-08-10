@@ -5,41 +5,52 @@
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
+    /* Reserve the scrollbar gutter permanently. Without it, switching between a
+       short screen (오늘) and a tall one (내 기록) toggles the scrollbar and the
+       whole layout jumps sideways by the scrollbar width. */
+    scrollbar-gutter: stable;
   }
 
   body {
     @apply bg-surface-soft text-ink font-sans antialiased;
     margin: 0;
+    overflow-x: hidden;
   }
 
   /* Coach UI is touch-first: kill the tap flash, keep taps snappy. */
-  button {
+  button,
+  a {
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
+  }
+
+  ::selection {
+    @apply bg-primary text-white;
   }
 }
 
 @layer components {
+  /* Pill geometry on every action — carried over from the public site. */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-md bg-primary px-[18px] py-[10px]
-           text-sm font-medium text-white transition-colors duration-150
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-[10px]
+           text-sm font-semibold text-white transition-all duration-200 ease-smooth
            hover:bg-primary-pressed active:bg-primary-deep
            disabled:bg-hairline disabled:text-muted;
   }
 
   .btn-dark {
-    @apply inline-flex items-center justify-center gap-2 rounded-md bg-ink-deep px-[18px] py-[10px]
-           text-sm font-medium text-white transition-colors duration-150 hover:bg-charcoal;
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-ink-deep px-5 py-[10px]
+           text-sm font-semibold text-white transition-all duration-200 ease-smooth hover:bg-primary;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-md border border-hairline-strong
-           bg-transparent px-[18px] py-[10px] text-sm font-medium text-ink
-           transition-colors duration-150 hover:bg-surface;
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-hairline-strong
+           bg-transparent px-5 py-[10px] text-sm font-semibold text-ink
+           transition-all duration-200 ease-smooth hover:border-primary hover:text-primary;
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-sm px-3 py-2 text-sm font-medium
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-3 py-2 text-sm font-medium
            text-ink transition-colors duration-150 hover:bg-surface;
   }
 
@@ -49,23 +60,61 @@
 
   .pill-tab {
     @apply rounded-full border border-hairline px-4 py-2 text-sm font-medium text-steel
-           transition-colors duration-150;
+           transition-colors duration-150 hover:border-hairline-strong hover:text-ink;
   }
 
   .pill-tab-active {
-    @apply border-ink-deep bg-ink-deep text-white;
+    @apply border-primary bg-primary text-white hover:border-primary hover:text-white;
   }
 
+  /* Wide-tracked uppercase label — the site's section eyebrow. */
   .micro-label {
-    @apply text-[11px] font-semibold uppercase tracking-[1px];
+    @apply text-[11px] font-semibold uppercase tracking-label;
+  }
+
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-label text-gold;
+  }
+
+  .eyebrow-ink {
+    @apply text-[11px] font-semibold uppercase tracking-label text-primary;
+  }
+
+  /* Section titles run tight and large, like the public site's headings. */
+  .h-section {
+    @apply font-semibold leading-[1.15] tracking-tightest text-ink;
+    font-size: clamp(1.4rem, 2.6vw, 1.85rem);
   }
 }
 
-/* Hide scrollbars on horizontal chip rails without losing scroll. */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
+@layer utilities {
+  /* Hide scrollbars on horizontal chip rails without losing scroll. */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Fine grain over the flat greens so large fills don't read as plastic. */
+  .grain::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.3;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  }
 }
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

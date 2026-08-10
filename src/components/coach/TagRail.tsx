@@ -31,7 +31,7 @@ export function TagRail({ selected, onToggle }: TagRailProps) {
 
         return (
           <div key={dimension}>
-            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[1px] text-stone">
+            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-label text-stone">
               {TAG_DIMENSION_LABEL[dimension]}
             </p>
             <div className="no-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5">

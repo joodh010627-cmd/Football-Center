@@ -31,31 +31,33 @@ export function PortfolioScreen() {
 
   return (
     <div>
-      <header className="border-b border-hairline bg-canvas px-5 pb-6 pt-6 sm:px-8 lg:px-10">
-        <div className="flex items-center gap-3">
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-tint-lavender text-[19px] font-semibold text-brand-purple-800">
+      <header className="border-b border-hairline bg-canvas px-5 pb-7 pt-8 sm:px-8 lg:px-12">
+        <p className="eyebrow-ink">Coach portfolio</p>
+
+        <div className="mt-3.5 flex items-center gap-3.5">
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-primary/20 text-[18px] font-bold text-primary">
             {coach?.name.slice(-2)}
           </span>
           <div className="min-w-0">
-            <h1 className="text-[24px] font-semibold leading-[1.25] tracking-[-0.4px] text-ink lg:text-[30px]">
+            <h1 className="text-[25px] font-semibold leading-[1.2] tracking-tightest text-ink lg:text-[32px]">
               {coach?.name} 코치
             </h1>
-            <p className="text-[13px] text-slate lg:text-sm">
+            <p className="mt-1 text-[13px] text-slate lg:text-sm">
               담당 {myClasses.length}개 클래스 · 원생 {studentCount}명
             </p>
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-1.5">
+        <div className="mt-5 flex flex-wrap gap-1.5">
           {coach?.certifications.map((c) => (
-            <Badge key={c} tone="sky">
+            <Badge key={c} tone="sky" pill>
               {c}
             </Badge>
           ))}
         </div>
       </header>
 
-      <div className="space-y-6 px-5 py-6 sm:px-8 lg:px-10 lg:py-8">
+      <div className="space-y-7 px-5 py-7 sm:px-8 lg:px-12 lg:py-10">
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <StatTile label="설계한 세션" value={portfolio.sessionCount} unit="회" icon={Layers} tint="lavender" />
           <StatTile label="누적 기록" value={totalLogs} unit="건" icon={BarChart3} tint="mint" />
@@ -90,7 +92,7 @@ export function PortfolioScreen() {
               유지됩니다.
             </p>
 
-            <h3 className="mt-5 mb-2.5 text-[11px] font-semibold uppercase tracking-[1px] text-stone">
+            <h3 className="mt-5 mb-2.5 eyebrow-ink">
               카테고리 구성
             </h3>
             <div className="space-y-3">
@@ -115,7 +117,7 @@ export function PortfolioScreen() {
           </section>
 
           <section>
-            <h2 className="mb-2.5 text-[11px] font-semibold uppercase tracking-[1px] text-stone">
+            <h2 className="mb-2.5 eyebrow-ink">
               자주 사용한 블록
             </h2>
             {portfolio.blockUsage.length > 0 ? (

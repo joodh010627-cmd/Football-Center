@@ -71,7 +71,7 @@ export function StudentDetailModal({ student, onClose }: StudentDetailModalProps
           <section
             className={cn(
               'rounded-lg p-4',
-              signal.score >= 55 ? 'bg-[#fef4f4]' : 'bg-surface-soft',
+              signal.score >= 55 ? 'bg-tint-alert-soft' : 'bg-surface-soft',
             )}
           >
             <div className="flex items-center justify-between gap-3">
@@ -215,7 +215,7 @@ function Metric({
 }) {
   return (
     <div className="rounded-lg border border-hairline bg-canvas px-3 py-3">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.5px] text-steel">{label}</p>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-steel">{label}</p>
       <p
         className={cn(
           'mt-1 text-[18px] font-semibold tracking-[-0.3px]',

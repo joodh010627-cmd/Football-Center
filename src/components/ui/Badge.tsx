@@ -10,7 +10,7 @@ const TONES: Record<Tone, string> = {
   sky: 'bg-tint-sky text-link-pressed',
   rose: 'bg-tint-rose text-brand-pink-deep',
   neutral: 'bg-tint-gray text-slate',
-  error: 'bg-[#fde2e2] text-error',
+  error: 'bg-tint-alert text-error',
 };
 
 interface BadgeProps {

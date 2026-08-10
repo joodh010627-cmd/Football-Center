@@ -65,7 +65,7 @@ export function ClassPerformanceTable() {
     <section className="overflow-hidden rounded-lg border border-hairline bg-canvas">
       <header className="flex flex-wrap items-end justify-between gap-3 border-b border-hairline px-6 py-5">
         <div>
-          <h2 className="text-[22px] font-semibold leading-[1.3] tracking-[-0.3px] text-ink">
+          <h2 className="text-[17px] font-semibold tracking-[-0.02em] text-ink">
             클래스별 리텐션 &amp; 마진
           </h2>
           <p className="mt-1 text-sm text-slate">
@@ -73,7 +73,7 @@ export function ClassPerformanceTable() {
           </p>
         </div>
         <div className="text-right">
-          <p className="text-[11px] font-semibold uppercase tracking-[1px] text-steel">
+          <p className="text-[11px] font-semibold uppercase tracking-label text-steel">
             전체 공헌이익
           </p>
           <p className="text-[24px] font-semibold tracking-[-0.5px] text-ink">
@@ -90,7 +90,7 @@ export function ClassPerformanceTable() {
                 <th
                   key={col.label}
                   className={cn(
-                    'px-5 py-3 text-[12px] font-semibold uppercase tracking-[0.5px] text-steel',
+                    'px-5 py-3 text-[12px] font-semibold uppercase tracking-wide text-steel',
                     col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left',
                   )}
                 >
@@ -150,7 +150,7 @@ function PerformanceRow({ row }: { row: ClassPerformance }) {
         <div className="flex items-center gap-2">
           <span className="font-semibold text-ink">{row.title}</span>
           {row.atRiskCount > 0 && (
-            <span className="rounded-sm bg-[#fde2e2] px-1.5 py-0.5 text-[11px] font-semibold text-error">
+            <span className="rounded-sm bg-tint-alert px-1.5 py-0.5 text-[11px] font-semibold text-error">
               위험 {row.atRiskCount}
             </span>
           )}
