@@ -12,7 +12,7 @@ import { useMemo, useState } from 'react';
 import { Check, Play, Sparkles, Trash2, X } from 'lucide-react';
 import type { Class, TrainingBlock, TrainingCategory } from '@/types';
 import { useApp } from '@/store/AppContext';
-import { TODAY } from '@/data/mockData';
+import { TODAY } from '@/data/dates';
 import { blocksByCategory } from '@/data/selectors';
 import { formatDateKo } from '@/lib/format';
 import { cn } from '@/lib/cn';

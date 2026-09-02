@@ -2,17 +2,17 @@ import type { ReactNode } from 'react';
 import { AlertTriangle, CalendarDays, ChevronRight, MapPin, Users } from 'lucide-react';
 import type { Class } from '@/types';
 import { useApp } from '@/store/AppContext';
-import { TODAY } from '@/data/mockData';
+import { TODAY } from '@/data/dates';
 import { classesForCoach, daysUntilNextSession, studentsInClass } from '@/data/selectors';
 import { formatDateKo, formatSchedule } from '@/lib/format';
 import { cn } from '@/lib/cn';
 
 export function TodayScreen({ onPickClass }: { onPickClass: (cls: Class) => void }) {
   const { state, getCoach } = useApp();
-  const coach = getCoach(state.currentCoachId);
+  const coach = getCoach(state.currentCoachId ?? '');
 
   // Soonest-first. A class meeting today sorts to the front with offset 0.
-  const myClasses = classesForCoach(state.classes, state.currentCoachId)
+  const myClasses = classesForCoach(state.classes, state.currentCoachId ?? '')
     .map((cls) => ({ cls, inDays: daysUntilNextSession(cls) ?? 99 }))
     .sort((a, b) => a.inDays - b.inDays);
 

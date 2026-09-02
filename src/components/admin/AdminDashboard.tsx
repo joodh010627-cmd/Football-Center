@@ -23,9 +23,10 @@ import {
   UserCheck,
   Users,
 } from 'lucide-react';
-import type { Role, Student } from '@/types';
+import type { Student } from '@/types';
 import { useApp } from '@/store/AppContext';
-import { TODAY } from '@/data/mockData';
+import { useSession } from '@/store/AuthContext';
+import { TODAY } from '@/data/dates';
 import { buildAlertQueue, buildClassPerformance, buildKpis } from '@/data/selectors';
 import { formatDateKo, formatPercent, formatWon, formatWonCompact } from '@/lib/format';
 import { cn } from '@/lib/cn';
@@ -44,14 +45,9 @@ type View = 'overview' | 'alerts' | 'classes' | 'roster' | 'ops';
 const MARGIN_WARNING = 0.25;
 const RETENTION_TARGET = 0.8;
 
-export function AdminDashboard({
-  role,
-  onRoleChange,
-}: {
-  role: Role;
-  onRoleChange: (role: Role) => void;
-}) {
-  const { slice, state, churnSignals } = useApp();
+export function AdminDashboard() {
+  const { slice, state, churnSignals, getFee } = useApp();
+  const session = useSession();
   const [view, setView] = useState<View>('overview');
   const [inspected, setInspected] = useState<Student | null>(null);
 
@@ -60,7 +56,7 @@ export function AdminDashboard({
   const performance = useMemo(() => buildClassPerformance(slice), [slice]);
 
   const totalStudents = state.students.length;
-  const revenueAtRisk = queue.reduce((sum, { student }) => sum + student.monthlyFee, 0);
+  const revenueAtRisk = queue.reduce((sum, { student }) => sum + getFee(student.id), 0);
 
   const go = (next: View) => {
     setView(next);
@@ -77,10 +73,7 @@ export function AdminDashboard({
 
   return (
     <AppShell
-      role={role}
-      onRoleChange={onRoleChange}
-      roleLabel="대표 대시보드"
-      identity={{ name: 'FC GROWTH 본원', meta: `${formatDateKo(TODAY)} 기준` }}
+      identity={{ name: session.membership.displayName, meta: `${formatDateKo(TODAY)} 기준` }}
       nav={nav}
       active={view}
       onSelect={(key) => go(key as View)}
@@ -172,6 +165,8 @@ function Overview({
   onGo: (v: View) => void;
   onInspect: (s: Student) => void;
 }) {
+  const { getFee } = useApp();
+
   const watchlist = performance
     .filter((p) => p.marginRate < MARGIN_WARNING || p.retentionRate < RETENTION_TARGET)
     .sort((a, b) => a.marginRate - b.marginRate)
@@ -285,7 +280,7 @@ function Overview({
                     </span>
                   </span>
                   <span className="shrink-0 text-right text-[13px] font-semibold tabular-nums text-charcoal">
-                    월 {(student.monthlyFee / 10_000).toFixed(0)}만
+                    월 {(getFee(student.id) / 10_000).toFixed(0)}만
                   </span>
                 </li>
               ))}

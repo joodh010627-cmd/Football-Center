@@ -1,27 +1,131 @@
 /**
- * Mock relational dataset — 원생 100명 규모의 중형 축구교실.
+ * Demo dataset — 원생 100명 규모의 중형 축구교실.
  *
  * Classes, coaches and blocks are hand-authored. The roster is part
  * hand-authored (the students who carry a story) and part generated from name
  * pools, and the ~8 weeks of attendance history behind everyone comes from a
- * seeded PRNG. Same seed, same dataset, every load — so churn scores, margins
+ * seeded PRNG. Same seed, same dataset, every run — so churn scores, margins
  * and retention always agree with each other while demoing.
+ *
+ * This used to be `src/data/mockData.ts`, loaded straight into the reducer.
+ * It now feeds `scripts/seed.ts`, which writes it into a real Supabase project.
+ * The distinction matters: the demo is no longer a special code path in the
+ * app, it is just an academy that happens to be fictional. Whatever the sales
+ * demo exercises is therefore the same code a paying customer runs.
+ *
+ * The shapes below are deliberately *not* imported from `@/types`. Seed rows
+ * are pre-tenant (no `academyId` — the seeder assigns it) and pre-split (the
+ * owner-only figures sit inline here, and the seeder distributes them to
+ * `student_billing`, `class_finances` and `coach_evaluations`). Sharing the app
+ * types would force this file to lie about one or the other.
  */
 
-import type {
+type ID = string;
+type ISODate = string;
+type AgeGroup = 'U7' | 'U9' | 'U11' | 'U13' | 'U15';
+type StudentStatus = 'active' | 'at_risk' | 'inactive';
+type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+interface Coach {
+  id: ID;
+  name: string;
+  /** Goes to `coach_evaluations` — owner-only. */
+  satisfactionScore: number;
+  certifications: string[];
+}
+
+interface Class {
+  id: ID;
+  title: string;
+  coachId: ID;
+  schedule: { days: Weekday[]; startTime: string; durationMin: number };
+  ageGroup: AgeGroup;
+  capacity: number;
+  venue: string;
+  /** Derived from the roster's tuition; kept here so the seed stays readable. */
+  monthlyRevenue: number;
+  /** Both go to `class_finances` — owner-only. */
+  monthlyCost: number;
+  retentionRate: number;
+}
+
+interface Student {
+  id: ID;
+  name: string;
+  ageGroup: AgeGroup;
+  status: StudentStatus;
+  lastAttendanceDate: ISODate;
+  churnScore: number;
+  classId: ID;
+  parentName: string;
+  parentPhone: string;
+  enrolledAt: ISODate;
+  /** Goes to `student_billing` — owner-only. */
+  monthlyFee: number;
+  lastParentContactDate: ISODate | null;
+  memo?: string;
+}
+
+interface BehaviorTag {
+  id: ID;
+  label: string;
+  dimension: 'skill' | 'attitude' | 'teamwork' | 'physical' | 'caution';
+  polarity: 'positive' | 'watch';
+}
+
+interface TrainingBlock {
+  id: ID;
+  title: string;
+  category: 'warmup' | 'skill' | 'game';
+  durationMin: number;
+  description: string;
+  ageGroups: AgeGroup[];
+  equipment: string[];
+  usageCount: number;
+  isCoreCurriculum: boolean;
+}
+
+interface SessionPlan {
+  id: ID;
+  classId: ID;
+  coachId: ID;
+  date: ISODate;
+  slots: { warmup: ID | null; skill: ID | null; game: ID | null };
+  createdAt: string;
+  status: 'draft' | 'ready' | 'completed';
+}
+
+interface AttendanceLog {
+  id: ID;
+  studentId: ID;
+  classId: ID;
+  date: ISODate;
+  status: 'present' | 'absent' | 'injured';
+  tags: string[];
+  coachComment: string;
+  sessionPlanId?: ID;
+  coachId?: ID;
+  loggedAt?: string;
+}
+
+interface CsAction {
+  id: ID;
+  studentId: ID;
+  actedAt: string;
+  actorId: ID;
+  note: string;
+}
+
+export type {
   AttendanceLog,
   BehaviorTag,
   Class,
   Coach,
   CsAction,
-  ID,
-  ISODate,
   SessionPlan,
   Student,
-  StudentStatus,
   TrainingBlock,
-  Weekday,
-} from '@/types';
+};
 
 // ---------------------------------------------------------------------------
 // Date helpers — everything is relative to "now" so the demo never goes stale.

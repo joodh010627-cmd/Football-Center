@@ -8,9 +8,9 @@
 
 import { useState } from 'react';
 import { CalendarCheck, ClipboardList, Home, User } from 'lucide-react';
-import type { Class, Role } from '@/types';
+import type { Class } from '@/types';
 import { useApp } from '@/store/AppContext';
-import { TODAY } from '@/data/mockData';
+import { TODAY } from '@/data/dates';
 import { classesForCoach, studentsInClass } from '@/data/selectors';
 import { AppShell, type ShellNavItem } from '@/components/AppShell';
 import { TodayScreen } from './TodayScreen';
@@ -27,21 +27,20 @@ const NAV: Array<Omit<ShellNavItem, 'disabled'> & { key: Screen }> = [
   { key: 'portfolio', label: '내 기록', icon: User },
 ];
 
-export function CoachApp({
-  role,
-  onRoleChange,
-}: {
-  role: Role;
-  onRoleChange: (role: Role) => void;
-}) {
+export function CoachApp() {
   const { state, dispatch, getCoach } = useApp();
   const [screen, setScreen] = useState<Screen>('today');
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
 
-  const coach = getCoach(state.currentCoachId);
+  // Never null in a coach session — the membership row carries the coach id.
+  // The type allows null only because owners have no coach row.
+  const coachId = state.currentCoachId ?? '';
+  const coach = getCoach(coachId);
   const selectedClass = state.classes.find((c) => c.id === selectedClassId) ?? null;
 
-  const myClasses = classesForCoach(state.classes, state.currentCoachId);
+  // RLS has already narrowed `state.classes` to this coach's classes; filtering
+  // again costs nothing and keeps the screen honest if that ever changes.
+  const myClasses = classesForCoach(state.classes, coachId);
   const myStudents = myClasses.reduce(
     (sum, c) => sum + studentsInClass(state.students, c.id).length,
     0,
@@ -119,9 +118,6 @@ export function CoachApp({
 
   return (
     <AppShell
-      role={role}
-      onRoleChange={onRoleChange}
-      roleLabel="코치 앱"
       identity={{
         name: `${coach?.name ?? ''} 코치`,
         meta: `담당 ${myClasses.length}개 반 · 원생 ${myStudents}명`,

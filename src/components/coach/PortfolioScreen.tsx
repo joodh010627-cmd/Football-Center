@@ -17,10 +17,10 @@ import { CATEGORY_META } from './TrainingBlockCard';
 
 export function PortfolioScreen() {
   const { state, slice, getCoach } = useApp();
-  const coach = getCoach(state.currentCoachId);
-  const portfolio = buildCoachPortfolio(slice, state.currentCoachId);
+  const coach = getCoach(state.currentCoachId ?? '');
+  const portfolio = buildCoachPortfolio(slice, state.currentCoachId ?? '');
 
-  const myClasses = classesForCoach(state.classes, state.currentCoachId);
+  const myClasses = classesForCoach(state.classes, state.currentCoachId ?? '');
   const studentCount = myClasses.reduce(
     (sum, c) => sum + studentsInClass(state.students, c.id).length,
     0,

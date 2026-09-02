@@ -10,7 +10,7 @@ import { useMemo, useState } from 'react';
 import { Users } from 'lucide-react';
 import type { Student, StudentStatus } from '@/types';
 import { useApp } from '@/store/AppContext';
-import { STUDENT_STATUS_LABEL } from '@/data/mockData';
+import { STUDENT_STATUS_LABEL } from '@/data/dates';
 import { attendanceRateForStudent } from '@/data/selectors';
 import { formatDateShort, formatPercent, formatWonCompact } from '@/lib/format';
 import { cn } from '@/lib/cn';
@@ -31,7 +31,7 @@ const STATUS_STYLE: Record<StudentStatus, string> = {
 const PAGE_SIZE = 15;
 
 export function RosterPanel({ onInspect }: { onInspect: (s: Student) => void }) {
-  const { state, getClass } = useApp();
+  const { state, getClass, getFee } = useApp();
   const [status, setStatus] = useState<StudentStatus | 'all'>('all');
   const [classId, setClassId] = useState<string>('all');
   const [limit, setLimit] = useState(PAGE_SIZE);
@@ -145,7 +145,7 @@ export function RosterPanel({ onInspect }: { onInspect: (s: Student) => void }) 
                   {formatDateShort(s.lastAttendanceDate)}
                 </td>
                 <td className="px-5 py-3 text-right tabular-nums text-charcoal">
-                  {formatWonCompact(s.monthlyFee)}원
+                  {formatWonCompact(getFee(s.id))}원
                 </td>
               </tr>
             ))}

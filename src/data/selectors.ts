@@ -9,6 +9,7 @@ import type {
   AttendanceLog,
   ChurnSignal,
   Class,
+  ClassFinance,
   ClassPerformance,
   Coach,
   DashboardKpis,
@@ -19,9 +20,28 @@ import type {
   TrainingBlock,
 } from '@/types';
 import { AT_RISK_THRESHOLD } from './churn';
-import { TODAY, diffDays } from './mockData';
+import { TODAY, diffDays } from './dates';
 
-export interface DataSlice {
+/**
+ * Owner-only figures, keyed by the id they belong to.
+ *
+ * These are maps rather than fields on the entities because the database
+ * returns them from separate, owner-only tables. In a coach session every one
+ * of these is `{}` — not because the UI hid them, but because the query came
+ * back empty. Anything reading them must therefore tolerate a miss, which is
+ * why `buildClassPerformance` and `buildKpis` are the only callers: both are
+ * owner-side aggregates that a coach never renders.
+ */
+export interface OwnerFinancials {
+  /** studentId → monthly tuition, KRW. */
+  billing: Record<ID, number>;
+  /** classId → cost & retention. */
+  finances: Record<ID, ClassFinance>;
+  /** coachId → the owner's 0–5 rating of that coach. */
+  evaluations: Record<ID, number>;
+}
+
+export interface DataSlice extends OwnerFinancials {
   students: Student[];
   classes: Class[];
   coaches: Coach[];
@@ -30,6 +50,10 @@ export interface DataSlice {
   sessionPlans: SessionPlan[];
   resolvedStudentIds: ID[];
 }
+
+/** Tuition for one student, or 0 when this session isn't allowed to see it. */
+export const feeFor = (fin: OwnerFinancials, studentId: ID): number =>
+  fin.billing[studentId] ?? 0;
 
 // ---------------------------------------------------------------------------
 // Lookups
@@ -137,7 +161,11 @@ export function buildClassPerformance(slice: DataSlice, asOf: ISODate = TODAY): 
   return slice.classes.map((cls) => {
     const roster = studentsInClass(slice.students, cls.id);
     const coach = coachMap.get(cls.coachId);
-    const contributionMargin = cls.monthlyRevenue - cls.monthlyCost;
+
+    const monthlyRevenue = roster.reduce((sum, s) => sum + feeFor(slice, s.id), 0);
+    const finance = slice.finances[cls.id];
+    const monthlyCost = finance?.monthlyCost ?? 0;
+    const contributionMargin = monthlyRevenue - monthlyCost;
 
     return {
       classId: cls.id,
@@ -145,13 +173,13 @@ export function buildClassPerformance(slice: DataSlice, asOf: ISODate = TODAY): 
       coachName: coach?.name ?? '미배정',
       headcount: roster.filter((s) => s.status !== 'inactive').length,
       capacity: cls.capacity,
-      retentionRate: cls.retentionRate,
-      monthlyRevenue: cls.monthlyRevenue,
-      monthlyCost: cls.monthlyCost,
+      retentionRate: finance?.retentionRate ?? 0,
+      monthlyRevenue,
+      monthlyCost,
       contributionMargin,
-      marginRate: cls.monthlyRevenue > 0 ? contributionMargin / cls.monthlyRevenue : 0,
+      marginRate: monthlyRevenue > 0 ? contributionMargin / monthlyRevenue : 0,
       attendanceRate: attendanceRateForClass(slice.attendanceLogs, cls.id, asOf),
-      coachSatisfaction: coach?.satisfactionScore ?? 0,
+      coachSatisfaction: slice.evaluations[cls.coachId] ?? 0,
       atRiskCount: roster.filter((s) => s.status === 'at_risk').length,
     };
   });
@@ -162,8 +190,10 @@ export function buildKpis(slice: DataSlice, asOf: ISODate = TODAY): DashboardKpi
   const atRisk = slice.students.filter((s) => s.status === 'at_risk');
   const perf = buildClassPerformance(slice, asOf);
 
-  const monthlyRevenue = slice.classes.reduce((sum, c) => sum + c.monthlyRevenue, 0);
-  const monthlyCost = slice.classes.reduce((sum, c) => sum + c.monthlyCost, 0);
+  // Rolled up from the per-class figures rather than re-summed from the raw
+  // tables, so the KPI strip and the class table can never disagree.
+  const monthlyRevenue = perf.reduce((sum, p) => sum + p.monthlyRevenue, 0);
+  const monthlyCost = perf.reduce((sum, p) => sum + p.monthlyCost, 0);
 
   const avg = (nums: number[]) => (nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : 0);
 

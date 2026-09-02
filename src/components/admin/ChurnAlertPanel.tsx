@@ -30,11 +30,11 @@ interface ChurnAlertPanelProps {
 }
 
 export function ChurnAlertPanel({ onInspect }: ChurnAlertPanelProps) {
-  const { slice, churnSignals, dispatch, state } = useApp();
+  const { slice, churnSignals, dispatch, state, getFee } = useApp();
   const queue = buildAlertQueue(slice, churnSignals);
 
   const resolvedCount = state.resolvedStudentIds.length;
-  const revenueAtRisk = queue.reduce((sum, { student }) => sum + student.monthlyFee, 0);
+  const revenueAtRisk = queue.reduce((sum, { student }) => sum + getFee(student.id), 0);
 
   return (
     <section className="overflow-hidden rounded-lg border border-hairline bg-canvas shadow-card">
@@ -159,7 +159,7 @@ export function ChurnAlertPanel({ onInspect }: ChurnAlertPanelProps) {
                       {formatPercent(signal.absenceRateLast30d)}
                     </p>
                     <p className="text-[12px] text-steel">
-                      월 {(student.monthlyFee / 10_000).toFixed(0)}만원
+                      월 {(getFee(student.id) / 10_000).toFixed(0)}만원
                     </p>
                   </div>
                 </div>

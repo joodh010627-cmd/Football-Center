@@ -17,12 +17,16 @@
 
 ## 실행
 
+앱은 Supabase 프로젝트 없이 실행되지 않는다. **[docs/SETUP.md](docs/SETUP.md)** 를 먼저 따른다 (약 15분).
+
 ```bash
 npm install
-npm run dev     # http://localhost:5173
+cp .env.example .env    # URL / anon key 채우기
+npm run seed            # 데모 아카데미 + 계정 3개 적재
+npm run dev             # http://localhost:5173
 ```
 
-우측 상단 `대표 / 코치` 토글로 두 인터페이스를 오간다 (프로토타입 전용 장치. 실제 배포 시 역할은 세션에서 결정된다).
+대표와 코치는 **다른 계정**이다. 화면을 오가려면 로그아웃해야 한다. 역할은 `academy_members.role`에서 오고, 클라이언트에서 바꿀 방법이 없다.
 
 ```bash
 npm run build      # 타입체크 + 프로덕션 번들
@@ -32,26 +36,52 @@ npm run typecheck
 ## 기술 스택
 
 - **React 18 + TypeScript + Vite**
-- **Tailwind CSS** — Notion 디자인 시스템 토큰을 `tailwind.config.js`에 그대로 매핑
+- **Supabase** — Postgres + Auth. 테넌트·역할 격리는 전부 RLS가 강제한다
+- **Tailwind CSS** — 디자인 토큰을 `tailwind.config.js`에 그대로 매핑
 - **lucide-react** 아이콘
-- 상태: `useReducer` + Context. 외부 상태 라이브러리 없음
+- 상태: `useReducer` + Context. 리듀서는 낙관적 업데이트로 남고 그 뒤에 Supabase 쓰기가 붙는다
 
 ## 구조
 
 ```
+supabase/migrations/            # 스키마 · RLS 정책 · 가입 RPC ← 보안은 여기 있다
+scripts/
+├── seedData.ts                 # 데모 데이터셋 (원생 100명 + 8주 출결)
+└── seed.ts                     # 실 DB 적재기 (service_role, 브라우저에 안 들어감)
 src/
-├── types.ts                    # 전체 관계형 스키마
+├── types.ts                    # 관계형 스키마 + 세션/소속 타입
 ├── data/
-│   ├── mockData.ts             # 엔티티 + 8주치 출결 이력 생성기
+│   ├── dates.ts                # 날짜 헬퍼
+│   ├── mappers.ts              # snake_case 행 ↔ 카멜케이스 엔티티
 │   ├── churn.ts                # 이탈 위험도 산출 엔진
 │   └── selectors.ts            # 조인·집계 (순수 함수)
-├── store/AppContext.tsx        # 단일 스토어 + 리듀서
-├── lib/                        # 포매터, 알림톡 작성기, cn
+├── lib/
+│   ├── supabase.ts             # 클라이언트
+│   └── permissions.ts          # 권한 모델의 *선언* (강제는 RLS)
+├── store/
+│   ├── AuthContext.tsx         # 세션 · 소속 · 역할
+│   └── AppContext.tsx          # 테넌트 데이터 + 낙관적 쓰기
 └── components/
+    ├── auth/                   # 로그인 · 가입 · 게이트
     ├── ui/                     # Badge · Modal · StatTile · ProgressBar · EmptyState
-    ├── coach/                  # 모바일 화면
-    └── admin/                  # 대시보드 화면
+    ├── coach/                  # 코치 화면
+    └── admin/                  # 대표 대시보드
 ```
+
+### 권한 모델
+
+대표 전용 수치는 **컬럼이 아니라 별도 테이블**에 있다.
+
+| 데이터 | 테이블 | 코치가 조회하면 |
+|---|---|---|
+| 코치 평가점수 | `coach_evaluations` | `[]` |
+| 클래스 원가·재등록률 | `class_finances` | `[]` |
+| 원생 수강료 | `student_billing` | `[]` |
+| 대표의 CS 조치 이력 | `cs_actions` | `[]` |
+
+Supabase는 로그인 사용자 전원이 같은 `authenticated` DB 역할을 쓰므로 컬럼 단위 권한을 줄 수 없고, RLS는 행 단위다. 따라서 **"코치가 못 보는 필드"는 별도 행이어야만 막을 수 있다.** `coaches.satisfaction_score`로 뒀다면 정책으로 가릴 방법이 없었다.
+
+같은 이유로 `src/types.ts`에서도 분리돼 있어, 코치 화면 컴포넌트는 평가점수를 **컴파일 자체가 안 된다.**
 
 ### 데이터 설계
 
@@ -140,7 +170,9 @@ Student ──┬── classId ──> Class ──> coachId ──> Coach
 
 ## 알려진 한계
 
-- 상태는 메모리에만 있다. 새로고침하면 초기화된다 (영속화는 백엔드 연동 시점의 일).
-- 재등록률은 클래스 고정값이다. 실제로는 결제 이력에서 산출해야 한다.
+- 재등록률은 `class_finances`의 고정값이다. 실제로는 결제 이력(`payments`)에서 산출해야 한다.
 - 알림톡은 시뮬레이션이다. 실제 발송 연동 없음.
-- 인증/권한 없음. 역할은 토글로 전환한다.
+- **`parent_phone`이 평문이다.** 운영 전 암호화가 필요하다.
+- **`audit_logs` 테이블과 정책은 있으나 앱이 아직 쓰지 않는다.** 열람 기록이 남지 않는다.
+- 코치 초대 코드 발급 UI가 없다. 현재는 SQL로 발급한다 (`docs/SETUP.md` 참조).
+- **이탈 엔진이 주 2~3회 수업을 가정한다.** 주 1회 클래스에서는 정상 원생이 위험군으로 뜬다 (`docs/PRODUCTIZATION.md` §2-1).

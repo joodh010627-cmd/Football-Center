@@ -16,6 +16,7 @@ const CORE_TARGET = 0.6;
 
 export function CurriculumPanel() {
   const { state, slice } = useApp();
+  const evaluations = state.evaluations;
 
   const rows = state.coaches
     .map((coach) => ({
@@ -50,7 +51,7 @@ export function CurriculumPanel() {
                   <span className="shrink-0 text-[12px] text-steel">{classCount}개 반</span>
                   <span className="flex shrink-0 items-center gap-0.5 text-[12px] text-steel">
                     <Star size={10} className="text-brand-yellow" fill="currentColor" strokeWidth={0} />
-                    {coach.satisfactionScore.toFixed(1)}
+                    {(evaluations[coach.id] ?? 0).toFixed(1)}
                   </span>
                 </span>
                 <span

@@ -23,7 +23,13 @@ export function formatDateKo(iso: ISODate): string {
   return `${d.getMonth() + 1}월 ${d.getDate()}일 (${WEEKDAY_KO[d.getDay()]})`;
 }
 
-export function formatDateShort(iso: ISODate): string {
+/**
+ * `null` renders as a dash. A freshly imported roster has no attendance dates
+ * yet, so this is a routine state rather than an edge case — and a blank is far
+ * safer than "Invalid Date" or a fabricated-looking 1/1 in that column.
+ */
+export function formatDateShort(iso: ISODate | null): string {
+  if (!iso) return '—';
   const d = new Date(`${iso}T00:00:00`);
   return `${d.getMonth() + 1}/${d.getDate()}`;
 }

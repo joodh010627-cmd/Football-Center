@@ -10,10 +10,11 @@
 
 import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { LayoutDashboard, Smartphone } from 'lucide-react';
-import type { Role } from '@/types';
+import { LogOut } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Crest } from '@/components/ui/Crest';
+import { ROLE_LABEL } from '@/lib/permissions';
+import { useAuth, useSession } from '@/store/AuthContext';
 
 export interface ShellNavItem {
   key: string;
@@ -26,10 +27,6 @@ export interface ShellNavItem {
 }
 
 interface AppShellProps {
-  /** Sits under the wordmark in the rail, e.g. "대표 대시보드". */
-  role: Role;
-  onRoleChange: (role: Role) => void;
-  roleLabel: string;
   /** Who is signed in — name + one line of context. */
   identity?: { name: string; meta: string };
   nav: ShellNavItem[];
@@ -40,40 +37,27 @@ interface AppShellProps {
   children: ReactNode;
 }
 
-const ROLE_OPTIONS: Array<{ key: Role; label: string; icon: LucideIcon }> = [
-  { key: 'admin', label: '대표', icon: LayoutDashboard },
-  { key: 'coach', label: '코치', icon: Smartphone },
-];
+export function AppShell({ identity, nav, active, onSelect, railFooter, children }: AppShellProps) {
+  const session = useSession();
+  const { signOut } = useAuth();
 
-export function AppShell({
-  role,
-  onRoleChange,
-  roleLabel,
-  identity,
-  nav,
-  active,
-  onSelect,
-  railFooter,
-  children,
-}: AppShellProps) {
-  const roleSwitch = (compact = false) => (
-    <div className="flex gap-1 rounded-full border border-white/12 bg-white/[0.06] p-1">
-      {ROLE_OPTIONS.map(({ key, label, icon: Icon }) => (
-        <button
-          key={key}
-          type="button"
-          onClick={() => onRoleChange(key)}
-          className={cn(
-            'flex items-center justify-center gap-1.5 rounded-full font-semibold transition-colors duration-200',
-            compact ? 'px-3 py-1.5 text-[12px]' : 'flex-1 py-2 text-[12.5px]',
-            role === key ? 'bg-gold text-pitch-deep' : 'text-white/60 hover:text-white',
-          )}
-        >
-          <Icon size={13} strokeWidth={2.4} />
-          {label}
-        </button>
-      ))}
-    </div>
+  // The role switch that used to sit here is gone. It was the prototype's way
+  // of demoing both interfaces from one page load, and it is exactly the thing
+  // that made "권한" a UI preference. Signing out is the only way across now.
+  const roleLabel = ROLE_LABEL[session.membership.role];
+
+  const signOutButton = (compact = false) => (
+    <button
+      type="button"
+      onClick={() => void signOut()}
+      className={cn(
+        'flex items-center justify-center gap-1.5 rounded-full border border-white/12 bg-white/[0.06] font-semibold text-white/60 transition-colors duration-200 hover:text-white',
+        compact ? 'px-3 py-1.5 text-[12px]' : 'w-full py-2 text-[12.5px]',
+      )}
+    >
+      <LogOut size={13} strokeWidth={2.4} />
+      로그아웃
+    </button>
   );
 
   return (
@@ -89,7 +73,7 @@ export function AppShell({
             {roleLabel}
           </span>
         </span>
-        {roleSwitch(true)}
+        {signOutButton(true)}
       </header>
 
       <div className="mx-auto flex w-full max-w-[1440px]">
@@ -98,7 +82,9 @@ export function AppShell({
           <div className="relative flex items-center gap-2.5 px-2">
             <Crest className="h-8 w-8 shrink-0 text-gold" />
             <span className="min-w-0 leading-none">
-              <span className="block text-[14px] font-bold tracking-[0.16em]">FC GROWTH</span>
+              <span className="block truncate text-[14px] font-bold tracking-[0.16em]">
+                {session.academy.name}
+              </span>
               <span className="mt-1.5 block text-[10px] font-semibold uppercase tracking-label text-white/45">
                 {roleLabel}
               </span>
@@ -109,6 +95,7 @@ export function AppShell({
             <div className="relative mt-6 rounded-lg border border-white/10 bg-white/[0.06] px-3.5 py-3">
               <p className="truncate text-[14px] font-semibold">{identity.name}</p>
               <p className="mt-0.5 truncate text-[12px] text-white/50">{identity.meta}</p>
+              <p className="mt-1.5 truncate text-[11px] text-white/30">{session.email}</p>
             </div>
           )}
 
@@ -125,9 +112,7 @@ export function AppShell({
 
           {railFooter && <div className="relative mt-6">{railFooter}</div>}
 
-          {/* Prototype-only role jump. In production the role comes from the
-              session and each user only ever sees one of these. */}
-          <div className="relative mt-auto pt-6">{roleSwitch()}</div>
+          <div className="relative mt-auto pt-6">{signOutButton()}</div>
         </aside>
 
         {/* --- Content ------------------------------------------------- */}

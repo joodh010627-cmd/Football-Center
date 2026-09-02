@@ -29,7 +29,7 @@ interface StudentDetailModalProps {
 }
 
 export function StudentDetailModal({ student, onClose }: StudentDetailModalProps) {
-  const { state, churnSignals, getClass } = useApp();
+  const { state, churnSignals, getClass, getFee } = useApp();
 
   const logs = useMemo(
     () => (student ? logsForStudent(state.attendanceLogs, student.id) : []),
@@ -105,7 +105,7 @@ export function StudentDetailModal({ student, onClose }: StudentDetailModalProps
             tone={trend >= 0 ? 'up' : 'down'}
           />
           <Metric label="누적 기록" value={`${logs.length}건`} />
-          <Metric label="월 수강료" value={formatWon(student.monthlyFee)} />
+          <Metric label="월 수강료" value={formatWon(getFee(student.id))} />
         </section>
 
         {/* --- Attendance strip --------------------------------------- */}

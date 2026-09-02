@@ -13,7 +13,7 @@ import { useMemo, useState } from 'react';
 import { CheckCircle2, ListChecks, MousePointerClick, Send } from 'lucide-react';
 import type { AttendanceStatus, Class, ParentNotification } from '@/types';
 import { useApp } from '@/store/AppContext';
-import { TODAY } from '@/data/mockData';
+import { TODAY } from '@/data/dates';
 import { attendanceRateForStudent, studentsInClass } from '@/data/selectors';
 import { composeParentNotification } from '@/lib/notification';
 import { ATTENDANCE_LABEL, formatDateKo } from '@/lib/format';
@@ -65,7 +65,7 @@ export function AttendanceScreen({ cls, onDone, onBack }: AttendanceScreenProps)
   const selectedEntry = selected ? draft.entries[selected.id] : undefined;
 
   const handleSubmit = () => {
-    const coachName = getCoach(state.currentCoachId)?.name ?? '코치';
+    const coachName = getCoach(state.currentCoachId ?? '')?.name ?? '코치';
 
     const payload: ParentNotification[] = roster.map((student) => {
       const entry = draft.entries[student.id] ?? { status: 'present' as const, tags: [] };

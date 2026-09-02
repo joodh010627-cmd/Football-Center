@@ -5,8 +5,9 @@
  * sheet, so the coach never loses sight of the roster while tagging.
  */
 
-import { behaviorTags, TAG_DIMENSION_LABEL } from '@/data/mockData';
+import { TAG_DIMENSION_LABEL } from '@/data/dates';
 import type { BehaviorTag } from '@/types';
+import { useApp } from '@/store/AppContext';
 import { cn } from '@/lib/cn';
 
 const DIMENSION_ORDER: BehaviorTag['dimension'][] = [
@@ -23,10 +24,15 @@ interface TagRailProps {
 }
 
 export function TagRail({ selected, onToggle }: TagRailProps) {
+  // Tags are per-academy now (`behavior_tags`), not a hardcoded list — an
+  // academy that renames "#드리블우수" sees its own wording here.
+  const { state } = useApp();
+
   return (
     <div className="space-y-2.5">
       {DIMENSION_ORDER.map((dimension) => {
-        const tags = behaviorTags.filter((t) => t.dimension === dimension);
+        const tags = state.behaviorTags.filter((t) => t.dimension === dimension);
+        if (tags.length === 0) return null;
         const isCaution = dimension === 'caution';
 
         return (

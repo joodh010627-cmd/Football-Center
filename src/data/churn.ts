@@ -7,7 +7,7 @@
  */
 
 import type { AttendanceLog, ChurnSignal, ID, ISODate, Student, StudentStatus } from '@/types';
-import { TODAY, diffDays } from './mockData';
+import { TODAY, diffDays } from './dates';
 
 /** Weights sum to 100. Tuned so a 2-week no-show alone clears the alert bar. */
 const WEIGHTS = {
@@ -30,7 +30,27 @@ export interface ChurnInput {
   asOf?: ISODate;
 }
 
+/** What a student with no attendance history yet gets — an honest blank. */
+function insufficientData(studentId: ID): ChurnSignal {
+  return {
+    studentId,
+    score: 0,
+    daysSinceLastAttendance: 0,
+    absenceRateLast30d: 0,
+    daysSinceParentContact: 0,
+    reasons: ['출결 기록이 쌓이면 산출됩니다 (약 3주)'],
+    severity: 'watch',
+    computable: false,
+  };
+}
+
 export function computeChurnSignal({ student, logs, asOf = TODAY }: ChurnInput): ChurnSignal {
+  // A freshly imported roster has no attendance at all. Scoring it anyway would
+  // put every student at ~15 points (the parent-contact axis saturates on a
+  // null), which reads as "everyone is fine" on a dashboard that cannot yet
+  // know anything. Refuse to produce a number instead.
+  if (!student.lastAttendanceDate) return insufficientData(student.id);
+
   const daysSinceLastAttendance = Math.max(0, diffDays(asOf, student.lastAttendanceDate));
 
   const recentLogs = logs.filter(
@@ -95,6 +115,7 @@ export function computeChurnSignal({ student, logs, asOf = TODAY }: ChurnInput):
     daysSinceParentContact,
     reasons,
     severity: score >= CRITICAL_THRESHOLD ? 'critical' : score >= AT_RISK_THRESHOLD ? 'high' : 'watch',
+    computable: true,
   };
 }
 
@@ -102,6 +123,9 @@ export function computeChurnSignal({ student, logs, asOf = TODAY }: ChurnInput):
 const INACTIVE_AFTER_DAYS = 30;
 
 export function deriveStatus(signal: ChurnSignal): StudentStatus {
+  // No history is not the same as a long absence. An imported roster must not
+  // land in the dashboard as 100 dormant students on its first day.
+  if (!signal.computable) return 'active';
   if (signal.daysSinceLastAttendance >= INACTIVE_AFTER_DAYS) return 'inactive';
   return signal.score >= AT_RISK_THRESHOLD ? 'at_risk' : 'active';
 }

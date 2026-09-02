@@ -3,6 +3,11 @@ dist/
 dist-ssr/
 *.local
 
+# Supabase 키. 시드용 service_role 키가 들어가므로 절대 커밋되면 안 된다.
+.env
+.env.*
+!.env.example
+
 .vscode/*
 !.vscode/extensions.json
 .idea/
@@ -16,3 +21,10 @@ dist-ssr/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# 마이그레이션에서 생성되는 파생 파일 (원본은 supabase/migrations/)
+supabase/APPLY_ALL.generated.sql
+
+# R 콘솔이 남기는 잡파일
+.Rhistory
+.RData
