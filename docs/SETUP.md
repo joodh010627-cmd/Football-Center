@@ -48,7 +48,7 @@
 ### 끝나면
 
 `npm run dev` → <http://localhost:5173/Football-Center/> →
-`owner@fcgrowth.demo` / `growth1234` 로 로그인.
+`owner@fcgrowth.demo` 로 로그인. **비밀번호는 `npm run seed` 실행 결과에 출력됩니다.**
 
 | 증상 | 원인 |
 |---|---|
@@ -152,7 +152,11 @@ npm run seed
 | `coach1@fcgrowth.demo` | 김도현 | 담당 반의 원생과 출결만 |
 | `coach2@fcgrowth.demo` | 박서준 | 김도현의 반은 보이지 않음 |
 
-비밀번호는 모두 `growth1234` 입니다. **데모 전용입니다.**
+**비밀번호는 시드 실행 시 매번 새로 만들어져 터미널에 출력됩니다.** 문서에 적어두지
+않습니다 — 이 저장소는 공개돼 있고, 배포된 앱이 같은 Supabase 프로젝트를 바라보기
+때문에, 여기 적힌 비밀번호는 곧 "누구나 대표 계정으로 로그인 가능"과 같은 말이 됩니다.
+
+고정된 값을 쓰고 싶으면 `.env` 에 `SEED_PASSWORD=...` 를 넣으세요 (`.env` 는 커밋되지 않습니다).
 
 ## 6. 실행
 

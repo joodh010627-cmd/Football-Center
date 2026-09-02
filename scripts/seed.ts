@@ -12,6 +12,7 @@
  * it. Everything else cascades from `academies.id`.
  */
 
+import { randomBytes } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import {
   attendanceLogs,
@@ -40,7 +41,19 @@ const db = createClient(url, serviceKey, {
 });
 
 const ACADEMY_NAME = 'FC GROWTH 데모 축구교실';
-const PASSWORD = 'growth1234';
+
+/**
+ * 시드 계정 비밀번호.
+ *
+ * 하드코딩하지 않는다. 이 저장소는 공개돼 있고, GitHub Pages로 배포된 앱이
+ * 같은 Supabase 프로젝트를 바라본다. 상수로 두면 저장소를 찾은 누구나 대표
+ * 계정으로 로그인할 수 있다 — 지금은 가짜 원생뿐이라 피해가 없지만, 이
+ * 아카데미에 실제 명단이 한 번이라도 들어가는 순간 그대로 유출이다.
+ *
+ * SEED_PASSWORD 를 주면 그것을 쓰고, 없으면 매번 새로 만들어 아래에 출력한다.
+ */
+const PASSWORD =
+  process.env.SEED_PASSWORD?.trim() || `demo-${randomBytes(6).toString('base64url')}`;
 
 /**
  * Two coaches, not one.
