@@ -16,6 +16,7 @@ import {
   BookOpenCheck,
   ClipboardCheck,
   Coins,
+  FileSpreadsheet,
   LayoutGrid,
   Repeat2,
   ShieldCheck,
@@ -38,15 +39,17 @@ import { CurriculumPanel } from './CurriculumPanel';
 import { RosterPanel } from './RosterPanel';
 import { StudentDetailModal } from './StudentDetailModal';
 import { RecentActivityPanel } from './RecentActivityPanel';
+import { ImportPanel } from '@/components/import/ImportPanel';
+import { commitImport } from '@/data/importCommit';
 
-type View = 'overview' | 'alerts' | 'classes' | 'roster' | 'ops';
+type View = 'overview' | 'alerts' | 'classes' | 'roster' | 'ops' | 'import';
 
 /** A class below either of these is worth a second look on the overview. */
 const MARGIN_WARNING = 0.25;
 const RETENTION_TARGET = 0.8;
 
 export function AdminDashboard() {
-  const { slice, state, churnSignals, getFee } = useApp();
+  const { slice, state, churnSignals, getFee, refresh } = useApp();
   const session = useSession();
   const [view, setView] = useState<View>('overview');
   const [inspected, setInspected] = useState<Student | null>(null);
@@ -69,6 +72,7 @@ export function AdminDashboard() {
     { key: 'classes', label: '클래스 성과', shortLabel: '클래스', icon: Coins },
     { key: 'roster', label: '원생 명단', shortLabel: '원생', icon: Users },
     { key: 'ops', label: '운영 품질', shortLabel: '운영', icon: BookOpenCheck },
+    { key: 'import', label: '명단 가져오기', shortLabel: '가져오기', icon: FileSpreadsheet },
   ];
 
   return (
@@ -138,6 +142,23 @@ export function AdminDashboard() {
             <CurriculumPanel />
             <RecentActivityPanel onInspect={setInspected} />
           </div>
+        </ViewFrame>
+      )}
+
+      {view === 'import' && (
+        <ViewFrame
+          eyebrow="Migration"
+          title="명단 가져오기"
+          description="쓰시던 엑셀을 그대로 올리면 열의 뜻을 알아서 판별합니다. 양식을 맞추실 필요 없습니다."
+        >
+          <ImportPanel
+            onCommit={async (r) => {
+              const summary = await commitImport(state.academyId, r, state.classes);
+              // 적재 후 다시 읽어야 대시보드 숫자가 새 원생을 포함한다.
+              refresh();
+              return summary;
+            }}
+          />
         </ViewFrame>
       )}
 

@@ -75,6 +75,66 @@ describe('콜드 스타트 — 임포트 직후', () => {
   });
 });
 
+describe('수업 주기 — 같은 공백도 반마다 뜻이 다르다', () => {
+  // 2026-08-19 → 2026-09-02 = 14일.
+  const twoWeeksOut = () =>
+    student({ lastAttendanceDate: '2026-08-19', lastParentContactDate: '2026-08-19' });
+
+  it('주 3회 반에서 2주 결석은 경보다 (6회 결석)', () => {
+    const signal = computeChurnSignal({
+      student: twoWeeksOut(),
+      logs: presentOn(['2026-08-19']),
+      asOf: ASOF,
+      sessionsPerWeek: 3,
+    });
+
+    expect(signal.score).toBeGreaterThanOrEqual(AT_RISK_THRESHOLD);
+    expect(signal.reasons.join(' ')).toContain('6회');
+  });
+
+  it('주 1회 반에서 같은 2주는 경보가 아니다 (2회 결석)', () => {
+    // 이 한 줄이 이번 수정의 전부다. 고치기 전에는 두 경우가 같은 45점을 받아,
+    // 감기로 두 번 빠진 주 1회 원생이 무더기로 Red Alert에 떴다.
+    // 대표가 헛전화를 두 번 걸면 그 뒤로는 알림을 아예 보지 않는다.
+    const signal = computeChurnSignal({
+      student: twoWeeksOut(),
+      logs: presentOn(['2026-08-19']),
+      asOf: ASOF,
+      sessionsPerWeek: 1,
+    });
+
+    expect(signal.score).toBeLessThan(AT_RISK_THRESHOLD);
+  });
+
+  it('주 1회 반도 충분히 오래 빠지면 경보가 된다', () => {
+    const signal = computeChurnSignal({
+      student: student({ lastAttendanceDate: '2026-07-15', lastParentContactDate: '2026-07-15' }),
+      logs: presentOn(['2026-07-15']),
+      asOf: ASOF,
+      sessionsPerWeek: 1,
+    });
+
+    // 49일 = 7회 결석. 주 1회 반에서도 이 정도면 진짜 위험이다.
+    expect(signal.score).toBeGreaterThanOrEqual(AT_RISK_THRESHOLD);
+  });
+
+  it('주기를 모르면 기존 계산(주 3회)을 유지한다', () => {
+    const withDefault = computeChurnSignal({
+      student: twoWeeksOut(),
+      logs: presentOn(['2026-08-19']),
+      asOf: ASOF,
+    });
+    const explicit = computeChurnSignal({
+      student: twoWeeksOut(),
+      logs: presentOn(['2026-08-19']),
+      asOf: ASOF,
+      sessionsPerWeek: 3,
+    });
+
+    expect(withDefault.score).toBe(explicit.score);
+  });
+});
+
 describe('이력이 쌓인 뒤', () => {
   it('2주 미출석만으로 경보 기준을 넘는다', () => {
     const signal = computeChurnSignal({
@@ -85,7 +145,7 @@ describe('이력이 쌓인 뒤', () => {
 
     expect(signal.computable).toBe(true);
     expect(signal.score).toBeGreaterThanOrEqual(AT_RISK_THRESHOLD);
-    expect(signal.reasons.join(' ')).toContain('미출석');
+    expect(signal.reasons.join(' ')).toContain('결석');
   });
 
   it('30일 이상 미출석은 위험군이 아니라 휴원이다', () => {

@@ -174,7 +174,10 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         ...action.data,
         // Stored score and status are a cache; the engine owns both. Recomputing
         // here means a row that was written weeks ago can't show a stale badge.
-        students: rescoreStudents(students, attendanceLogs),
+        // Classes come along because the score depends on how often each class
+        // actually meets — a fortnight away means very different things at 주1회
+        // and 주3회.
+        students: rescoreStudents(students, attendanceLogs, TODAY, action.data.classes),
       };
     }
 
@@ -313,7 +316,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         attendanceLogs,
-        students: rescoreStudents(students, attendanceLogs),
+        students: rescoreStudents(students, attendanceLogs, TODAY, state.classes),
       };
     }
 
@@ -620,7 +623,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const churnSignals = useMemo(
-    () => buildChurnSignals(state.students, state.attendanceLogs),
+    () => buildChurnSignals(state.students, state.attendanceLogs, TODAY, state.classes),
     [state.students, state.attendanceLogs],
   );
 

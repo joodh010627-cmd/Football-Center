@@ -108,11 +108,7 @@ export function runImport(grids: Grid[], asOf: Date = new Date()): ImportResult 
     };
   }
 
-  const sheets: ImportSheetResult[] = [];
-  const issues: ImportIssue[] = [];
-  const notes: string[] = [];
-  let sampleRows = 0;
-  let paymentColumnCount = 0;
+  const inputs: SheetInput[] = [];
 
   for (const grid of grids) {
     const table = detectTable(grid);
@@ -125,12 +121,41 @@ export function runImport(grids: Grid[], asOf: Date = new Date()): ImportResult 
         : a,
     );
 
+    inputs.push({ table, assignments });
+  }
+
+  return finalizeImport(inputs, asOf, grids.length > 1);
+}
+
+/** A table plus the decision about what each of its columns means. */
+export interface SheetInput {
+  table: TableRegion;
+  assignments: ColumnAssignment[];
+}
+
+/**
+ * Extraction and aggregation, split from classification so the review screen
+ * can re-run it when the owner corrects a column — without re-parsing the file
+ * or throwing away the corrections they already made.
+ */
+export function finalizeImport(
+  inputs: SheetInput[],
+  asOf: Date = new Date(),
+  labelSheets = inputs.length > 1,
+): ImportResult {
+  const sheets: ImportSheetResult[] = [];
+  const issues: ImportIssue[] = [];
+  const notes: string[] = [];
+  let sampleRows = 0;
+  let paymentColumnCount = 0;
+
+  for (const { table, assignments } of inputs) {
     const extracted = extractStudents(table, assignments, asOf);
     const students = extracted.students;
     issues.push(...extracted.issues);
     sampleRows += extracted.sampleRows;
     paymentColumnCount += assignments.filter((a) => a.paymentMonth).length;
-    notes.push(...table.notes.map((n) => (grids.length > 1 ? `[${grid.source}] ${n}` : n)));
+    notes.push(...table.notes.map((n) => (labelSheets ? `[${table.source}] ${n}` : n)));
 
     // `className` is the one required field with a fallback chain — a section
     // label above the block, or the sheet name when a workbook keeps one class

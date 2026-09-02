@@ -6,7 +6,15 @@
  * so the owner can act on the alert without second-guessing the number.
  */
 
-import type { AttendanceLog, ChurnSignal, ID, ISODate, Student, StudentStatus } from '@/types';
+import type {
+  AttendanceLog,
+  ChurnSignal,
+  Class,
+  ID,
+  ISODate,
+  Student,
+  StudentStatus,
+} from '@/types';
 import { TODAY, diffDays } from './dates';
 
 /** Weights sum to 100. Tuned so a 2-week no-show alone clears the alert bar. */
@@ -23,11 +31,39 @@ export const CRITICAL_THRESHOLD = 78;
 
 const ABSENCE_WINDOW_DAYS = 30;
 
+/**
+ * Missed sessions that saturate the recency axis.
+ *
+ * Six is not arbitrary: the original weights were tuned so that "2주 미출석"
+ * alone cleared the alert bar, and two weeks of a 주3회 class is exactly six
+ * sessions. Keeping that number means every previously-calibrated judgement
+ * still holds for three-a-week classes, while once-a-week classes stop being
+ * punished for the same calendar gap.
+ */
+const MISSED_SESSIONS_SATURATE = 6;
+
+/** Used when a student's class has no schedule — the old day-based cadence. */
+const DEFAULT_SESSIONS_PER_WEEK = 3;
+
 export interface ChurnInput {
   student: Student;
   logs: AttendanceLog[];
   /** Defaults to today; injectable for tests. */
   asOf?: ISODate;
+  /**
+   * How often the student's class actually meets. Without it a 주1회 class is
+   * scored as if it met three times a week, and a student who missed one
+   * ordinary lesson lands on the owner's Red Alert list. Two wasted phone calls
+   * and the owner stops trusting the alerts — which costs more than the feature
+   * was ever worth.
+   */
+  sessionsPerWeek?: number;
+}
+
+/** Weekly meeting count from a class schedule, floored at 1. */
+export function sessionsPerWeekOf(cls: Pick<Class, 'schedule'> | undefined): number {
+  const days = cls?.schedule?.days?.length ?? 0;
+  return days > 0 ? days : DEFAULT_SESSIONS_PER_WEEK;
 }
 
 /** What a student with no attendance history yet gets — an honest blank. */
@@ -44,7 +80,12 @@ function insufficientData(studentId: ID): ChurnSignal {
   };
 }
 
-export function computeChurnSignal({ student, logs, asOf = TODAY }: ChurnInput): ChurnSignal {
+export function computeChurnSignal({
+  student,
+  logs,
+  asOf = TODAY,
+  sessionsPerWeek = DEFAULT_SESSIONS_PER_WEEK,
+}: ChurnInput): ChurnSignal {
   // A freshly imported roster has no attendance at all. Scoring it anyway would
   // put every student at ~15 points (the parent-contact axis saturates on a
   // null), which reads as "everyone is fine" on a dashboard that cannot yet
@@ -68,13 +109,18 @@ export function computeChurnSignal({ student, logs, asOf = TODAY }: ChurnInput):
   const reasons: string[] = [];
 
   // --- 1. Recency: silence is the loudest signal --------------------------
-  // 14 days with no show-up saturates this component.
-  const recencyRatio = Math.min(1, daysSinceLastAttendance / 14);
-  const recencyPoints = recencyRatio * WEIGHTS.recency;
-  if (daysSinceLastAttendance >= 14) {
-    reasons.push(`${daysSinceLastAttendance}일째 미출석 (2주 초과)`);
-  } else if (daysSinceLastAttendance >= 7) {
-    reasons.push(`${daysSinceLastAttendance}일째 미출석`);
+  // Counted in missed *sessions*, not days. The same fortnight is six no-shows
+  // for a 주3회 class and two for a 주1회 class; scoring them alike is the
+  // difference between a real alert and a false one.
+  const missedSessions = (daysSinceLastAttendance * sessionsPerWeek) / 7;
+  const recencyPoints =
+    Math.min(1, missedSessions / MISSED_SESSIONS_SATURATE) * WEIGHTS.recency;
+
+  const missed = Math.floor(missedSessions);
+  if (missed >= 4) {
+    reasons.push(`${missed}회 연속 결석 (${daysSinceLastAttendance}일째)`);
+  } else if (missed >= 2) {
+    reasons.push(`${missed}회 결석 (${daysSinceLastAttendance}일째)`);
   }
 
   // --- 2. Absence rate: the slow fade -------------------------------------
@@ -137,13 +183,25 @@ export function deriveStatus(signal: ChurnSignal): StudentStatus {
  * their score (the underlying facts haven't changed) but drop off the alert
  * list so the queue stays workable.
  */
+/** classId → weekly session count, so each student is judged on their own cadence. */
+function cadenceMap(classes: Class[]): Map<ID, number> {
+  return new Map(classes.map((c) => [c.id, sessionsPerWeekOf(c)]));
+}
+
 export function rescoreStudents(
   students: Student[],
   logs: AttendanceLog[],
   asOf: ISODate = TODAY,
+  classes: Class[] = [],
 ): Student[] {
+  const cadence = cadenceMap(classes);
   return students.map((student) => {
-    const signal = computeChurnSignal({ student, logs, asOf });
+    const signal = computeChurnSignal({
+      student,
+      logs,
+      asOf,
+      sessionsPerWeek: cadence.get(student.classId),
+    });
     return { ...student, churnScore: signal.score, status: deriveStatus(signal) };
   });
 }
@@ -152,8 +210,18 @@ export function buildChurnSignals(
   students: Student[],
   logs: AttendanceLog[],
   asOf: ISODate = TODAY,
+  classes: Class[] = [],
 ): Map<ID, ChurnSignal> {
+  const cadence = cadenceMap(classes);
   return new Map(
-    students.map((student) => [student.id, computeChurnSignal({ student, logs, asOf })]),
+    students.map((student) => [
+      student.id,
+      computeChurnSignal({
+        student,
+        logs,
+        asOf,
+        sessionsPerWeek: cadence.get(student.classId),
+      }),
+    ]),
   );
 }
