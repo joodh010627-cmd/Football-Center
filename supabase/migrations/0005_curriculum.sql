@@ -157,32 +157,56 @@ alter table session_plans alter column status set default 'draft';
 -- 그리고 버리는 행을 가리키던 출결 로그는 남는 행으로 옮긴다. attendance_logs의
 -- FK가 on delete set null 이므로 그냥 지우면 "언제 무엇을 했는지" 링크가 조용히
 -- 끊긴다 — 중복을 지우는 값보다 잃는 게 크다.
-create temporary table _plan_dupes as
-select id as doomed_id, keep_id
-  from (
-    select p.id,
-           first_value(p.id) over w as keep_id,
-           row_number()      over w as rn
-      from session_plans p
-    window w as (
-      partition by p.class_id, p.date
-      order by (select count(*) from attendance_logs l where l.session_plan_id = p.id) desc,
-               (p.status = 'completed') desc,
-               p.created_at desc
-    )
-  ) ranked
- where rn > 1;
+--
+-- 두 문장이 순위를 각각 다시 계산한다. 중간 테이블에 담아 두 번 쓰는 쪽이
+-- 짧지만, 임시 테이블을 쓴 판본이 Supabase SQL 에디터에서
+-- `relation "_plan_dupes" does not exist` 로 죽었다. 에디터가 문장을 어떻게
+-- 쪼개고 어느 커넥션에 태우는지에 기대지 않는 편이 낫다 — 두 문장 모두
+-- 자기 완결적이면 그 질문 자체가 사라진다.
+--
+-- 다시 계산해도 결과가 같은 이유: 유지 대상은 "출결 로그가 가장 많은 행"이고,
+-- 1번 문장은 버려질 행의 로그를 바로 그 행으로 옮긴다. 옮기고 나면 유지 대상의
+-- 로그 수는 늘고 나머지는 0이 되므로 순위가 뒤집힐 수 없다. 아무 행에도 로그가
+-- 없으면 1번 문장이 아무것도 바꾸지 않으므로 역시 같다.
 
+-- 1) 버려질 설계를 가리키던 출결 로그를 남을 설계로 옮긴다.
 update attendance_logs l
    set session_plan_id = d.keep_id
-  from _plan_dupes d
+  from (
+    select id as doomed_id, keep_id
+      from (
+        select p.id,
+               first_value(p.id) over w as keep_id,
+               row_number()      over w as rn
+          from session_plans p
+        window w as (
+          partition by p.class_id, p.date
+          order by (select count(*) from attendance_logs a where a.session_plan_id = p.id) desc,
+                   (p.status = 'completed') desc,
+                   p.created_at desc
+        )
+      ) ranked
+     where rn > 1
+  ) d
  where l.session_plan_id = d.doomed_id;
 
+-- 2) 중복 행을 지운다.
 delete from session_plans p
- using _plan_dupes d
+ using (
+    select id as doomed_id
+      from (
+        select p2.id,
+               row_number() over (
+                 partition by p2.class_id, p2.date
+                 order by (select count(*) from attendance_logs a where a.session_plan_id = p2.id) desc,
+                          (p2.status = 'completed') desc,
+                          p2.created_at desc
+               ) as rn
+          from session_plans p2
+      ) ranked
+     where rn > 1
+  ) d
  where p.id = d.doomed_id;
-
-drop table _plan_dupes;
 
 -- 한 클래스의 한 날짜에 수업은 하나다. 달력 칸이 두 개의 설계를 가리키면
 -- "등록됨"이 무슨 뜻인지 말할 수 없게 된다. 재설계는 덮어쓴다.
