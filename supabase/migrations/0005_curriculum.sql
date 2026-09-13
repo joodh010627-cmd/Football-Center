@@ -12,13 +12,20 @@
 -- jsonb 배열로 바꾼다. 스킬 두 번, 미니게임 먼저, 웜업 뒤 게임만 — 전부 실제로
 -- 하는 수업인데 3컬럼 스키마로는 표현할 수가 없었고, 표현 못 하는 스키마는
 -- 코치에게 "안 한 수업을 기록"하게 만든다.
+--
+-- -----------------------------------------------------------------------------
+-- 이 파일은 몇 번 실행해도 안전하다.
+--
+-- 그냥 방어적으로 쓴 게 아니라, 그래야 했다. Supabase SQL 에디터에서 이 파일을
+-- 세 번 돌리는 동안 1차는 롤백됐고 2차는 일부가 남았다. 같은 begin/commit 인데
+-- 결과가 달랐고, 에디터가 문장을 어떻게 쪼개고 어느 커넥션에 태우는지 여기서는
+-- 알 수 없다. 그 질문에 답하는 대신 답이 필요 없게 만든다 — 모든 문장이
+-- if exists / if not exists 이거나, 이미 적용된 상태에서 0행을 건드린다.
+--
+-- 그러므로 실패하면 원인만 고치고 파일 전체를 그대로 다시 붙여넣으면 된다.
+-- 어디까지 적용됐는지 추적할 필요가 없다.
 -- -----------------------------------------------------------------------------
 
--- 한 트랜잭션으로 묶는다. Postgres는 DDL도 트랜잭션에 들어가므로, 중간에
--- 실패하면 아무것도 적용되지 않은 상태로 돌아간다. 대시보드에 붙여넣어 한 번에
--- 실행하는 파일에서 이게 중요한 이유: 절반만 적용된 스키마는 두 번째 시도에서
--- "type approval_status already exists" 처럼 원인과 무관한 에러를 내고, 그때부터
--- 손으로 복구해야 한다.
 begin;
 
 -- -----------------------------------------------------------------------------
@@ -27,13 +34,20 @@ begin;
 
 -- 코치가 제안한 행과 대표가 등재한 행은 같은 테이블에 산다. 그래서 대표의
 -- 승인 대기 큐는 별도 스키마가 아니라 그냥 필터다.
-create type approval_status as enum ('published', 'pending', 'rejected');
+--
+-- create type 에는 if not exists 가 없다. 예외를 잡는 것이 표준 우회로다.
+do $$
+begin
+  create type approval_status as enum ('published', 'pending', 'rejected');
+exception
+  when duplicate_object then null;
+end $$;
 
 -- -----------------------------------------------------------------------------
 -- curricula
 -- -----------------------------------------------------------------------------
 
-create table curricula (
+create table if not exists curricula (
   id          uuid primary key default gen_random_uuid(),
   academy_id  uuid not null references academies(id) on delete cascade,
   title       text not null,
@@ -48,20 +62,22 @@ create table curricula (
   created_at  timestamptz not null default now()
 );
 
-create index on curricula (academy_id);
+-- 인덱스에 이름을 직접 준다. `create index on t (c)` 는 이름을 서버가 짓고
+-- if not exists 를 걸 수 없어서 두 번째 실행에서 중복 인덱스를 만든다.
+create index if not exists curricula_academy_id_idx on curricula (academy_id);
 
 -- 클래스가 어느 트랙을 도는지. null 허용 — 방금 만든 클래스는 아직 미배정이고,
 -- 그때 설계 화면은 블록 전체를 보여주는 쪽으로 열화된다(빈 화면보다 낫다).
 alter table classes
-  add column curriculum_id uuid references curricula(id) on delete set null;
+  add column if not exists curriculum_id uuid references curricula(id) on delete set null;
 
-create index on classes (curriculum_id);
+create index if not exists classes_curriculum_id_idx on classes (curriculum_id);
 
 -- -----------------------------------------------------------------------------
 -- session_templates — 표준 수업 세션
 -- -----------------------------------------------------------------------------
 
-create table session_templates (
+create table if not exists session_templates (
   id            uuid primary key default gen_random_uuid(),
   academy_id    uuid not null references academies(id) on delete cascade,
   curriculum_id uuid not null references curricula(id) on delete cascade,
@@ -83,46 +99,71 @@ create table session_templates (
     check (status <> 'pending' or proposed_by is not null)
 );
 
-create index on session_templates (academy_id);
-create index on session_templates (curriculum_id, week);
-create index on session_templates (status);
+create index if not exists session_templates_academy_id_idx
+  on session_templates (academy_id);
+create index if not exists session_templates_curriculum_week_idx
+  on session_templates (curriculum_id, week);
+create index if not exists session_templates_status_idx
+  on session_templates (status);
 
 -- -----------------------------------------------------------------------------
 -- training_blocks — 코치 제안 허용
 -- -----------------------------------------------------------------------------
 
 alter table training_blocks
-  add column status      approval_status not null default 'published',
-  add column proposed_by uuid references coaches(id) on delete set null;
+  add column if not exists status      approval_status not null default 'published',
+  add column if not exists proposed_by uuid references coaches(id) on delete set null;
+
+-- add constraint 에는 if not exists 가 없으니 먼저 떨어뜨린다.
+alter table training_blocks
+  drop constraint if exists training_blocks_pending_has_author;
 
 alter table training_blocks
   add constraint training_blocks_pending_has_author
     check (status <> 'pending' or proposed_by is not null);
 
-create index on training_blocks (status);
+create index if not exists training_blocks_status_idx on training_blocks (status);
 
 -- -----------------------------------------------------------------------------
 -- session_plans — 3칸 고정 슬롯 → 순서 있는 배열
 -- -----------------------------------------------------------------------------
 
 alter table session_plans
-  add column items       jsonb not null default '[]'::jsonb,
-  add column template_id uuid references session_templates(id) on delete set null;
+  add column if not exists items       jsonb not null default '[]'::jsonb,
+  add column if not exists template_id uuid references session_templates(id) on delete set null;
 
 -- 기존 행 이관. 3컬럼은 웜업-스킬-게임 순서로만 존재했으므로 그 순서로 편다.
 -- 빈 슬롯은 빈 배열이 되어 자연히 빠진다.
-update session_plans set items =
-     case when warmup_block_id is null then '[]'::jsonb else jsonb_build_array(
-       jsonb_build_object('category', 'warmup', 'blockId', warmup_block_id, 'durationMin', null)) end
-  || case when skill_block_id is null then '[]'::jsonb else jsonb_build_array(
-       jsonb_build_object('category', 'skill', 'blockId', skill_block_id, 'durationMin', null)) end
-  || case when game_block_id is null then '[]'::jsonb else jsonb_build_array(
-       jsonb_build_object('category', 'game', 'blockId', game_block_id, 'durationMin', null)) end;
+--
+-- 컬럼이 이미 떨어진 뒤라면 이 UPDATE는 파싱조차 되지 않으므로, 존재 여부를
+-- 보고 동적으로 실행한다. `where items = '[]'` 는 재실행 시 이미 채워진 items를
+-- 덮어쓰지 않기 위한 것이다 — 앱이 그 사이에 쓴 설계를 3컬럼 값으로 되돌리면
+-- 안 된다.
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+     where table_schema = 'public'
+       and table_name   = 'session_plans'
+       and column_name  = 'warmup_block_id'
+  ) then
+    execute $mig$
+      update session_plans set items =
+           case when warmup_block_id is null then '[]'::jsonb else jsonb_build_array(
+             jsonb_build_object('category', 'warmup', 'blockId', warmup_block_id, 'durationMin', null)) end
+        || case when skill_block_id is null then '[]'::jsonb else jsonb_build_array(
+             jsonb_build_object('category', 'skill', 'blockId', skill_block_id, 'durationMin', null)) end
+        || case when game_block_id is null then '[]'::jsonb else jsonb_build_array(
+             jsonb_build_object('category', 'game', 'blockId', game_block_id, 'durationMin', null)) end
+       where items = '[]'::jsonb
+    $mig$;
+  end if;
+end $$;
 
 alter table session_plans
-  drop column warmup_block_id,
-  drop column skill_block_id,
-  drop column game_block_id;
+  drop column if exists warmup_block_id,
+  drop column if exists skill_block_id,
+  drop column if exists game_block_id;
 
 -- 'ready'는 "설계 완료"였고 달력이 없던 시절의 이름이다. 지금은 달력에 등재된
 -- 상태를 뜻하므로 'scheduled'로 부른다. 'draft'는 아직 등재 전.
@@ -160,9 +201,8 @@ alter table session_plans alter column status set default 'draft';
 --
 -- 두 문장이 순위를 각각 다시 계산한다. 중간 테이블에 담아 두 번 쓰는 쪽이
 -- 짧지만, 임시 테이블을 쓴 판본이 Supabase SQL 에디터에서
--- `relation "_plan_dupes" does not exist` 로 죽었다. 에디터가 문장을 어떻게
--- 쪼개고 어느 커넥션에 태우는지에 기대지 않는 편이 낫다 — 두 문장 모두
--- 자기 완결적이면 그 질문 자체가 사라진다.
+-- `relation "_plan_dupes" does not exist` 로 죽었다. 두 문장 모두 자기 완결적이면
+-- 에디터가 문장을 어떻게 다루든 상관이 없다.
 --
 -- 다시 계산해도 결과가 같은 이유: 유지 대상은 "출결 로그가 가장 많은 행"이고,
 -- 1번 문장은 버려질 행의 로그를 바로 그 행으로 옮긴다. 옮기고 나면 유지 대상의
@@ -214,7 +254,8 @@ delete from session_plans p
 -- 것이므로 if exists — 남아 있어도 중복 인덱스일 뿐 틀린 동작은 아니다.
 drop index if exists session_plans_class_id_date_idx;
 
-create unique index session_plans_class_date_key on session_plans (class_id, date);
+create unique index if not exists session_plans_class_date_key
+  on session_plans (class_id, date);
 
 -- -----------------------------------------------------------------------------
 -- RLS
@@ -223,15 +264,20 @@ create unique index session_plans_class_date_key on session_plans (class_id, dat
 alter table curricula         enable row level security;
 alter table session_templates enable row level security;
 
+-- create policy 에도 if not exists 가 없다. 전부 drop if exists 를 앞세운다.
+
 -- 커리큘럼은 코치도 본다. 코치가 자기 수업의 근거를 읽지 못하면 표준화는
 -- 통제가 아니라 잔소리가 된다.
+drop policy if exists curricula_read on curricula;
 create policy curricula_read on curricula
   for select using (is_member(academy_id));
 
+drop policy if exists curricula_owner_write on curricula;
 create policy curricula_owner_write on curricula
   for all using (is_owner(academy_id)) with check (is_owner(academy_id));
 
 -- 대표는 전부, 코치는 등재된 것 + 자기가 낸 제안. 남의 반려된 제안은 안 보인다.
+drop policy if exists session_templates_read on session_templates;
 create policy session_templates_read on session_templates
   for select using (
     is_owner(academy_id)
@@ -247,6 +293,7 @@ create policy session_templates_read on session_templates
 -- 만들 방법이 없다. 등재는 대표의 update만 할 수 있고(아래 owner 정책),
 -- 코치에게는 update 정책 자체를 주지 않는다 — 주면 자기 pending 행을
 -- published로 바꿀 수 있게 된다.
+drop policy if exists session_templates_coach_propose on session_templates;
 create policy session_templates_coach_propose on session_templates
   for insert with check (
     is_member(academy_id)
@@ -256,16 +303,17 @@ create policy session_templates_coach_propose on session_templates
   );
 
 -- 대표가 아직 보지 않은 자기 제안은 코치가 철회할 수 있다.
+drop policy if exists session_templates_coach_withdraw on session_templates;
 create policy session_templates_coach_withdraw on session_templates
   for delete using (status = 'pending' and proposed_by = my_coach_id(academy_id));
 
+drop policy if exists session_templates_owner_write on session_templates;
 create policy session_templates_owner_write on session_templates
   for all using (is_owner(academy_id)) with check (is_owner(academy_id));
 
 -- training_blocks도 같은 구조. 0002의 읽기 정책은 등재/제안을 구분하지 않으므로
 -- 여기서 조인다 — 남의 pending 블록이 라이브러리에 뜨면 승인 절차가 무의미하다.
 drop policy if exists training_blocks_read on training_blocks;
-
 create policy training_blocks_read on training_blocks
   for select using (
     is_owner(academy_id)
@@ -275,6 +323,7 @@ create policy training_blocks_read on training_blocks
     )
   );
 
+drop policy if exists training_blocks_coach_propose on training_blocks;
 create policy training_blocks_coach_propose on training_blocks
   for insert with check (
     is_member(academy_id)
@@ -286,6 +335,7 @@ create policy training_blocks_coach_propose on training_blocks
     and usage_count = 0
   );
 
+drop policy if exists training_blocks_coach_withdraw on training_blocks;
 create policy training_blocks_coach_withdraw on training_blocks
   for delete using (status = 'pending' and proposed_by = my_coach_id(academy_id));
 
