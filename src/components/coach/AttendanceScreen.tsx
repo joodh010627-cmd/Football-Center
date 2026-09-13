@@ -11,10 +11,9 @@
 
 import { useMemo, useState } from 'react';
 import { CheckCircle2, ListChecks, MousePointerClick, Send } from 'lucide-react';
-import type { AttendanceStatus, Class, ParentNotification } from '@/types';
+import type { AttendanceStatus, Class, ISODate, ParentNotification } from '@/types';
 import { useApp } from '@/store/AppContext';
-import { TODAY } from '@/data/dates';
-import { attendanceRateForStudent, studentsInClass } from '@/data/selectors';
+import { attendanceRateForStudent, planFor, studentsInClass } from '@/data/selectors';
 import { composeParentNotification } from '@/lib/notification';
 import { ATTENDANCE_LABEL, formatDateKo } from '@/lib/format';
 import { NEXT_STATUS, StudentLogCard } from './StudentLogCard';
@@ -23,11 +22,13 @@ import { TagRail } from './TagRail';
 
 interface AttendanceScreenProps {
   cls: Class;
+  /** The calendar day being recorded — not necessarily today. */
+  date: ISODate;
   onDone: () => void;
   onBack: () => void;
 }
 
-export function AttendanceScreen({ cls, onDone, onBack }: AttendanceScreenProps) {
+export function AttendanceScreen({ cls, date, onDone, onBack }: AttendanceScreenProps) {
   const { state, dispatch, getBlock, getCoach } = useApp();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<ParentNotification[] | null>(null);
@@ -35,13 +36,11 @@ export function AttendanceScreen({ cls, onDone, onBack }: AttendanceScreenProps)
   const draft = state.attendanceDraft;
   const roster = useMemo(() => studentsInClass(state.students, cls.id), [state.students, cls.id]);
 
-  /** The plan committed a moment ago in the builder — used in the report text. */
-  const todaysPlan = state.sessionPlans.find((p) => p.classId === cls.id && p.date === TODAY);
-  const sessionSummary = todaysPlan
-    ? (Object.values(todaysPlan.slots).filter(Boolean) as string[])
-        .map((id) => getBlock(id)?.title)
-        .filter((t): t is string => Boolean(t))
-    : [];
+  /** The plan registered for this day — its blocks go into the parent report. */
+  const plan = planFor(state.sessionPlans, cls.id, date);
+  const sessionSummary = (plan?.items ?? [])
+    .map((item) => (item.blockId ? getBlock(item.blockId)?.title : undefined))
+    .filter((t): t is string => Boolean(t));
 
   if (!draft) {
     return (
@@ -94,7 +93,7 @@ export function AttendanceScreen({ cls, onDone, onBack }: AttendanceScreenProps)
     console.log('발송 예정 알림톡:', payload);
     console.groupEnd();
 
-    dispatch({ type: 'attendance/submit', sessionPlanId: todaysPlan?.id });
+    dispatch({ type: 'attendance/submit', sessionPlanId: plan?.id });
     setNotifications(payload);
   };
 
@@ -119,7 +118,7 @@ export function AttendanceScreen({ cls, onDone, onBack }: AttendanceScreenProps)
           onClick={onBack}
           className="mb-2 text-[13px] font-medium text-steel transition-colors hover:text-ink"
         >
-          ← 훈련 설계
+          ← 달력
         </button>
 
         <h1 className="text-[25px] font-semibold leading-[1.2] tracking-tightest text-ink lg:text-[32px]">

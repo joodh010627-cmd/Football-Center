@@ -77,8 +77,14 @@ Supabase 대시보드 → **SQL Editor** 에서 아래 순서대로 붙여넣고
 | 2 | `supabase/migrations/0002_rls.sql` | 헬퍼 함수 + RLS 정책 |
 | 3 | `supabase/migrations/0003_functions.sql` | 가입·초대·제한된 쓰기 RPC |
 | 4 | `supabase/migrations/0004_payments.sql` | 수납(대표 전용) + 미납 뷰 |
+| 5 | `supabase/migrations/0005_curriculum.sql` | 커리큘럼·표준 세션 + 세션 설계 자유 구성 |
 
-**네 개를 하나로 합친 `supabase/APPLY_ALL.generated.sql` 을 붙여넣는 쪽이 편합니다.**
+> **이미 0004까지 적용한 프로젝트라면 0005만 추가로 실행하면 됩니다.** 0005는
+> `session_plans` 의 3칸 슬롯 컬럼을 순서 있는 `items` jsonb로 이관하고 기존
+> 컬럼을 떨어뜨립니다. 기존 행은 웜업-스킬-게임 순서로 자동 변환되므로 먼저
+> 백업할 필요는 없지만, **되돌리는 마이그레이션은 없습니다.**
+
+**다섯 개를 하나로 합친 `supabase/APPLY_ALL.generated.sql` 을 붙여넣는 쪽이 편합니다.**
 그 파일은 마이그레이션에서 생성되는 파생물이라 커밋되지 않습니다. 다시 만들려면:
 
 ```bash

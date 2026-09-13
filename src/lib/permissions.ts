@@ -32,8 +32,16 @@ export type Capability =
   | 'roster:read-all'
   /** Add coaches, issue invite codes. */
   | 'members:manage'
-  /** Edit the shared training block library and behaviour tags. */
+  /** Author curricula and standard sessions, and rule on coaches' proposals. */
   | 'curriculum:manage'
+  /**
+   * Submit a new standard session or training block for the owner's approval.
+   *
+   * Separate from `curriculum:manage` because it is the one curriculum write a
+   * coach has, and it is not a weaker version of authoring — the row it creates
+   * is `pending` and invisible in the builder until the owner rules on it.
+   */
+  | 'curriculum:propose'
   /** Plan sessions and record attendance for one's own classes. */
   | 'session:record';
 
@@ -46,12 +54,13 @@ const CAPABILITIES: Record<MemberRole, readonly Capability[]> = {
     'roster:read-all',
     'members:manage',
     'curriculum:manage',
+    'curriculum:propose',
     'session:record',
   ],
-  // A coach records their own sessions. That is the whole job. Everything the
-  // owner uses to *evaluate* coaches is absent — including, most importantly,
-  // the coach's own score.
-  coach: ['session:record'],
+  // A coach records their own sessions and may *propose* into the curriculum.
+  // Everything the owner uses to *evaluate* coaches is absent — including, most
+  // importantly, the coach's own score.
+  coach: ['session:record', 'curriculum:propose'],
 };
 
 export function can(session: Session | null, capability: Capability): boolean {

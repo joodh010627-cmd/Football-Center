@@ -20,7 +20,9 @@ import {
   classes,
   coaches,
   csActions,
+  curricula,
   sessionPlans,
+  sessionTemplates,
   students,
   trainingBlocks,
 } from './seedData';
@@ -122,6 +124,26 @@ async function main() {
     'coach_evaluations',
   );
 
+  // --- Curriculum tracks ---------------------------------------------------
+  // Before classes, because `classes.curriculum_id` references these.
+  await check(
+    db.from('curricula').insert(
+      curricula.map((c, i) =>
+        withAcademy({
+          id: uuidFor(c.id),
+          title: c.title,
+          age_group: c.ageGroup,
+          track: c.track,
+          objective: c.objective,
+          focus_areas: c.focusAreas,
+          cycle_weeks: c.cycleWeeks,
+          sort_order: i,
+        }),
+      ),
+    ),
+    'curricula',
+  );
+
   // --- Classes -------------------------------------------------------------
   await check(
     db.from('classes').insert(
@@ -136,6 +158,7 @@ async function main() {
           age_group: c.ageGroup,
           capacity: c.capacity,
           venue: c.venue,
+          curriculum_id: uuidFor(c.curriculumId),
         }),
       ),
     ),
@@ -184,10 +207,35 @@ async function main() {
           equipment: b.equipment,
           usage_count: b.usageCount,
           is_core_curriculum: b.isCoreCurriculum,
+          status: b.status,
+          proposed_by: b.proposedBy ? uuidFor(b.proposedBy) : null,
         }),
       ),
     ),
     'training_blocks',
+  );
+
+  // Standard sessions. After blocks, since `block_ids` points at them — the
+  // column is a uuid[] rather than a join table, so nothing enforces the order,
+  // but a seeder that writes dangling ids produces a demo full of "삭제된 블록".
+  await check(
+    db.from('session_templates').insert(
+      sessionTemplates.map((t) =>
+        withAcademy({
+          id: uuidFor(t.id),
+          curriculum_id: uuidFor(t.curriculumId),
+          title: t.title,
+          week: t.week,
+          goal: t.goal,
+          block_ids: t.blockIds.map(uuidFor),
+          status: t.status,
+          proposed_by: t.proposedBy ? uuidFor(t.proposedBy) : null,
+          review_note: t.reviewNote,
+          usage_count: t.usageCount,
+        }),
+      ),
+    ),
+    'session_templates',
   );
 
   // --- Students ------------------------------------------------------------
@@ -217,22 +265,25 @@ async function main() {
   );
 
   // --- Sessions & attendance ----------------------------------------------
-  await check(
-    db.from('session_plans').insert(
-      sessionPlans.map((p) =>
-        withAcademy({
-          id: uuidFor(p.id),
-          class_id: uuidFor(p.classId),
-          coach_id: uuidFor(p.coachId),
-          date: p.date,
-          warmup_block_id: p.slots.warmup ? uuidFor(p.slots.warmup) : null,
-          skill_block_id: p.slots.skill ? uuidFor(p.slots.skill) : null,
-          game_block_id: p.slots.game ? uuidFor(p.slots.game) : null,
-          status: p.status,
-        }),
-      ),
-    ),
+  // Chunked: one plan per class per session day over three months is a few
+  // hundred rows, past the point where a single insert is comfortable.
+  await insertChunked(
     'session_plans',
+    sessionPlans.map((p) =>
+      withAcademy({
+        id: uuidFor(p.id),
+        class_id: uuidFor(p.classId),
+        coach_id: uuidFor(p.coachId),
+        date: p.date,
+        items: p.items.map((item) => ({
+          category: item.category,
+          blockId: uuidFor(item.blockId),
+          durationMin: item.durationMin,
+        })),
+        template_id: p.templateId ? uuidFor(p.templateId) : null,
+        status: p.status,
+      }),
+    ),
   );
 
   await insertChunked(

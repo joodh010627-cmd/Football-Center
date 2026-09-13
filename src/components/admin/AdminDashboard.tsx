@@ -40,9 +40,11 @@ import { RosterPanel } from './RosterPanel';
 import { StudentDetailModal } from './StudentDetailModal';
 import { RecentActivityPanel } from './RecentActivityPanel';
 import { ImportPanel } from '@/components/import/ImportPanel';
+import { CurriculumScreen } from '@/components/curriculum/CurriculumScreen';
 import { commitImport } from '@/data/importCommit';
+import { buildProposalQueue } from '@/data/selectors';
 
-type View = 'overview' | 'alerts' | 'classes' | 'roster' | 'ops' | 'import';
+type View = 'overview' | 'alerts' | 'curriculum' | 'classes' | 'roster' | 'ops' | 'import';
 
 /** A class below either of these is worth a second look on the overview. */
 const MARGIN_WARNING = 0.25;
@@ -57,6 +59,7 @@ export function AdminDashboard() {
   const kpis = useMemo(() => buildKpis(slice), [slice]);
   const queue = useMemo(() => buildAlertQueue(slice, churnSignals), [slice, churnSignals]);
   const performance = useMemo(() => buildClassPerformance(slice), [slice]);
+  const proposals = useMemo(() => buildProposalQueue(slice), [slice]);
 
   const totalStudents = state.students.length;
   const revenueAtRisk = queue.reduce((sum, { student }) => sum + getFee(student.id), 0);
@@ -69,9 +72,15 @@ export function AdminDashboard() {
   const nav: ShellNavItem[] = [
     { key: 'overview', label: '개요', icon: LayoutGrid },
     { key: 'alerts', label: '이탈 위험', shortLabel: '위험', icon: AlertTriangle, badge: queue.length },
+    {
+      key: 'curriculum',
+      label: '커리큘럼',
+      icon: BookOpenCheck,
+      badge: proposals.length,
+    },
     { key: 'classes', label: '클래스 성과', shortLabel: '클래스', icon: Coins },
     { key: 'roster', label: '원생 명단', shortLabel: '원생', icon: Users },
-    { key: 'ops', label: '운영 품질', shortLabel: '운영', icon: BookOpenCheck },
+    { key: 'ops', label: '운영 품질', shortLabel: '운영', icon: ClipboardCheck },
     { key: 'import', label: '명단 가져오기', shortLabel: '가져오기', icon: FileSpreadsheet },
   ];
 
@@ -111,6 +120,10 @@ export function AdminDashboard() {
           <ChurnAlertPanel onInspect={setInspected} />
         </ViewFrame>
       )}
+
+      {/* Curriculum brings its own header — it opens on the centre's philosophy,
+          and a ViewFrame title above that would state the same thing twice. */}
+      {view === 'curriculum' && <CurriculumScreen />}
 
       {view === 'classes' && (
         <ViewFrame

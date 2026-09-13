@@ -63,10 +63,10 @@ export function PortfolioScreen() {
           <StatTile label="누적 기록" value={totalLogs} unit="건" icon={BarChart3} tint="mint" />
           <StatTile label="담당 원생" value={studentCount} unit="명" icon={Users} tint="sky" />
           <StatTile
-            label="표준 준수율"
-            value={formatPercent(portfolio.coreCurriculumRate)}
+            label="표준 세션 준수율"
+            value={formatPercent(portfolio.templateAdherenceRate)}
             icon={Award}
-            tint={portfolio.coreCurriculumRate >= 0.6 ? 'canvas' : 'peach'}
+            tint={portfolio.templateAdherenceRate >= 0.7 ? 'canvas' : 'peach'}
           />
         </div>
 
@@ -75,21 +75,29 @@ export function PortfolioScreen() {
             <div className="flex items-center justify-between gap-2">
               <h2 className="flex items-center gap-1.5 text-[15px] font-semibold text-ink">
                 <Award size={15} className="text-primary" />
-                표준 커리큘럼 준수율
+                표준 세션 준수율
               </h2>
               <span className="text-[17px] font-semibold tracking-[-0.3px] text-ink">
-                {formatPercent(portfolio.coreCurriculumRate)}
+                {formatPercent(portfolio.templateAdherenceRate)}
               </span>
             </div>
             <ProgressBar
               className="mt-3"
-              value={portfolio.coreCurriculumRate}
-              target={0.6}
-              barClassName={portfolio.coreCurriculumRate >= 0.6 ? 'bg-brand-green' : 'bg-brand-orange'}
+              value={portfolio.templateAdherenceRate}
+              target={0.7}
+              barClassName={
+                portfolio.templateAdherenceRate >= 0.7 ? 'bg-brand-green' : 'bg-brand-orange'
+              }
             />
             <p className="mt-2 text-[12px] leading-[1.5] text-slate">
-              본원 목표는 60%입니다. 표준 블록 사용 비율이 높을수록 코치가 바뀌어도 수업 품질이
-              유지됩니다.
+              본원 목표는 70%입니다. 담당 반의 커리큘럼에 등재된 표준 세션으로 설계한 비율이며,
+              블록을 하나라도 바꾸면 그 수업은 직접 구성으로 집계됩니다.
+            </p>
+            <p className="mt-3 flex items-baseline justify-between gap-2 border-t border-hairline-soft pt-3 text-[12px]">
+              <span className="text-steel">표준 블록 사용률</span>
+              <span className="font-semibold tabular-nums text-charcoal">
+                {formatPercent(portfolio.coreCurriculumRate)}
+              </span>
             </p>
 
             <h3 className="mt-5 mb-2.5 eyebrow-ink">

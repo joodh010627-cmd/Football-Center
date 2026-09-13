@@ -34,6 +34,30 @@ export type AttendanceStatus = 'present' | 'absent' | 'injured';
 
 export type TrainingCategory = 'warmup' | 'skill' | 'game';
 
+/**
+ * What a curriculum is *for*, independent of age. The centre's philosophy is
+ * expressed as `track × ageGroup`: 킨더 U7 and 주말 U9 클럽 are both "play
+ * first", but they are not the same curriculum, and a U9 in the weekday
+ * foundation track is not doing what the weekend club is doing.
+ */
+export type CurriculumTrack =
+  | 'kinder'
+  | 'foundation'
+  | 'skill'
+  | 'tactical'
+  | 'elite'
+  | 'physical'
+  | 'club';
+
+/**
+ * Approval state for anything a coach can *propose* into the shared library.
+ *
+ * `pending` rows exist in the same table as published ones, which is what makes
+ * the owner's queue a filter rather than a second schema. Nothing pending is
+ * offered in the session builder — see `publishedBlocks` / `publishedTemplates`.
+ */
+export type ApprovalStatus = 'published' | 'pending' | 'rejected';
+
 /** Weekday index, 0 = Sunday … 6 = Saturday (matches `Date.getDay()`). */
 export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -164,6 +188,12 @@ export interface Class {
   ageGroup: AgeGroup;
   capacity: number;
   venue: string;
+  /**
+   * The standard curriculum this class runs. `null` is legal — a newly created
+   * class has no track assigned yet — and the builder degrades to the whole
+   * block library when it is missing, rather than showing nothing.
+   */
+  curriculumId: ID | null;
 }
 
 /**
@@ -187,6 +217,64 @@ export interface ClassSchedule {
   durationMin: number;
 }
 
+// ---------------------------------------------------------------------------
+// Curriculum
+// ---------------------------------------------------------------------------
+
+/**
+ * A standard curriculum — one per `track × ageGroup` the centre offers.
+ *
+ * This is the layer *above* session design, and it is authored from the owner's
+ * interview rather than accumulated from what coaches happen to run. Read
+ * downward it is philosophy → curriculum → standard session → block; read
+ * upward it is the claim that a tapped block is not an isolated drill but a line
+ * item in the centre's promise to a parent.
+ */
+export interface Curriculum {
+  id: ID;
+  academyId: ID;
+  /** e.g. "킨더 U7 — 놀이로 배우는 첫 축구". */
+  title: string;
+  ageGroup: AgeGroup;
+  track: CurriculumTrack;
+  /** One sentence: what a child who finishes this track can do. */
+  objective: string;
+  /** The competences this track owns, rendered as chips. */
+  focusAreas: string[];
+  /** How many standard sessions make up one cycle. */
+  cycleWeeks: number;
+  sortOrder: number;
+}
+
+/**
+ * A standard session inside a curriculum — the smallest unit the owner
+ * standardises, and the thing a coach's day is assembled from.
+ *
+ * `blockIds` is an *ordered, free-length* list, not three fixed slots: two skill
+ * blocks, a game before the skill work, or warmup-then-game-only are all real
+ * sessions, and a schema that can't express them pushes coaches into logging a
+ * session they didn't run.
+ */
+export interface SessionTemplate {
+  id: ID;
+  academyId: ID;
+  curriculumId: ID;
+  title: string;
+  /** Position in the curriculum cycle, 1-based. */
+  week: number;
+  /** What this session is trying to move. Shown to the coach before the blocks. */
+  goal: string;
+  blockIds: ID[];
+  status: ApprovalStatus;
+  /** The coach who proposed it. `null` when the owner authored it directly. */
+  proposedBy: ID | null;
+  /** The owner's note on an approval or rejection. Empty until reviewed. */
+  reviewNote: string;
+  /** How many session plans started from this template. */
+  usageCount: number;
+  createdAt: string;
+}
+
 export interface TrainingBlock {
   id: ID;
   academyId: ID;
@@ -202,11 +290,22 @@ export interface TrainingBlock {
   usageCount: number;
   /** Set by the owner: standardised curriculum blocks every class must cover. */
   isCoreCurriculum: boolean;
+  /** `pending` = a coach proposed it and the owner hasn't ruled yet. */
+  status: ApprovalStatus;
+  proposedBy: ID | null;
 }
 
+// ---------------------------------------------------------------------------
+// Session plans
+// ---------------------------------------------------------------------------
+
 /**
- * A designed session: three ordered slots (warmup / skill / game), each holding
- * at most one `TrainingBlock` id.
+ * A designed session for one class on one date.
+ *
+ * `status` is what the calendar colours itself from, and the three values are
+ * the three things an owner or coach needs to tell apart at a glance:
+ * `draft` — the class meets but nobody has planned it; `scheduled` — a plan is
+ * registered; `completed` — it ran, attendance is logged and parents were told.
  */
 export interface SessionPlan {
   id: ID;
@@ -214,15 +313,22 @@ export interface SessionPlan {
   classId: ID;
   coachId: ID;
   date: ISODate;
-  slots: SessionSlots;
+  items: SessionItem[];
+  /** The standard session this was built from. `null` = assembled from scratch. */
+  templateId: ID | null;
   createdAt: string;
-  status: 'draft' | 'ready' | 'completed';
+  status: SessionPlanStatus;
 }
 
-export interface SessionSlots {
-  warmup: ID | null;
-  skill: ID | null;
-  game: ID | null;
+export type SessionPlanStatus = 'draft' | 'scheduled' | 'completed';
+
+/** One step of a session. Order is the order the coach will run it in. */
+export interface SessionItem {
+  category: TrainingCategory;
+  /** `null` while the coach has chosen the shape but not yet the drill. */
+  blockId: ID | null;
+  /** Coach's override; falls back to the block's own `durationMin`. */
+  durationMin: number | null;
 }
 
 export interface AttendanceLog {

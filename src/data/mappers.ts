@@ -11,6 +11,7 @@
  */
 
 import type {
+  ApprovalStatus,
   AttendanceLog,
   AttendanceStatus,
   AgeGroup,
@@ -19,9 +20,13 @@ import type {
   ClassFinance,
   Coach,
   CsAction,
+  Curriculum,
+  CurriculumTrack,
   ID,
   Payment,
+  SessionItem,
   SessionPlan,
+  SessionTemplate,
   Student,
   StudentStatus,
   TrainingBlock,
@@ -52,6 +57,7 @@ export const toClass = (r: Row): Class => ({
   ageGroup: r.age_group as AgeGroup,
   capacity: r.capacity,
   venue: r.venue ?? '',
+  curriculumId: r.curriculum_id ?? null,
 });
 
 export const toClassFinance = (r: Row): ClassFinance => ({
@@ -90,6 +96,64 @@ export const toTrainingBlock = (r: Row): TrainingBlock => ({
   equipment: r.equipment ?? [],
   usageCount: r.usage_count ?? 0,
   isCoreCurriculum: r.is_core_curriculum ?? false,
+  status: (r.status ?? 'published') as ApprovalStatus,
+  proposedBy: r.proposed_by ?? null,
+});
+
+export const fromTrainingBlock = (b: TrainingBlock): Row => ({
+  id: b.id,
+  academy_id: b.academyId,
+  title: b.title,
+  category: b.category,
+  duration_min: b.durationMin,
+  description: b.description,
+  age_groups: b.ageGroups,
+  equipment: b.equipment,
+  is_core_curriculum: b.isCoreCurriculum,
+  status: b.status,
+  proposed_by: b.proposedBy,
+  // `usage_count` is deliberately absent: it only ever moves through
+  // increment_block_usage(), and the coach-propose policy requires it be 0.
+});
+
+export const toCurriculum = (r: Row): Curriculum => ({
+  id: r.id,
+  academyId: r.academy_id,
+  title: r.title,
+  ageGroup: r.age_group as AgeGroup,
+  track: r.track as CurriculumTrack,
+  objective: r.objective ?? '',
+  focusAreas: r.focus_areas ?? [],
+  cycleWeeks: r.cycle_weeks ?? 8,
+  sortOrder: r.sort_order ?? 0,
+});
+
+export const toSessionTemplate = (r: Row): SessionTemplate => ({
+  id: r.id,
+  academyId: r.academy_id,
+  curriculumId: r.curriculum_id,
+  title: r.title,
+  week: r.week ?? 1,
+  goal: r.goal ?? '',
+  blockIds: r.block_ids ?? [],
+  status: (r.status ?? 'published') as ApprovalStatus,
+  proposedBy: r.proposed_by ?? null,
+  reviewNote: r.review_note ?? '',
+  usageCount: r.usage_count ?? 0,
+  createdAt: r.created_at,
+});
+
+export const fromSessionTemplate = (t: SessionTemplate): Row => ({
+  id: t.id,
+  academy_id: t.academyId,
+  curriculum_id: t.curriculumId,
+  title: t.title,
+  week: t.week,
+  goal: t.goal,
+  block_ids: t.blockIds,
+  status: t.status,
+  proposed_by: t.proposedBy,
+  review_note: t.reviewNote,
 });
 
 export const toBehaviorTag = (r: Row): BehaviorTag => ({
@@ -100,17 +164,25 @@ export const toBehaviorTag = (r: Row): BehaviorTag => ({
   polarity: r.polarity,
 });
 
+/**
+ * `items` is jsonb, so it arrives as whatever was written — including rows
+ * migrated from the old three-column layout. Normalising each element here is
+ * what lets the rest of the app treat `SessionItem` as a guaranteed shape.
+ */
 export const toSessionPlan = (r: Row): SessionPlan => ({
   id: r.id,
   academyId: r.academy_id,
   classId: r.class_id,
   coachId: r.coach_id,
   date: r.date,
-  slots: {
-    warmup: r.warmup_block_id,
-    skill: r.skill_block_id,
-    game: r.game_block_id,
-  },
+  items: ((r.items ?? []) as Row[]).map(
+    (i): SessionItem => ({
+      category: i.category as TrainingCategory,
+      blockId: i.blockId ?? null,
+      durationMin: i.durationMin ?? null,
+    }),
+  ),
+  templateId: r.template_id ?? null,
   createdAt: r.created_at,
   status: r.status,
 });
@@ -121,9 +193,8 @@ export const fromSessionPlan = (p: SessionPlan): Row => ({
   class_id: p.classId,
   coach_id: p.coachId,
   date: p.date,
-  warmup_block_id: p.slots.warmup,
-  skill_block_id: p.slots.skill,
-  game_block_id: p.slots.game,
+  items: p.items,
+  template_id: p.templateId,
   status: p.status,
 });
 

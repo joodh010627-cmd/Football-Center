@@ -38,6 +38,67 @@ export function diffDays(a: ISODate, b: ISODate): number {
   return Math.round(ms / 86_400_000);
 }
 
+export function addDays(iso: ISODate, n: number): ISODate {
+  const d = new Date(`${iso}T00:00:00`);
+  d.setDate(d.getDate() + n);
+  return toISODate(d);
+}
+
+// ---------------------------------------------------------------------------
+// Month grid — the coach calendar
+// ---------------------------------------------------------------------------
+
+/**
+ * A month the calendar is looking at. Kept as `{ year, month }` with a 0-based
+ * month rather than a `Date`, because a `Date` pinned to the 1st still carries a
+ * time and a day-of-month that the next `setMonth` can overflow (31 Jan + 1
+ * month = 3 Mar). Two integers cannot drift.
+ */
+export interface YearMonth {
+  year: number;
+  /** 0 = January, matching `Date.getMonth()`. */
+  month: number;
+}
+
+export const monthOf = (iso: ISODate): YearMonth => {
+  const d = new Date(`${iso}T00:00:00`);
+  return { year: d.getFullYear(), month: d.getMonth() };
+};
+
+export const THIS_MONTH: YearMonth = monthOf(TODAY);
+
+export function shiftMonth({ year, month }: YearMonth, delta: number): YearMonth {
+  const total = year * 12 + month + delta;
+  return { year: Math.floor(total / 12), month: ((total % 12) + 12) % 12 };
+}
+
+export const monthLabel = ({ year, month }: YearMonth): string => `${year}년 ${month + 1}월`;
+
+export const inMonth = (iso: ISODate, ym: YearMonth): boolean => {
+  const d = new Date(`${iso}T00:00:00`);
+  return d.getFullYear() === ym.year && d.getMonth() === ym.month;
+};
+
+/**
+ * Six weeks of dates covering the month, Sunday-first, including the leading and
+ * trailing days that belong to the neighbouring months.
+ *
+ * Always 42 cells, never 35: a grid that changes height between months makes the
+ * controls under it jump when you page through, which is exactly the moment a
+ * coach is aiming at [다음 달].
+ */
+export function monthGrid(ym: YearMonth): ISODate[] {
+  const first = new Date(ym.year, ym.month, 1);
+  const start = new Date(first);
+  start.setDate(1 - first.getDay());
+
+  return Array.from({ length: 42 }, (_, i) => {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    return toISODate(d);
+  });
+}
+
 /** Status labels, shared by the roster table and the student detail modal. */
 export const STUDENT_STATUS_LABEL = {
   active: '정상',

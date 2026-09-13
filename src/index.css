@@ -58,6 +58,14 @@
     @apply rounded-lg border border-hairline bg-canvas;
   }
 
+  /* Text input on a light surface. The auth screen keeps its own dark variant —
+     it sits on the pitch-green plane and shares nothing but the geometry. */
+  .input-field {
+    @apply w-full rounded-md border border-hairline-strong bg-canvas px-3.5 py-2.5 text-[14px]
+           text-ink outline-none transition-colors duration-200
+           placeholder:text-stone focus:border-primary;
+  }
+
   .pill-tab {
     @apply rounded-full border border-hairline px-4 py-2 text-sm font-medium text-steel
            transition-colors duration-150 hover:border-hairline-strong hover:text-ink;

@@ -3,6 +3,12 @@
  *
  * Answers the owner's question "is every class actually running the curriculum
  * I designed?" — coach by coach, from session-plan history rather than trust.
+ *
+ * Two numbers, because they fail differently. 표준 세션 준수율 asks whether the
+ * session a coach ran was one of the standard sessions authored for that class's
+ * track; 표준 블록 사용률 asks what share of their blocks are flagged core. A coach
+ * can score high on the second while assembling drills from three unrelated
+ * tracks, which is precisely the drift the first one catches.
  */
 
 import { BookOpenCheck, Star } from 'lucide-react';
@@ -13,6 +19,8 @@ import { ProgressBar } from '@/components/ui/ProgressBar';
 import { cn } from '@/lib/cn';
 
 const CORE_TARGET = 0.6;
+/** Below this, a coach is improvising most of their month. */
+const ADHERENCE_TARGET = 0.7;
 
 export function CurriculumPanel() {
   const { state, slice } = useApp();
@@ -24,7 +32,7 @@ export function CurriculumPanel() {
       portfolio: buildCoachPortfolio(slice, coach.id),
       classCount: classesForCoach(state.classes, coach.id).length,
     }))
-    .sort((a, b) => b.portfolio.coreCurriculumRate - a.portfolio.coreCurriculumRate);
+    .sort((a, b) => b.portfolio.templateAdherenceRate - a.portfolio.templateAdherenceRate);
 
   return (
     <section className="rounded-lg border border-hairline bg-canvas p-6">
@@ -34,14 +42,15 @@ export function CurriculumPanel() {
           커리큘럼 표준화 현황
         </h2>
         <p className="mt-1 text-[13px] leading-[1.5] text-slate">
-          표준 블록 사용률. 목표 {formatPercent(CORE_TARGET)} 미만이면 수업 품질 편차가 발생합니다.
+          표준 세션 준수율. 목표 {formatPercent(ADHERENCE_TARGET)} 미만이면 수업 품질 편차가
+          발생합니다. 괄호 안은 표준 블록 사용률입니다.
         </p>
       </header>
 
       <ul className="space-y-4">
         {rows.map(({ coach, portfolio, classCount }) => {
-          const rate = portfolio.coreCurriculumRate;
-          const belowTarget = rate < CORE_TARGET;
+          const rate = portfolio.templateAdherenceRate;
+          const belowTarget = rate < ADHERENCE_TARGET;
 
           return (
             <li key={coach.id}>
@@ -54,19 +63,33 @@ export function CurriculumPanel() {
                     {(evaluations[coach.id] ?? 0).toFixed(1)}
                   </span>
                 </span>
-                <span
-                  className={cn(
-                    'shrink-0 text-sm font-semibold tabular-nums',
-                    belowTarget ? 'text-brand-orange-deep' : 'text-ink',
+                <span className="flex shrink-0 items-baseline gap-1.5">
+                  <span
+                    className={cn(
+                      'text-sm font-semibold tabular-nums',
+                      belowTarget ? 'text-brand-orange-deep' : 'text-ink',
+                    )}
+                  >
+                    {portfolio.sessionCount > 0 ? formatPercent(rate) : '기록 없음'}
+                  </span>
+                  {portfolio.sessionCount > 0 && (
+                    <span
+                      className={cn(
+                        'text-[12px] tabular-nums',
+                        portfolio.coreCurriculumRate < CORE_TARGET
+                          ? 'text-brand-orange-deep'
+                          : 'text-steel',
+                      )}
+                    >
+                      ({formatPercent(portfolio.coreCurriculumRate)})
+                    </span>
                   )}
-                >
-                  {portfolio.sessionCount > 0 ? formatPercent(rate) : '기록 없음'}
                 </span>
               </div>
               <ProgressBar
                 className="mt-2"
                 value={rate}
-                target={CORE_TARGET}
+                target={ADHERENCE_TARGET}
                 barClassName={belowTarget ? 'bg-brand-orange' : 'bg-brand-green'}
               />
             </li>
