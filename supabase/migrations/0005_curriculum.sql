@@ -140,6 +140,50 @@ alter table session_plans
 
 alter table session_plans alter column status set default 'draft';
 
+-- -----------------------------------------------------------------------------
+-- 중복 설계 정리 — 고유 인덱스를 걸기 전에
+-- -----------------------------------------------------------------------------
+
+-- 기존 데이터에는 (class_id, date) 중복이 있을 수 있고, 실제로 있었다.
+-- 예전 builder/commit 은 매번 새 uuid로 plain insert 를 했으므로, 코치가 같은 반을
+-- 같은 날 두 번 설계하면 두 행이 남았다. 그래서 아래 고유 인덱스는 정리 없이는
+-- 걸리지 않는다.
+--
+-- 무엇을 남길지가 이 블록의 전부다. 순서대로:
+--   1. 출결 로그가 가리키는 설계 — 그게 실제로 진행된 수업이다
+--   2. completed 인 설계
+--   3. 가장 나중에 만들어진 설계
+--
+-- 그리고 버리는 행을 가리키던 출결 로그는 남는 행으로 옮긴다. attendance_logs의
+-- FK가 on delete set null 이므로 그냥 지우면 "언제 무엇을 했는지" 링크가 조용히
+-- 끊긴다 — 중복을 지우는 값보다 잃는 게 크다.
+create temporary table _plan_dupes as
+select id as doomed_id, keep_id
+  from (
+    select p.id,
+           first_value(p.id) over w as keep_id,
+           row_number()      over w as rn
+      from session_plans p
+    window w as (
+      partition by p.class_id, p.date
+      order by (select count(*) from attendance_logs l where l.session_plan_id = p.id) desc,
+               (p.status = 'completed') desc,
+               p.created_at desc
+    )
+  ) ranked
+ where rn > 1;
+
+update attendance_logs l
+   set session_plan_id = d.keep_id
+  from _plan_dupes d
+ where l.session_plan_id = d.doomed_id;
+
+delete from session_plans p
+ using _plan_dupes d
+ where p.id = d.doomed_id;
+
+drop table _plan_dupes;
+
 -- 한 클래스의 한 날짜에 수업은 하나다. 달력 칸이 두 개의 설계를 가리키면
 -- "등록됨"이 무슨 뜻인지 말할 수 없게 된다. 재설계는 덮어쓴다.
 -- 0001의 비고유 (class_id, date) 인덱스를 대체한다. 이름 역시 자동 생성된
