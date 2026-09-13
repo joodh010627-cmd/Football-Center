@@ -14,6 +14,13 @@
 -- 코치에게 "안 한 수업을 기록"하게 만든다.
 -- -----------------------------------------------------------------------------
 
+-- 한 트랜잭션으로 묶는다. Postgres는 DDL도 트랜잭션에 들어가므로, 중간에
+-- 실패하면 아무것도 적용되지 않은 상태로 돌아간다. 대시보드에 붙여넣어 한 번에
+-- 실행하는 파일에서 이게 중요한 이유: 절반만 적용된 스키마는 두 번째 시도에서
+-- "type approval_status already exists" 처럼 원인과 무관한 에러를 내고, 그때부터
+-- 손으로 복구해야 한다.
+begin;
+
 -- -----------------------------------------------------------------------------
 -- 승인 상태
 -- -----------------------------------------------------------------------------
@@ -119,7 +126,11 @@ alter table session_plans
 
 -- 'ready'는 "설계 완료"였고 달력이 없던 시절의 이름이다. 지금은 달력에 등재된
 -- 상태를 뜻하므로 'scheduled'로 부른다. 'draft'는 아직 등재 전.
-alter table session_plans drop constraint session_plans_status_check;
+--
+-- if exists: 이 제약의 이름은 0001의 인라인 check가 자동 생성한 것이라 우리가
+-- 지은 게 아니다. 이름을 맞게 추측했더라도, 틀렸을 때 마이그레이션이 중간에
+-- 죽는 쪽보다 조용히 넘어가고 아래에서 새 제약을 붙이는 쪽이 낫다.
+alter table session_plans drop constraint if exists session_plans_status_check;
 
 update session_plans set status = 'scheduled' where status = 'ready';
 
@@ -131,8 +142,9 @@ alter table session_plans alter column status set default 'draft';
 
 -- 한 클래스의 한 날짜에 수업은 하나다. 달력 칸이 두 개의 설계를 가리키면
 -- "등록됨"이 무슨 뜻인지 말할 수 없게 된다. 재설계는 덮어쓴다.
--- 0001의 비고유 (class_id, date) 인덱스를 대체한다.
-drop index session_plans_class_id_date_idx;
+-- 0001의 비고유 (class_id, date) 인덱스를 대체한다. 이름 역시 자동 생성된
+-- 것이므로 if exists — 남아 있어도 중복 인덱스일 뿐 틀린 동작은 아니다.
+drop index if exists session_plans_class_id_date_idx;
 
 create unique index session_plans_class_date_key on session_plans (class_id, date);
 
@@ -184,7 +196,7 @@ create policy session_templates_owner_write on session_templates
 
 -- training_blocks도 같은 구조. 0002의 읽기 정책은 등재/제안을 구분하지 않으므로
 -- 여기서 조인다 — 남의 pending 블록이 라이브러리에 뜨면 승인 절차가 무의미하다.
-drop policy training_blocks_read on training_blocks;
+drop policy if exists training_blocks_read on training_blocks;
 
 create policy training_blocks_read on training_blocks
   for select using (
@@ -236,3 +248,5 @@ $$;
 
 revoke execute on function public.increment_template_usage(uuid) from public;
 grant  execute on function public.increment_template_usage(uuid) to authenticated;
+
+commit;
