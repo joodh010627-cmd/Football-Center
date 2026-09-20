@@ -32,6 +32,27 @@ export function daysAgo(n: number): ISODate {
  */
 export const TODAY: ISODate = toISODate(NOW);
 
+/**
+ * The local calendar day of a full timestamp.
+ *
+ * The same rule as `TODAY`, applied to a value that already exists. Slicing the
+ * first ten characters of an ISO string is the obvious implementation and it is
+ * wrong twice over in KST: a row written at 08:00 local carries yesterday's UTC
+ * date, and a synthetic `...T20:00:00Z` stamp for an evening session reads as
+ * 05:00 tomorrow. Either way the event is filed on a day nobody taught.
+ */
+export function dayOf(at: string): ISODate {
+  const d = new Date(at);
+  return Number.isNaN(d.getTime()) ? at.slice(0, 10) : toISODate(d);
+}
+
+/** `HH:mm`, local. Same reasoning as `dayOf`. */
+export function timeOf(at: string): string {
+  const d = new Date(at);
+  if (Number.isNaN(d.getTime())) return at.slice(11, 16);
+  return `${`${d.getHours()}`.padStart(2, '0')}:${`${d.getMinutes()}`.padStart(2, '0')}`;
+}
+
 /** Whole days between two ISO dates (a − b). */
 export function diffDays(a: ISODate, b: ISODate): number {
   const ms = new Date(`${a}T00:00:00`).getTime() - new Date(`${b}T00:00:00`).getTime();

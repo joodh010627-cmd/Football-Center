@@ -66,6 +66,8 @@ interface ClassCalendarScreenProps {
   onDesign: (date: ISODate) => void;
   onRecord: (date: ISODate) => void;
   onBack: () => void;
+  /** Names wherever 뒤로 actually goes — this screen is reached from three places. */
+  backLabel?: string;
 }
 
 export function ClassCalendarScreen({
@@ -73,6 +75,7 @@ export function ClassCalendarScreen({
   onDesign,
   onRecord,
   onBack,
+  backLabel = '← 수업 목록',
 }: ClassCalendarScreenProps) {
   const { state } = useApp();
   const [month, setMonth] = useState<YearMonth>(THIS_MONTH);
@@ -94,7 +97,7 @@ export function ClassCalendarScreen({
           onClick={onBack}
           className="mb-2 text-[13px] font-medium text-steel transition-colors hover:text-ink"
         >
-          ← 수업 목록
+          {backLabel}
         </button>
 
         <div className="flex flex-wrap items-start justify-between gap-3">

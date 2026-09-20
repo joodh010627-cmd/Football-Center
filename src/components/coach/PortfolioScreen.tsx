@@ -13,9 +13,10 @@ import { ProgressBar } from '@/components/ui/ProgressBar';
 import { StatTile } from '@/components/ui/StatTile';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { BackBar } from '@/components/shell/Shell';
 import { CATEGORY_META } from './TrainingBlockCard';
 
-export function PortfolioScreen() {
+export function PortfolioScreen({ onBack }: { onBack?: () => void }) {
   const { state, slice, getCoach } = useApp();
   const coach = getCoach(state.currentCoachId ?? '');
   const portfolio = buildCoachPortfolio(slice, state.currentCoachId ?? '');
@@ -31,6 +32,8 @@ export function PortfolioScreen() {
 
   return (
     <div>
+      {onBack && <BackBar label="클럽" onBack={onBack} />}
+
       <header className="border-b border-hairline bg-canvas px-5 pb-7 pt-8 sm:px-8 lg:px-12">
         <p className="eyebrow-ink">Coach portfolio</p>
 

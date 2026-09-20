@@ -36,13 +36,14 @@ import { studentsInClass, templatesForCurriculum } from '@/data/selectors';
 import { cn } from '@/lib/cn';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { BackBar } from '@/components/shell/Shell';
 import { CATEGORY_META } from '@/components/coach/TrainingBlockCard';
 import { AGE_CAPTION, AGE_ORDER, APPROVAL_LABEL, TRACK_META, TRACK_ORDER } from './curriculumMeta';
 import { SessionTemplateEditor } from './SessionTemplateEditor';
 import { BlockProposalModal } from './BlockProposalModal';
 import { ApprovalQueuePanel } from './ApprovalQueuePanel';
 
-export function CurriculumScreen() {
+export function CurriculumScreen({ onBack }: { onBack?: () => void }) {
   const { state } = useApp();
   const session = useSession();
   const canEdit = can(session, 'curriculum:manage');
@@ -91,6 +92,7 @@ export function CurriculumScreen() {
   if (curricula.length === 0) {
     return (
       <div className="px-5 py-16 sm:px-8 lg:px-12">
+        {onBack && <BackBar label="클럽" onBack={onBack} />}
         <EmptyState
           icon={BookOpenCheck}
           title="등록된 커리큘럼이 없습니다"
@@ -102,6 +104,8 @@ export function CurriculumScreen() {
 
   return (
     <div>
+      {onBack && <BackBar label="클럽" onBack={onBack} />}
+
       {/* --- Philosophy ------------------------------------------------- */}
       <header className="relative overflow-hidden border-b border-hairline bg-canvas px-5 pb-9 pt-10 sm:px-8 lg:px-12 lg:pb-11 lg:pt-14">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(115%_150%_at_92%_-10%,#EDF2EE_0%,transparent_60%)]" />
