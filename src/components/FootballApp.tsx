@@ -27,12 +27,12 @@ import { useApp } from '@/store/AppContext';
 import { useWorkspace } from '@/store/WorkspaceContext';
 import { useSession } from '@/store/AuthContext';
 import { isOwner } from '@/lib/permissions';
-import { useSystemBack } from '@/lib/systemBack';
+import { EXIT_WINDOW, useSystemBack } from '@/lib/systemBack';
 import { TODAY } from '@/data/dates';
 import { buildDay, summarise } from '@/data/today';
 import { countLeads, triage } from '@/data/crm';
 import { planFor } from '@/data/selectors';
-import { Shell, type Alert, type TabItem } from '@/components/shell/Shell';
+import { Shell, Toast, type Alert, type TabItem } from '@/components/shell/Shell';
 import { ClassHomeScreen } from '@/components/home/ClassHomeScreen';
 import { ScheduleScreen } from '@/components/schedule/ScheduleScreen';
 import { FormsScreen } from '@/components/forms/FormsScreen';
@@ -78,6 +78,7 @@ export function FootballApp() {
 
   const [tab, setTab] = useState<Tab>('class');
   const [stacks, setStacks] = useState<Stacks>(EMPTY_STACKS);
+  const [leaving, setLeaving] = useState(false);
 
   const stack = stacks[tab];
   const route = stack.length > 0 ? stack[stack.length - 1] : null;
@@ -141,7 +142,10 @@ export function FootballApp() {
     pop();
   };
 
-  useSystemBack(stack.length, dismiss);
+  useSystemBack(stack.length, dismiss, () => {
+    setLeaving(true);
+    window.setTimeout(() => setLeaving(false), EXIT_WINDOW);
+  });
 
   // --- Session flow -------------------------------------------------------
   //
@@ -215,14 +219,17 @@ export function FootballApp() {
   ];
 
   return (
-    <Shell
-      tabs={tabs}
-      active={tab}
-      onSelect={(key) => resetTo(key as Tab)}
-      alerts={alerts}
-    >
-      {route ? renderRoute() : renderTab()}
-    </Shell>
+    <>
+      <Shell
+        tabs={tabs}
+        active={tab}
+        onSelect={(key) => resetTo(key as Tab)}
+        alerts={alerts}
+      >
+        {route ? renderRoute() : renderTab()}
+      </Shell>
+      {leaving && <Toast>한 번 더 누르면 종료됩니다</Toast>}
+    </>
   );
 
   // --- Rendering ----------------------------------------------------------

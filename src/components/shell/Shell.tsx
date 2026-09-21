@@ -445,6 +445,27 @@ export function BackBar({ label, onBack }: { label: string; onBack: () => void }
   );
 }
 
+/**
+ * A brief, non-blocking line at the thumb end of the screen.
+ *
+ * Sits above the bottom bar rather than centred, because the only thing it has
+ * to say so far is about a button down there. `pointer-events-none` so it never
+ * eats the second press it is asking for.
+ */
+export function Toast({ children }: { children: ReactNode }) {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="pointer-events-none fixed inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-50 flex justify-center px-6 lg:bottom-8"
+    >
+      <span className="animate-slide-up rounded-full bg-ink-deep/90 px-4 py-2.5 text-[13px] font-medium text-white shadow-modal backdrop-blur-sm">
+        {children}
+      </span>
+    </div>
+  );
+}
+
 /** Standard horizontal gutters. Every screen body uses this, nothing else. */
 export function ScreenBody({ children }: { children: ReactNode }) {
   return <div className="px-5 py-5 sm:px-7 lg:px-10">{children}</div>;
