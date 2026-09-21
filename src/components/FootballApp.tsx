@@ -3,7 +3,7 @@
  *
  * One structure for both roles. 대표 and 코치 get the same five tabs, the same
  * home screen and the same session flow; the owner's extra — finance, coach
- * evaluation, the churn queue — hangs off a 상세 보기 inside 클럽. The old
+ * evaluation, the churn queue — hangs off 세부 관리 inside 클럽. The old
  * `RoleRouter` shipped two different applications and made "권한" mean "a
  * different product", which is why an owner could not see the thing they
  * actually spend their evenings doing.

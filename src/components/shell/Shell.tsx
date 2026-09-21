@@ -4,7 +4,7 @@
  * The old shell gave the owner a BI dashboard and the coach a session tool, and
  * they shared nothing but a colour. That was wrong about what an owner does all
  * day: they teach. So the five destinations below are the same five for
- * everybody, and 대표 gets *more inside them* — a 상세 보기 on the 클럽 tab —
+ * everybody, and 대표 gets *more inside them* — a 세부 관리 on the 클럽 tab —
  * rather than a different app. Role is a depth, not a fork.
  *
  * Mobile is the design target, not the fallback. A coach opens this one-handed

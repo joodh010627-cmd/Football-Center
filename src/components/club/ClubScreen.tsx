@@ -6,7 +6,7 @@
  * rather than a screen of content, which is what lets the other four tabs stay
  * single-purpose.
  *
- * It is also where the owner's extra lives. `대표 상세 보기` opens the P&L, the
+ * It is also where the owner's extra lives. `세부 관리` opens the P&L, the
  * churn queue and the coach evaluations — one entry point, clearly labelled,
  * rather than a second application. A coach never sees the card because
  * `finance:read` is false for them, and even if this branch were edited in the
@@ -73,7 +73,7 @@ export function ClubScreen({ owner, onOpen, onOpenStudent }: ClubScreenProps) {
               <Crown size={20} strokeWidth={2} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[16.5px] font-bold text-white">대표 상세 보기</span>
+              <span className="block text-[16.5px] font-bold text-white">세부 관리</span>
               <span className="mt-1 block text-[13px] leading-[1.5] text-white/60">
                 매출·공헌이익 · 이탈 위험 {queue.length}명 · 코치 평가
                 {revenueAtRisk > 0 && ` · 위험 매출 ${formatWonCompact(revenueAtRisk)}원`}

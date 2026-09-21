@@ -1,5 +1,5 @@
 /**
- * 대표 상세 — the owner's extra, behind one door.
+ * 세부 관리 — the owner's extra, behind one door.
  *
  * This is the old `AdminDashboard`, demoted. It used to *be* the owner's
  * application: they logged in and landed on a P&L, which quietly said that
@@ -89,7 +89,7 @@ export function OwnerConsole({ onBack, onOpenStudent }: OwnerConsoleProps) {
 
       <ScreenHeader
         eyebrow="Owner only"
-        title="대표 상세"
+        title="세부 관리"
         meta={
           queue.length > 0
             ? `이탈 위험 ${queue.length}명 · 위험 매출 월 ${formatWonCompact(revenueAtRisk)}원`
