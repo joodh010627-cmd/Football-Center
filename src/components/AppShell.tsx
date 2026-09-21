@@ -67,7 +67,7 @@ export function AppShell({ identity, nav, active, onSelect, railFooter, children
           switch, and keeps both out of the page header's way. */}
       <header className="sticky top-0 z-40 flex h-14 items-center justify-between gap-3 bg-pitch-deep px-4 text-white lg:hidden">
         <span className="flex min-w-0 items-center gap-2">
-          <Crest className="h-6 w-6 shrink-0 text-gold" />
+          <Crest className="h-6 w-6 shrink-0 text-white" />
           <span className="truncate text-[13px] font-bold tracking-[0.16em]">FC GROWTH</span>
           <span className="hidden shrink-0 text-[10px] font-semibold uppercase tracking-label text-white/40 min-[400px]:inline">
             {roleLabel}
@@ -80,7 +80,7 @@ export function AppShell({ identity, nav, active, onSelect, railFooter, children
         {/* --- Desktop rail ------------------------------------------- */}
         <aside className="grain sticky top-0 hidden h-screen w-[264px] shrink-0 flex-col overflow-hidden bg-pitch-deep px-4 py-7 text-white lg:flex">
           <div className="relative flex items-center gap-2.5 px-2">
-            <Crest className="h-8 w-8 shrink-0 text-gold" />
+            <Crest className="h-8 w-8 shrink-0 text-white" />
             <span className="min-w-0 leading-none">
               <span className="block truncate text-[14px] font-bold tracking-[0.16em]">
                 {session.academy.name}
@@ -134,7 +134,7 @@ export function AppShell({ identity, nav, active, onSelect, railFooter, children
                 // Fixed 56px so the coach screens' sticky CTAs can sit on
                 // `bottom-14` without guessing at the bar's height.
                 'relative flex h-14 flex-1 flex-col items-center justify-center gap-1 transition-colors duration-200',
-                isActive ? 'text-gold' : 'text-white/50',
+                isActive ? 'text-white' : 'text-white/50',
                 item.disabled && 'opacity-35',
               )}
             >
@@ -150,7 +150,7 @@ export function AppShell({ identity, nav, active, onSelect, railFooter, children
                 {item.shortLabel ?? item.label}
               </span>
               {isActive && (
-                <span className="absolute inset-x-[22%] top-0 h-[2px] rounded-full bg-gold" />
+                <span className="absolute inset-x-[22%] top-0 h-[2px] rounded-full bg-white" />
               )}
             </button>
           );

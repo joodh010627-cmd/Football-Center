@@ -70,7 +70,7 @@ export const AXIS_META: Record<DevelopmentAxis, AxisMeta> = {
     label: '멘탈',
     meaning: '경기·훈련에서의 심리 상태',
     items: ['집중', '자신감', '도전성', '회복력', '침착함'],
-    tone: 'text-gold-deep',
+    tone: 'text-charcoal',
     wash: 'bg-tint-yellow',
   },
   attitude: {

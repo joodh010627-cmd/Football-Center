@@ -241,7 +241,7 @@ function DayCell({
       className={cn(
         'flex min-h-[68px] flex-col rounded-md border-2 px-2 py-1.5 text-left transition-all duration-150 sm:min-h-[84px]',
         style.cell,
-        active && 'ring-2 ring-gold ring-offset-1',
+        active && 'ring-2 ring-primary ring-offset-1',
         !cell.inMonth && 'opacity-45',
       )}
     >
@@ -257,8 +257,10 @@ function DayCell({
         {isToday && (
           <span
             className={cn(
-              'rounded-full px-1 text-[9.5px] font-bold uppercase tracking-wide',
-              cell.state === 'completed' ? 'bg-white/25 text-white' : 'bg-gold/25 text-gold-deep',
+              // `nowrap`: the cell is ~44px on a phone and "오늘" was breaking
+              // after the first syllable.
+              'whitespace-nowrap rounded-full px-1 text-[9.5px] font-bold uppercase tracking-wide',
+              cell.state === 'completed' ? 'bg-white/25 text-white' : 'bg-primary-wash text-primary',
             )}
           >
             오늘

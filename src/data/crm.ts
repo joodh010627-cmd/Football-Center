@@ -109,8 +109,8 @@ export const STAGE_META: Record<LeadStage, StageMeta> = {
     duty: '아직 아무도 연락하지 않았습니다',
     action: '상담 완료로 표시',
     slaDays: 1,
-    pill: 'bg-tint-yellow-bold text-gold-deep',
-    dot: 'bg-gold',
+    pill: 'bg-tint-yellow-bold text-charcoal',
+    dot: 'bg-stone',
   },
   contacted: {
     label: '상담 완료',

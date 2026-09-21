@@ -26,7 +26,7 @@ const STATE_PILL: Record<SessionState, { label: string; className: string }> = {
   now: { label: '진행 중', className: 'bg-primary text-white' },
   upcoming: { label: '예정', className: 'bg-primary-wash text-primary' },
   done: { label: '완료', className: 'bg-tint-mint text-brand-green' },
-  needs_log: { label: '기록 필요', className: 'bg-tint-yellow-bold text-gold-deep' },
+  needs_log: { label: '기록 필요', className: 'bg-tint-yellow-bold text-charcoal' },
 };
 
 interface ClassHomeScreenProps {
@@ -94,10 +94,10 @@ export function ClassHomeScreen({
               <button
                 type="button"
                 onClick={() => onRecord(unlogged[0].cls, TODAY)}
-                className="mt-3 flex w-full items-center gap-2.5 rounded-lg border border-gold-soft bg-tint-yellow px-4 py-3 text-left transition-colors duration-200 hover:bg-tint-yellow-bold"
+                className="mt-3 flex w-full items-center gap-2.5 rounded-lg border border-hairline bg-tint-yellow px-4 py-3 text-left transition-colors duration-200 hover:bg-tint-yellow-bold"
               >
-                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-gold-deep" />
-                <span className="min-w-0 flex-1 text-[13.5px] font-medium text-gold-deep">
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-steel" />
+                <span className="min-w-0 flex-1 text-[13.5px] font-medium text-charcoal">
                   기록이 필요한 수업 {unlogged.length}개
                 </span>
                 <span className="shrink-0 text-[13.5px] font-bold text-primary">기록하기</span>
@@ -157,7 +157,7 @@ function DayCounts({ summary }: { summary: DaySummary }) {
       {summary.needsLog > 0 && (
         <>
           <span className="text-hairline-strong">·</span>
-          <span className="font-semibold text-gold-deep">기록 필요 {summary.needsLog}</span>
+          <span className="font-semibold text-charcoal">기록 필요 {summary.needsLog}</span>
         </>
       )}
     </span>
@@ -230,7 +230,7 @@ function HeroCard({
         {coach?.name ?? '미배정'} 코치 · {entry.headcount}명
         {minutes > 0 && ` · ${minutes}분 구성`}
         {entry.unplanned && entry.state !== 'needs_log' && (
-          <span className="ml-1.5 font-semibold text-gold-deep">· 미설계</span>
+          <span className="ml-1.5 font-semibold text-charcoal">· 미설계</span>
         )}
       </p>
 

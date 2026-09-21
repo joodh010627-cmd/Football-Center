@@ -276,7 +276,7 @@ export function StudentProfileScreen({
                   flex container turns every text run into its own flex item,
                   which breaks the sentence into columns. */}
               <div className="flex items-start gap-2">
-                <Sparkles size={15} className="mt-[3px] shrink-0 text-gold" strokeWidth={2.2} />
+                <Sparkles size={15} className="mt-[3px] shrink-0 text-primary" strokeWidth={2.2} />
                 <p className="min-w-0 text-[13px] leading-[1.6] text-slate">
                   가장 낮은 영역은{' '}
                   <strong className="whitespace-nowrap font-semibold text-ink">
@@ -325,7 +325,7 @@ export function StudentProfileScreen({
                       log.status === 'present'
                         ? 'bg-tint-mint text-brand-green'
                         : log.status === 'injured'
-                          ? 'bg-tint-yellow text-gold-deep'
+                          ? 'bg-tint-yellow text-primary-deep'
                           : 'bg-tint-alert text-error',
                     )}
                   >

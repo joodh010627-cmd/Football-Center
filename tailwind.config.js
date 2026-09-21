@@ -1,12 +1,21 @@
 /** @type {import('tailwindcss').Config} */
 
 /**
- * Palette is inherited from the FC GROWTH public site so the operations app and
- * the homepage read as one brand: deep pitch green as the only dark surface,
- * muted gold as the single accent, warm paper as the page.
+ * Palette: white paper, pitch green as the only dark surface, nothing else
+ * loud. Inherited from the FC GROWTH public site, minus the gold.
+ *
+ * The gold ramp is gone on purpose. It was doing two incompatible jobs — a
+ * bright accent on the dark auth/boot surfaces *and* readable body text on
+ * light washes — so every site had to pick one and lose the other. On dark
+ * surfaces the accent is now plain white; on light ones it is `charcoal`. That
+ * leaves green as the single colour that means "act on this", which is the only
+ * thing an accent was ever for here.
+ *
+ * Neutrals were also cooled off the old warm-paper ramp (#FAF9F5 …): with white
+ * as the page, a beige hairline read as a stain rather than a rule.
  *
  * Token *names* are the app's own (primary / tint / hairline …) — only their
- * values were re-pointed at the brand ramp, so components didn't have to change.
+ * values were re-pointed, so components didn't have to change.
  */
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
@@ -31,12 +40,6 @@ export default {
           soft: '#12A06A',
           wash: '#EEF3F0',
         },
-        /** Muted gold — eyebrows, rules, hero figures. Never a large fill. */
-        gold: {
-          DEFAULT: '#C6A664',
-          soft: '#E4D3AC',
-          deep: '#8A7134',
-        },
         /** Hero band: a floodlit pitch seen from above, in brand green. */
         pitch: {
           DEFAULT: '#00301C',
@@ -47,50 +50,52 @@ export default {
         /** High-contrast figures sitting on the dark pitch. */
         accent: {
           lime: '#5FD6A0',
-          amber: '#E4D3AC',
+          amber: '#FFFFFF',
           alert: '#F0A38C',
         },
         link: {
           DEFAULT: '#006039',
           pressed: '#004429',
         },
-        /* Legacy semantic names, re-pointed into the green/gold ramp. */
+        /* Legacy semantic names. Hues are kept only where they carry meaning —
+           the curriculum tracks and the block categories need to stay tellable
+           apart — and everything that was gold is now neutral. */
         brand: {
-          orange: '#B8863B',
-          'orange-deep': '#7A5A22',
-          pink: '#C6A664',
-          'pink-deep': '#8A7134',
+          orange: '#BE7C35',
+          'orange-deep': '#805121',
+          pink: '#C08497',
+          'pink-deep': '#8A5566',
           purple: '#006039',
           'purple-300': '#9BC3AF',
           'purple-800': '#00301C',
           teal: '#00794A',
           green: '#0F8E5E',
-          yellow: '#C6A664',
-          brown: '#6B5730',
+          yellow: '#9AA3A0',
+          brown: '#4A5350',
         },
-        /** Washes. All are desaturated toward paper so cards stay quiet. */
+        /** Washes. All are desaturated toward white so cards stay quiet. */
         tint: {
-          peach: '#F4EDDD',
-          rose: '#F8EBE6',
-          mint: '#E3EEE8',
-          lavender: '#EAF1EC',
-          sky: '#E6EEEA',
-          yellow: '#F6F1E4',
-          'yellow-bold': '#EEE2C3',
-          cream: '#F5F2E9',
-          gray: '#F0EEE7',
-          alert: '#F6E4DE',
-          'alert-soft': '#FCF4F1',
+          peach: '#FAEEE3',
+          rose: '#F9ECEF',
+          mint: '#E6F0EA',
+          lavender: '#EDF1EE',
+          sky: '#E9EEF1',
+          yellow: '#F4F6F5',
+          'yellow-bold': '#E7EBEA',
+          cream: '#F6F7F7',
+          gray: '#F1F3F2',
+          alert: '#F8E6E1',
+          'alert-soft': '#FDF5F3',
         },
         canvas: '#ffffff',
         surface: {
-          DEFAULT: '#F2F0E9',
-          soft: '#FAF9F5',
+          DEFAULT: '#F1F3F2',
+          soft: '#F8F9F9',
         },
         hairline: {
-          DEFAULT: '#DFDCD3',
-          soft: '#EAE7DE',
-          strong: '#C7C2B5',
+          DEFAULT: '#E3E6E5',
+          soft: '#EDEFEF',
+          strong: '#C8CDCB',
         },
         ink: {
           DEFAULT: '#0E1310',
@@ -104,7 +109,7 @@ export default {
         'on-dark': '#ffffff',
         'on-dark-muted': '#9BAAA1',
         success: '#0F8E5E',
-        warning: '#B8863B',
+        warning: '#BE7C35',
         error: '#BE4F39',
       },
       /* Softer geometry across the board — the homepage's main luxury signal. */

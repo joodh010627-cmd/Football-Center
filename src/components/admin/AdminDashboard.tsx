@@ -92,7 +92,7 @@ export function AdminDashboard() {
       onSelect={(key) => go(key as View)}
       railFooter={
         <div className="rounded-lg border border-white/10 bg-white/[0.06] p-3.5">
-          <p className="text-[10px] font-semibold uppercase tracking-label text-gold">위험 매출</p>
+          <p className="text-[10px] font-semibold uppercase tracking-label text-white">위험 매출</p>
           <p className="mt-1.5 text-[20px] font-semibold tracking-[-0.5px] text-white">
             월 {(revenueAtRisk / 10_000).toLocaleString('ko-KR')}만원
           </p>
@@ -230,7 +230,7 @@ function Overview({
             출결·결제·특이사항·학부모 소통 이력이 한 곳에 모입니다. 감이 아니라 기록으로 운영하세요.
           </p>
 
-          <div className="mt-8 h-px w-14 bg-gold" />
+          <div className="mt-8 h-px w-14 bg-white" />
         </div>
       </header>
 

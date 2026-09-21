@@ -59,7 +59,7 @@ export function AuthScreen() {
             onClick={() => switchMode(key)}
             className={cn(
               'flex-1 rounded-full py-2 text-[12.5px] font-semibold transition-colors duration-200',
-              mode === key ? 'bg-gold text-pitch-deep' : 'text-white/60 hover:text-white',
+              mode === key ? 'bg-white text-pitch-deep' : 'text-white/60 hover:text-white',
             )}
           >
             {label}
@@ -133,7 +133,7 @@ export function AuthScreen() {
         <button
           type="submit"
           disabled={busy}
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-gold py-3 text-[14px] font-bold text-pitch-deep transition-opacity duration-200 disabled:opacity-60"
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-white py-3 text-[14px] font-bold text-pitch-deep transition-opacity duration-200 disabled:opacity-60"
         >
           {busy && <Loader2 size={15} className="animate-spin" />}
           {mode === 'signin' ? '로그인' : '가입하고 시작하기'}
@@ -142,14 +142,14 @@ export function AuthScreen() {
 
       {mode === 'coach' && (
         <p className="mt-5 flex items-start gap-2 text-[12px] leading-relaxed text-white/45">
-          <KeyRound size={14} className="mt-0.5 shrink-0 text-gold/70" />
+          <KeyRound size={14} className="mt-0.5 shrink-0 text-white/55" />
           코드가 없으면 가입할 수 없습니다. 코치 계정은 대표가 초대한 사람만 만들 수 있습니다.
         </p>
       )}
 
       {mode === 'owner' && (
         <p className="mt-5 flex items-start gap-2 text-[12px] leading-relaxed text-white/45">
-          <ShieldCheck size={14} className="mt-0.5 shrink-0 text-gold/70" />
+          <ShieldCheck size={14} className="mt-0.5 shrink-0 text-white/55" />
           매출·원가·코치 평가는 대표 계정에서만 열립니다. 코치는 자기 반의 기록만 봅니다.
         </p>
       )}
@@ -166,7 +166,7 @@ export function AuthLayout({ children, wide = false }: { children: ReactNode; wi
 
       <div className={cn('relative w-full', wide ? 'max-w-[440px]' : 'max-w-[380px]')}>
         <div className="mb-8 flex flex-col items-center text-center text-white">
-          <Crest className="h-11 w-11 text-gold" />
+          <Crest className="h-11 w-11 text-white" />
           <p className="mt-4 text-[20px] font-bold leading-none tracking-[0.22em]">FC GROWTH</p>
           <p className="mt-2.5 text-[11px] font-semibold uppercase tracking-label text-white/40">
             Football Center
@@ -220,7 +220,7 @@ function Field({
         autoComplete={type === 'password' ? 'current-password' : 'on'}
         className={cn(
           'w-full rounded-lg border border-white/12 bg-white/[0.06] px-3.5 py-2.5 text-[14px] text-white outline-none transition-colors duration-200',
-          'placeholder:text-white/25 focus:border-gold/60 focus:bg-white/[0.09]',
+          'placeholder:text-white/25 focus:border-white/45 focus:bg-white/[0.09]',
           className,
         )}
       />

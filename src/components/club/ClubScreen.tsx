@@ -69,7 +69,7 @@ export function ClubScreen({ owner, onOpen, onOpenStudent }: ClubScreenProps) {
             onClick={() => onOpen({ name: 'owner' })}
             className="flex w-full items-center gap-3.5 rounded-xl bg-gradient-to-br from-pitch-deep to-primary-deep px-5 py-5 text-left transition-opacity duration-200 hover:opacity-95"
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10 text-gold">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10 text-white">
               <Crown size={20} strokeWidth={2} />
             </span>
             <span className="min-w-0 flex-1">
@@ -241,7 +241,7 @@ function HubRow({
           <span className="mt-0.5 block truncate text-[12.5px] text-steel">{meta}</span>
         </span>
         {badge && (
-          <span className="shrink-0 rounded-full bg-tint-yellow-bold px-2.5 py-1 text-[11px] font-bold text-gold-deep">
+          <span className="shrink-0 rounded-full bg-tint-yellow-bold px-2.5 py-1 text-[11px] font-bold text-charcoal">
             {badge}
           </span>
         )}

@@ -259,7 +259,7 @@ function BellButton({
         <span
           className={cn(
             'absolute right-1.5 top-1.5 h-2 w-2 rounded-full ring-2 ring-canvas',
-            urgent ? 'bg-error' : 'bg-gold',
+            urgent ? 'bg-error' : 'bg-stone',
           )}
         />
       )}
@@ -356,7 +356,7 @@ function AlertList({
             <span
               className={cn(
                 'mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full',
-                alert.tone === 'urgent' ? 'bg-error' : 'bg-gold',
+                alert.tone === 'urgent' ? 'bg-error' : 'bg-stone',
               )}
             />
             <span className="min-w-0">

@@ -170,7 +170,7 @@ export function Pentagon({
             <span className="h-[2px] w-4 rounded-full bg-primary" />이 원생
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="h-[2px] w-4 rounded-full border-t-2 border-dashed border-gold" />
+            <span className="h-[2px] w-4 rounded-full border-t-2 border-dashed border-stone" />
             {compareLabel}
           </span>
         </figcaption>

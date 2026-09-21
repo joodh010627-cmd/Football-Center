@@ -69,10 +69,10 @@ export function SessionSheetScreen({
           {/* Statement band — the only dark surface on the coach's side, used
               once, so this screen reads as a document rather than a form. */}
           <header className="relative overflow-hidden bg-pitch-deep px-6 py-7 text-white sm:px-8">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_160%_at_88%_-20%,rgba(198,166,100,0.22)_0%,transparent_62%)]" />
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_160%_at_88%_-20%,rgba(255,255,255,0.14)_0%,transparent_62%)]" />
 
             <div className="relative">
-              <p className="text-[11px] font-semibold uppercase tracking-label text-gold">
+              <p className="text-[11px] font-semibold uppercase tracking-label text-white">
                 Session plan · {cls.title}
               </p>
               <h1 className="mt-3 text-[28px] font-semibold leading-[1.15] tracking-tightest sm:text-[36px]">
@@ -100,7 +100,7 @@ export function SessionSheetScreen({
                   <span className="block text-[10.5px] font-semibold uppercase tracking-label text-white/40">
                     총 진행
                   </span>
-                  <span className="mt-1 block text-[32px] font-semibold leading-none tracking-tightest text-gold">
+                  <span className="mt-1 block text-[32px] font-semibold leading-none tracking-tightest text-white">
                     {totalMin}
                     <span className="ml-1 text-[14px] font-medium text-white/60">분</span>
                   </span>

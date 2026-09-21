@@ -192,7 +192,7 @@ export function ScheduleScreen({
                     onClick={() => onOpenLead(lead.id)}
                     className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors duration-150 hover:bg-surface-soft"
                   >
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-tint-yellow text-gold-deep">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-tint-yellow text-charcoal">
                       <UserPlus size={16} strokeWidth={2.2} />
                     </span>
                     <span className="min-w-0 flex-1">
@@ -260,7 +260,7 @@ function ScheduleRow({
         className={cn(
           'shrink-0 rounded-full px-3 py-1.5 text-[12px] font-bold transition-opacity duration-200 hover:opacity-85',
           entry.unplanned && entry.state === 'upcoming'
-            ? 'bg-tint-yellow-bold text-gold-deep'
+            ? 'bg-tint-yellow-bold text-charcoal'
             : pill.className,
         )}
       >

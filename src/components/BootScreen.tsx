@@ -48,7 +48,7 @@ export function BootScreen({ onDone }: { onDone?: () => void }) {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(45%_38%_at_50%_44%,rgba(198,166,100,0.14)_0%,transparent_70%)]" />
 
       <div className="relative flex flex-col items-center px-8 text-center text-white">
-        <Crest className="h-[62px] w-[62px] animate-crest-in text-gold" />
+        <Crest className="h-[62px] w-[62px] animate-crest-in text-white" />
 
         <p
           className="mt-7 text-[26px] font-bold leading-none tracking-[0.24em] animate-boot-rise sm:text-[32px]"
@@ -75,7 +75,7 @@ export function BootScreen({ onDone }: { onDone?: () => void }) {
       {/* Progress rule — the only motion that reads as "loading". */}
       <div className="absolute bottom-[16vh] h-px w-[132px] overflow-hidden bg-white/15">
         <div
-          className="h-full origin-left animate-boot-progress bg-gold"
+          className="h-full origin-left animate-boot-progress bg-white"
           style={{ animationDelay: '240ms' }}
         />
       </div>

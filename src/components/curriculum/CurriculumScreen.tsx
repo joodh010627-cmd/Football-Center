@@ -8,9 +8,12 @@
  * measured against, and a coach-flavoured summary of that standard is a second
  * source of truth.
  *
- * Reading order is deliberately top-down — 철학 → 트랙 구성 → 표준 세션 → 블록 —
- * because that is the direction the owner's interview goes. The app runs the
- * same chain in reverse at the end of every class.
+ * The tracks used to be a 7×5 track-by-age matrix. It was the right diagram and
+ * the wrong screen: the centre runs eight curricula, so the grid spent 27 of its
+ * 35 cells drawing an em dash, and it could not fit a phone without sideways
+ * scrolling. A plain list of eight names does the same job in a third of the
+ * height — and the empty combinations, which were the matrix's one real
+ * argument, are a thing the owner learns when adding a track, not while reading.
  */
 
 import { useMemo, useState } from 'react';
@@ -18,7 +21,6 @@ import {
   BookOpenCheck,
   ChevronRight,
   Clock,
-  Layers,
   Lightbulb,
   PencilLine,
   Plus,
@@ -26,7 +28,6 @@ import {
   Sparkles,
   Target,
   Trash2,
-  Users,
 } from 'lucide-react';
 import type { Curriculum, SessionTemplate } from '@/types';
 import { useApp } from '@/store/AppContext';
@@ -38,7 +39,7 @@ import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { BackBar } from '@/components/shell/Shell';
 import { CATEGORY_META } from '@/components/coach/TrainingBlockCard';
-import { AGE_CAPTION, AGE_ORDER, APPROVAL_LABEL, TRACK_META, TRACK_ORDER } from './curriculumMeta';
+import { AGE_ORDER, APPROVAL_LABEL, TRACK_META, TRACK_ORDER } from './curriculumMeta';
 import { SessionTemplateEditor } from './SessionTemplateEditor';
 import { BlockProposalModal } from './BlockProposalModal';
 import { ApprovalQueuePanel } from './ApprovalQueuePanel';
@@ -89,6 +90,20 @@ export function CurriculumScreen({ onBack }: { onBack?: () => void }) {
     ? state.classes.filter((cls) => cls.curriculumId === selected.id)
     : [];
 
+  const publishedTemplates = state.sessionTemplates.filter((t) => t.status === 'published').length;
+  const publishedBlocks = state.trainingBlocks.filter((b) => b.status === 'published').length;
+
+  // Session count per track, so the list rows can carry a number without each
+  // of them filtering the whole template table.
+  const sessionCount = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const t of state.sessionTemplates) {
+      if (t.status !== 'published') continue;
+      counts.set(t.curriculumId, (counts.get(t.curriculumId) ?? 0) + 1);
+    }
+    return counts;
+  }, [state.sessionTemplates]);
+
   if (curricula.length === 0) {
     return (
       <div className="px-5 py-16 sm:px-8 lg:px-12">
@@ -106,101 +121,67 @@ export function CurriculumScreen({ onBack }: { onBack?: () => void }) {
     <div>
       {onBack && <BackBar label="클럽" onBack={onBack} />}
 
-      {/* --- Philosophy ------------------------------------------------- */}
-      <header className="relative overflow-hidden border-b border-hairline bg-canvas px-5 pb-9 pt-10 sm:px-8 lg:px-12 lg:pb-11 lg:pt-14">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(115%_150%_at_92%_-10%,#EDF2EE_0%,transparent_60%)]" />
-
-        <div className="relative max-w-3xl">
-          <p className="eyebrow-ink">Curriculum</p>
-          <h1 className="mt-3.5 text-[27px] font-semibold leading-[1.16] tracking-tightest text-ink lg:text-[40px]">
-            수업 세션이 모여 하루가 되고,
-            <br />
-            하루가 이어져 커리큘럼이 됩니다.
-          </h1>
-          <p className="mt-4 text-[14px] leading-[1.75] text-slate lg:text-[15px]">
-            나이대와 클래스 목적마다 도달해야 할 지점이 다릅니다. 아래 트랙은 그 지점을 정의하고,
-            각 트랙의 표준 세션은 코치가 어느 날 무엇을 해야 하는지까지 내려갑니다.
-            {canEdit
-              ? ' 여기서 추가·수정한 내용은 즉시 코치의 설계 화면에 반영됩니다.'
-              : ' 새 세션이나 블록이 필요하면 제안해 주세요. 대표 승인 시 등재됩니다.'}
-          </p>
-
-          <div className="mt-7 flex flex-wrap gap-2">
-            <Chip icon={Layers} label={`트랙 ${curricula.length}개`} />
-            <Chip icon={Sparkles} label={`표준 세션 ${state.sessionTemplates.filter((t) => t.status === 'published').length}개`} />
-            <Chip
-              icon={Users}
-              label={`블록 ${state.trainingBlocks.filter((b) => b.status === 'published').length}종`}
-            />
-          </div>
-        </div>
+      {/* --- Header -------------------------------------------------------
+          The old hero ran a two-line thesis, a four-line paragraph and three
+          count chips before the first tappable thing. On a phone that is a
+          full screen of reading to reach a list the user opened this tab to
+          see, so it is now one word and one line of counts. */}
+      <header className="px-5 pb-1 pt-5 sm:px-8 lg:px-12 lg:pt-8">
+        <h1 className="text-[27px] font-bold leading-[1.15] tracking-tightest text-ink">
+          커리큘럼
+        </h1>
+        <p className="mt-2 text-[13.5px] tabular-nums text-steel">
+          트랙 {curricula.length} · 세션 {publishedTemplates} · 블록 {publishedBlocks}
+        </p>
       </header>
 
-      <div className="space-y-9 px-5 py-8 sm:px-8 lg:px-12 lg:py-10">
-        {/* --- Track × age matrix -------------------------------------- */}
-        <section>
-          <div className="mb-3.5 flex flex-wrap items-end justify-between gap-2">
-            <div>
-              <h2 className="eyebrow-ink">클래스 · 나이대 구성</h2>
-              <p className="mt-1.5 text-[13px] text-slate">
-                가로는 나이대, 세로는 클래스 목적입니다. 같은 U9라도 목적이 다르면 다른 커리큘럼입니다.
-              </p>
-            </div>
-            {canEdit && <span className="text-[12px] text-stone">셀을 눌러 표준 세션 보기</span>}
-          </div>
-
-          <CurriculumMatrix
-            curricula={visible.length > 0 ? visible : curricula}
-            selectedId={selected?.id ?? null}
-            onSelect={setSelectedId}
-          />
-        </section>
+      <div className="space-y-7 px-5 py-5 sm:px-8 lg:px-12 lg:py-8">
+        {/* --- Tracks ---------------------------------------------------- */}
+        <TrackList
+          curricula={visible.length > 0 ? visible : curricula}
+          selectedId={selected?.id ?? null}
+          sessionCount={sessionCount}
+          onSelect={setSelectedId}
+        />
 
         {/* --- Selected curriculum ------------------------------------- */}
         {selected && (
           <section>
             <div className="rounded-lg border border-hairline bg-canvas">
-              <header
-                className={cn(
-                  'flex flex-wrap items-start justify-between gap-4 rounded-t-lg border-b border-hairline px-5 py-5 sm:px-6',
-                  TRACK_META[selected.track].tint,
-                )}
-              >
-                <div className="min-w-0">
-                  <p
-                    className={cn(
-                      'text-[11px] font-semibold uppercase tracking-label',
-                      TRACK_META[selected.track].accent,
-                    )}
-                  >
-                    {TRACK_META[selected.track].label} · {selected.ageGroup}
-                  </p>
-                  <h3 className="mt-1.5 text-[20px] font-semibold leading-[1.3] tracking-[-0.02em] text-ink lg:text-[24px]">
-                    {selected.title}
-                  </h3>
-                  <p className="mt-2 flex items-start gap-1.5 text-[13.5px] leading-[1.6] text-charcoal">
-                    <Target size={14} className="mt-[3px] shrink-0" />
-                    {selected.objective}
-                  </p>
-                </div>
+              {/* The track label and age are not repeated here — the user just
+                  tapped them one row up. What the panel adds is the objective,
+                  the cycle and the sessions.
 
-                <div className="shrink-0 text-right">
-                  <p className="text-[26px] font-semibold tracking-[-0.04em] text-ink">
-                    {selected.cycleWeeks}
-                    <span className="ml-0.5 text-[13px] font-medium text-charcoal">주 1주기</span>
-                  </p>
-                  <p className="mt-0.5 text-[12.5px] text-charcoal/70">
-                    표준 세션 {published.length}개
-                  </p>
-                </div>
+                  The band used to be filled with the track's tint. On a white
+                  page a full-width rose or peach panel is the loudest thing on
+                  screen, and it was carrying information the coloured dot in the
+                  list row already carries. So the band is near-white and the
+                  track colour stays a 8px dot. */}
+              <header className="rounded-t-lg border-b border-hairline bg-surface-soft px-5 py-4 sm:px-6">
+                <h3 className="flex items-center gap-2 text-[18px] font-bold leading-[1.3] tracking-[-0.02em] text-ink">
+                  <span
+                    className={cn(
+                      'h-2 w-2 shrink-0 rounded-full',
+                      TRACK_META[selected.track].bar,
+                    )}
+                  />
+                  {selected.title.replace(/^.*—\s*/, '')}
+                </h3>
+                <p className="mt-1.5 flex items-start gap-1.5 text-[13.5px] leading-[1.55] text-charcoal">
+                  <Target size={13} className="mt-[3px] shrink-0" />
+                  {selected.objective}
+                </p>
+                <p className="mt-2 text-[12.5px] tabular-nums text-steel">
+                  {selected.cycleWeeks}주 주기 · 세션 {published.length}
+                </p>
               </header>
 
-              <div className="space-y-5 px-5 py-5 sm:px-6">
+              <div className="space-y-4 px-5 py-4 sm:px-6">
                 {/* Focus areas + classes on this track */}
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <p className="mb-2 text-[11px] font-semibold uppercase tracking-label text-steel">
-                      이 트랙이 책임지는 역량
+                      역량
                     </p>
                     <div className="flex flex-wrap gap-1.5">
                       {selected.focusAreas.map((area) => (
@@ -213,10 +194,10 @@ export function CurriculumScreen({ onBack }: { onBack?: () => void }) {
 
                   <div>
                     <p className="mb-2 text-[11px] font-semibold uppercase tracking-label text-steel">
-                      이 커리큘럼을 도는 클래스
+                      클래스
                     </p>
                     {classesOn.length === 0 ? (
-                      <p className="text-[13px] text-stone">배정된 클래스가 없습니다.</p>
+                      <p className="text-[13px] text-stone">없음</p>
                     ) : (
                       <ul className="space-y-1">
                         {classesOn.map((cls) => (
@@ -233,9 +214,9 @@ export function CurriculumScreen({ onBack }: { onBack?: () => void }) {
                 </div>
 
                 {/* Standard sessions */}
-                <div className="border-t border-hairline-soft pt-5">
+                <div className="border-t border-hairline-soft pt-4">
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <h4 className="text-[15px] font-semibold text-ink">표준 수업 세션</h4>
+                    <h4 className="text-[15px] font-semibold text-ink">세션</h4>
                     <div className="flex gap-2">
                       {can(session, 'curriculum:propose') && !canEdit && (
                         <button
@@ -281,7 +262,7 @@ export function CurriculumScreen({ onBack }: { onBack?: () => void }) {
                   {mine.length > 0 && (
                     <div className="mt-5">
                       <p className="mb-2 text-[11px] font-semibold uppercase tracking-label text-steel">
-                        내가 제안한 세션
+                        내 제안
                       </p>
                       <ol className="space-y-2">
                         {mine.map((template) => (
@@ -325,114 +306,80 @@ export function CurriculumScreen({ onBack }: { onBack?: () => void }) {
 }
 
 // ---------------------------------------------------------------------------
-// Matrix
+// Track list
 // ---------------------------------------------------------------------------
 
 /**
- * The centre's offering as a grid: purpose down, age across.
+ * The centre's tracks, one line each.
  *
- * A flat list of curricula reads as eight unrelated products. Laid out this way
- * the gaps are visible — and a gap in this grid is either a deliberate choice or
- * a class the centre cannot yet sell.
+ * A row is: name, age group, session count. Nothing else fits on a phone in one
+ * line, and nothing else is needed to choose — the objective, the cycle length
+ * and the classes on the track are all one tap away in the panel below, which is
+ * where the user was heading anyway.
+ *
+ * Age is a small label beside the name rather than a second axis. Sorting by
+ * `TRACK_ORDER` then age keeps the reading order the owner already thinks in
+ * (younger and simpler first) without a heading per group.
  */
-function CurriculumMatrix({
+function TrackList({
   curricula,
   selectedId,
+  sessionCount,
   onSelect,
 }: {
   curricula: Curriculum[];
   selectedId: string | null;
+  sessionCount: Map<string, number>;
   onSelect: (id: string) => void;
 }) {
-  const tracks = TRACK_ORDER.filter((t) => curricula.some((c) => c.track === t));
+  const rows = useMemo(
+    () =>
+      [...curricula].sort(
+        (a, b) =>
+          TRACK_ORDER.indexOf(a.track) - TRACK_ORDER.indexOf(b.track) ||
+          AGE_ORDER.indexOf(a.ageGroup) - AGE_ORDER.indexOf(b.ageGroup),
+      ),
+    [curricula],
+  );
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-hairline bg-canvas">
-      <table className="w-full min-w-[720px] border-collapse">
-        <thead>
-          <tr>
-            <th className="w-[150px] border-b border-r border-hairline-soft bg-surface-soft px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-label text-steel">
-              클래스 목적
-            </th>
-            {AGE_ORDER.map((age) => (
-              <th
-                key={age}
-                className="border-b border-hairline-soft bg-surface-soft px-3 py-3 text-center"
-              >
-                <span className="block text-[14px] font-semibold text-ink">{age}</span>
-                <span className="mt-0.5 block text-[11px] font-normal text-stone">
-                  {AGE_CAPTION[age]}
-                </span>
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {tracks.map((track) => {
-            const meta = TRACK_META[track];
-            return (
-              <tr key={track}>
-                <th className="border-b border-r border-hairline-soft px-4 py-3 text-left align-top">
-                  <span className="flex items-center gap-1.5">
-                    <span className={cn('h-2 w-2 shrink-0 rounded-full', meta.bar)} />
-                    <span className="text-[13.5px] font-semibold text-ink">{meta.label}</span>
-                  </span>
-                  <span className="mt-1 block text-[11.5px] font-normal leading-[1.45] text-steel">
-                    {meta.purpose}
-                  </span>
-                </th>
+    <ul className="overflow-hidden rounded-lg border border-hairline bg-canvas">
+      {rows.map((c) => {
+        const meta = TRACK_META[c.track];
+        const active = c.id === selectedId;
 
-                {AGE_ORDER.map((age) => {
-                  const cell = curricula.find((c) => c.track === track && c.ageGroup === age);
-                  if (!cell) {
-                    return (
-                      <td
-                        key={age}
-                        className="border-b border-hairline-soft px-2 py-3 text-center align-middle"
-                      >
-                        <span className="text-[13px] text-muted">—</span>
-                      </td>
-                    );
-                  }
-                  const active = cell.id === selectedId;
-                  return (
-                    <td key={age} className="border-b border-hairline-soft px-2 py-2 align-middle">
-                      <button
-                        type="button"
-                        onClick={() => onSelect(cell.id)}
-                        className={cn(
-                          'w-full rounded-md px-2.5 py-2.5 text-left transition-all duration-150',
-                          active
-                            ? 'bg-primary text-white shadow-card'
-                            : cn(meta.tint, 'hover:shadow-card'),
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            'block text-[12.5px] font-semibold leading-[1.35]',
-                            active ? 'text-white' : 'text-ink',
-                          )}
-                        >
-                          {cell.title.replace(/^.*—\s*/, '')}
-                        </span>
-                        <span
-                          className={cn(
-                            'mt-1 block text-[11px]',
-                            active ? 'text-white/70' : 'text-charcoal/65',
-                          )}
-                        >
-                          {cell.cycleWeeks}주 주기
-                        </span>
-                      </button>
-                    </td>
-                  );
-                })}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+        return (
+          <li key={c.id} className="border-b border-hairline-soft last:border-b-0">
+            <button
+              type="button"
+              onClick={() => onSelect(c.id)}
+              aria-current={active ? 'true' : undefined}
+              className={cn(
+                'flex w-full items-center gap-2.5 px-4 py-3.5 text-left transition-colors duration-150',
+                active ? 'bg-primary-wash' : 'hover:bg-surface-soft',
+              )}
+            >
+              <span className={cn('h-2 w-2 shrink-0 rounded-full', meta.bar)} />
+              <span
+                className={cn(
+                  'shrink-0 text-[15.5px]',
+                  active ? 'font-bold text-primary' : 'font-semibold text-ink',
+                )}
+              >
+                {meta.label}
+              </span>
+              <span className="shrink-0 rounded-full bg-surface px-2 py-0.5 text-[11.5px] font-semibold tabular-nums text-steel">
+                {c.ageGroup}
+              </span>
+              <span className="ml-auto shrink-0 text-[12.5px] tabular-nums text-steel">
+                세션 {sessionCount.get(c.id) ?? 0}
+              </span>
+              <ChevronRight size={15} className="shrink-0 text-stone" />
+            </button>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -591,11 +538,3 @@ function TemplateRow({
   );
 }
 
-function Chip({ icon: Icon, label }: { icon: typeof Layers; label: string }) {
-  return (
-    <span className="flex items-center gap-1.5 rounded-full border border-hairline bg-surface-soft px-3.5 py-2 text-[13px] font-semibold text-charcoal">
-      <Icon size={13} className="text-primary" />
-      {label}
-    </span>
-  );
-}

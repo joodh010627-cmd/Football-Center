@@ -201,7 +201,7 @@ export function CoachApp() {
         openClass &&
         tab === 'classes' && (
           <div className="rounded-lg border border-white/10 bg-white/[0.06] p-3.5">
-            <p className="text-[10px] font-semibold uppercase tracking-label text-gold">
+            <p className="text-[10px] font-semibold uppercase tracking-label text-white">
               열려 있는 클래스
             </p>
             <p className="mt-1.5 text-[14px] font-semibold text-white">{openClass.title}</p>

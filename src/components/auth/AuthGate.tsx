@@ -34,7 +34,7 @@ function SessionLoading() {
   return (
     <AuthLayout>
       <div className="flex items-center justify-center gap-2.5 text-[13px] text-white/50">
-        <Loader2 size={16} className="animate-spin text-gold" />
+        <Loader2 size={16} className="animate-spin text-white" />
         세션을 확인하는 중입니다…
       </div>
     </AuthLayout>
@@ -45,7 +45,7 @@ function SetupNotice() {
   return (
     <AuthLayout wide>
       <div className="rounded-xl border border-white/12 bg-white/[0.06] p-6 text-white">
-        <p className="flex items-center gap-2 text-[14px] font-bold text-gold">
+        <p className="flex items-center gap-2 text-[14px] font-bold text-white">
           <AlertTriangle size={16} />
           Supabase 설정이 필요합니다
         </p>
@@ -57,24 +57,24 @@ function SetupNotice() {
 
         <ol className="mt-5 space-y-2.5 text-[13px] leading-relaxed text-white/70">
           <li>
-            <span className="mr-1.5 font-bold text-gold">1</span>
+            <span className="mr-1.5 font-bold text-white">1</span>
             supabase.com에서 프로젝트를 만듭니다.
           </li>
           <li>
-            <span className="mr-1.5 font-bold text-gold">2</span>
+            <span className="mr-1.5 font-bold text-white">2</span>
             <code className="rounded bg-white/10 px-1.5 py-0.5 text-[12px]">
               supabase/migrations
             </code>
             의 SQL을 순서대로 실행합니다.
           </li>
           <li>
-            <span className="mr-1.5 font-bold text-gold">3</span>
+            <span className="mr-1.5 font-bold text-white">3</span>
             <code className="rounded bg-white/10 px-1.5 py-0.5 text-[12px]">.env.example</code>을
             <code className="mx-1.5 rounded bg-white/10 px-1.5 py-0.5 text-[12px]">.env</code>로
             복사하고 URL과 anon key를 채웁니다.
           </li>
           <li>
-            <span className="mr-1.5 font-bold text-gold">4</span>
+            <span className="mr-1.5 font-bold text-white">4</span>
             개발 서버를 다시 시작합니다.
           </li>
         </ol>
@@ -121,14 +121,14 @@ function JoinAcademy() {
             maxLength={8}
             required
             autoFocus
-            className="w-full rounded-lg border border-white/12 bg-white/[0.06] px-3.5 py-2.5 font-mono text-[14px] tracking-[0.2em] text-white outline-none placeholder:text-white/25 focus:border-gold/60"
+            className="w-full rounded-lg border border-white/12 bg-white/[0.06] px-3.5 py-2.5 font-mono text-[14px] tracking-[0.2em] text-white outline-none placeholder:text-white/25 focus:border-white/45"
           />
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="이름"
             required
-            className="w-full rounded-lg border border-white/12 bg-white/[0.06] px-3.5 py-2.5 text-[14px] text-white outline-none placeholder:text-white/25 focus:border-gold/60"
+            className="w-full rounded-lg border border-white/12 bg-white/[0.06] px-3.5 py-2.5 text-[14px] text-white outline-none placeholder:text-white/25 focus:border-white/45"
           />
 
           {error && (
@@ -140,7 +140,7 @@ function JoinAcademy() {
           <button
             type="submit"
             disabled={busy}
-            className="flex w-full items-center justify-center gap-2 rounded-full bg-gold py-3 text-[14px] font-bold text-pitch-deep disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-2 rounded-full bg-white py-3 text-[14px] font-bold text-pitch-deep disabled:opacity-60"
           >
             {busy && <Loader2 size={15} className="animate-spin" />}
             합류하기

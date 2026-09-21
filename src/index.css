@@ -80,10 +80,9 @@
     @apply text-[11px] font-semibold uppercase tracking-label;
   }
 
-  .eyebrow {
-    @apply text-[11px] font-semibold uppercase tracking-label text-gold;
-  }
-
+  /* There is no gold `.eyebrow` companion any more: the accent it used to carry
+     is gone, and a second eyebrow that differed only in colour was never read
+     as a different thing. */
   .eyebrow-ink {
     @apply text-[11px] font-semibold uppercase tracking-label text-primary;
   }
