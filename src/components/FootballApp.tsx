@@ -8,10 +8,16 @@
  * different product", which is why an owner could not see the thing they
  * actually spend their evenings doing.
  *
- * Navigation is a stack per tab. Switching tabs keeps your place in each, and
- * every drill-down pushes rather than replaces, so 뒤로 always means one step
- * back rather than "wherever the state machine decides". That mattered less on
- * a desktop rail; on a phone it is the whole feel of the app.
+ * Navigation is a stack per tab, and tapping a tab in the bar empties that
+ * tab's stack — you always land on the tab's own home screen. Preserving each
+ * tab's position sounded more respectful of the user's place and was worse to
+ * use: a coach who left 클럽 four screens deep inside a student profile comes
+ * back an hour later, taps 클럽 expecting the hub, and gets a stranger's page
+ * with no memory of how they got there. Five predictable front doors beat five
+ * resumed sessions. A drill-down still pushes rather than replaces, so 뒤로
+ * inside a tab means one step back rather than "wherever the state machine
+ * decides". The phone's own back button does the same thing as the 뒤로 on the
+ * screen — see `useSystemBack`.
  */
 
 import { useMemo, useState } from 'react';
@@ -21,6 +27,7 @@ import { useApp } from '@/store/AppContext';
 import { useWorkspace } from '@/store/WorkspaceContext';
 import { useSession } from '@/store/AuthContext';
 import { isOwner } from '@/lib/permissions';
+import { useSystemBack } from '@/lib/systemBack';
 import { TODAY } from '@/data/dates';
 import { buildDay, summarise } from '@/data/today';
 import { countLeads, triage } from '@/data/crm';
@@ -107,10 +114,34 @@ export function FootballApp() {
     top();
   };
 
+  /**
+   * Go to a tab's home screen, dropping whatever was open on it.
+   *
+   * This is what the bottom bar and the alert sheet both do. `push` is the only
+   * thing that may leave a tab deep, and it is never a tab *tap* — it is a
+   * cross-tab jump like 일정 → 문의 상세, where the destination is the point.
+   */
   const resetTo = (next: Tab) => {
+    setStacks((s) => (s[next].length === 0 ? s : { ...s, [next]: [] }));
     setTab(next);
     top();
   };
+
+  /**
+   * Leave the top screen the way that screen's own 뒤로 would.
+   *
+   * The phone's back button and the 뒤로 drawn on the screen have to agree, and
+   * two of these screens hold a draft that must be thrown away on the way out.
+   * So the cleanup lives here, at the one place that owns the stack, rather
+   * than in each button's `onClick` where only the visible one would run it.
+   */
+  const dismiss = () => {
+    if (route?.name === 'builder') dispatch({ type: 'builder/close' });
+    if (route?.name === 'attendance') dispatch({ type: 'attendance/discard' });
+    pop();
+  };
+
+  useSystemBack(stack.length, dismiss);
 
   // --- Session flow -------------------------------------------------------
   //
@@ -187,7 +218,7 @@ export function FootballApp() {
     <Shell
       tabs={tabs}
       active={tab}
-      onSelect={(key) => setTab(key as Tab)}
+      onSelect={(key) => resetTo(key as Tab)}
       alerts={alerts}
     >
       {route ? renderRoute() : renderTab()}
@@ -254,7 +285,7 @@ export function FootballApp() {
             backLabel={tab === 'schedule' ? '← 일정' : '← 오늘의 클래스'}
             onDesign={(date) => design(cls, date)}
             onRecord={(date) => record(cls, date)}
-            onBack={pop}
+            onBack={dismiss}
           />
         );
       }
@@ -267,10 +298,7 @@ export function FootballApp() {
             cls={cls}
             date={route.date}
             onDone={() => replace({ name: 'sheet', classId: cls.id, date: route.date })}
-            onBack={() => {
-              dispatch({ type: 'builder/close' });
-              pop();
-            }}
+            onBack={dismiss}
           />
         );
       }
@@ -309,10 +337,7 @@ export function FootballApp() {
               if (plan) dispatch({ type: 'plan/complete', planId: plan.id });
               pop();
             }}
-            onBack={() => {
-              dispatch({ type: 'attendance/discard' });
-              pop();
-            }}
+            onBack={dismiss}
           />
         );
       }
@@ -321,36 +346,36 @@ export function FootballApp() {
         return (
           <LeadDetailScreen
             leadId={route.leadId}
-            onBack={pop}
+            onBack={dismiss}
             onOpenClass={(cls) => push({ name: 'class', classId: cls.id })}
           />
         );
 
       case 'student':
-        return <StudentProfileScreen studentId={route.studentId} onBack={pop} />;
+        return <StudentProfileScreen studentId={route.studentId} onBack={dismiss} />;
 
       case 'roster':
         return (
           <RosterScreen
             owner={owner}
-            onBack={pop}
+            onBack={dismiss}
             onOpenStudent={(s) => push({ name: 'student', studentId: s.id })}
           />
         );
 
       case 'curriculum':
-        return <CurriculumScreen onBack={pop} />;
+        return <CurriculumScreen onBack={dismiss} />;
 
       case 'portfolio':
-        return <PortfolioScreen onBack={pop} />;
+        return <PortfolioScreen onBack={dismiss} />;
 
       case 'activity':
-        return <ActivityScreen onBack={pop} />;
+        return <ActivityScreen onBack={dismiss} />;
 
       case 'owner':
         return (
           <OwnerConsole
-            onBack={pop}
+            onBack={dismiss}
             onOpenStudent={(s) => push({ name: 'student', studentId: s.id })}
           />
         );
