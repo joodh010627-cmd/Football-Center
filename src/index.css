@@ -55,7 +55,31 @@
   }
 
   .card {
-    @apply rounded-lg border border-hairline bg-canvas;
+    @apply rounded-lg border border-hairline bg-canvas shadow-subtle;
+  }
+
+  /**
+   * Frosted chrome — the bars and sheets, not the content.
+   *
+   * A fixed bar painted solid white on a white page is indistinguishable from
+   * the page, so nothing tells you it is pinned; you only find out by scrolling
+   * and watching text appear from underneath it. Letting the page blur through
+   * says "this floats above" before the user moves anything.
+   *
+   * Deliberately only on chrome. Frosting the cards too would mean every
+   * surface is semi-transparent and the stack reads as fog — the effect works
+   * by being the exception.
+   */
+  .glass {
+    @apply bg-canvas/75 backdrop-blur-xl backdrop-saturate-150;
+  }
+
+  /* Browsers without backdrop-filter get the solid bar back, not a see-through
+     one — a 75%-opaque bar with text scrolling under it is unreadable. */
+  @supports not (backdrop-filter: blur(1px)) {
+    .glass {
+      @apply bg-canvas;
+    }
   }
 
   /* Text input on a light surface. The auth screen keeps its own dark variant —

@@ -65,7 +65,7 @@ export function Shell({ tabs, active, onSelect, alerts, children }: ShellProps) 
       {/* --- Mobile top bar ---------------------------------------------
           White, not the old pitch-green band. On a phone the green bar ate
           48px of a 780px viewport to say something the user already knew. */}
-      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-hairline-soft bg-canvas px-4 lg:hidden">
+      <header className="glass sticky top-0 z-40 flex h-14 items-center justify-between border-b border-hairline px-4 lg:hidden">
         <span className="flex min-w-0 items-center gap-2">
           <Crest className="h-6 w-6 shrink-0 text-primary" />
           <span className="truncate text-[17px] font-bold tracking-[-0.02em] text-ink">
@@ -77,7 +77,7 @@ export function Shell({ tabs, active, onSelect, alerts, children }: ShellProps) 
 
       <div className="mx-auto flex w-full max-w-[1320px]">
         {/* --- Desktop rail ---------------------------------------------- */}
-        <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col border-r border-hairline-soft bg-canvas px-3 py-6 lg:flex">
+        <aside className="glass sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col border-r border-hairline px-3 py-6 lg:flex">
           <div className="flex items-center gap-2.5 px-3">
             <Crest className="h-7 w-7 shrink-0 text-primary" />
             <span className="min-w-0 leading-none">
@@ -122,7 +122,7 @@ export function Shell({ tabs, active, onSelect, alerts, children }: ShellProps) 
       </div>
 
       {/* --- Mobile bottom bar ------------------------------------------- */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 flex items-stretch border-t border-hairline bg-canvas/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
+      <nav className="glass fixed inset-x-0 bottom-0 z-40 flex items-stretch border-t border-hairline pb-[env(safe-area-inset-bottom)] lg:hidden">
         {tabs.map((tab) => (
           <BottomTab
             key={tab.key}
@@ -282,10 +282,10 @@ function AlertSheet({
         type="button"
         aria-label="닫기"
         onClick={onClose}
-        className="absolute inset-0 bg-ink/35 animate-fade-in"
+        className="absolute inset-0 animate-fade-in bg-ink/30 backdrop-blur-sm"
       />
-      <div className="absolute inset-x-0 bottom-0 max-h-[78vh] animate-slide-up overflow-y-auto rounded-t-2xl bg-canvas pb-[env(safe-area-inset-bottom)]">
-        <header className="sticky top-0 flex items-center justify-between border-b border-hairline-soft bg-canvas px-5 py-4">
+      <div className="absolute inset-x-0 bottom-0 max-h-[78vh] animate-slide-up overflow-y-auto rounded-t-2xl bg-canvas pb-[env(safe-area-inset-bottom)] shadow-modal">
+        <header className="glass sticky top-0 flex items-center justify-between border-b border-hairline px-5 py-4">
           <h2 className="text-[17px] font-semibold tracking-[-0.02em] text-ink">
             오늘 확인할 것 {alerts.length}
           </h2>
