@@ -46,9 +46,16 @@ interface LeadDetailScreenProps {
   leadId: ID;
   onBack: () => void;
   onOpenClass: (cls: Class) => void;
+  /** Name of the screen 뒤로 returns to. */
+  backLabel?: string;
 }
 
-export function LeadDetailScreen({ leadId, onBack, onOpenClass }: LeadDetailScreenProps) {
+export function LeadDetailScreen({
+  leadId,
+  onBack,
+  onOpenClass,
+  backLabel = '문의 목록',
+}: LeadDetailScreenProps) {
   const { state } = useApp();
   const { getLead, activity, advanceLead, bookTrial, updateLead } = useWorkspace();
   const [booking, setBooking] = useState(false);
@@ -65,7 +72,7 @@ export function LeadDetailScreen({ leadId, onBack, onOpenClass }: LeadDetailScre
   if (!lead) {
     return (
       <ScreenBody>
-        <BackLink onBack={onBack} />
+        <BackLink onBack={onBack} label={backLabel} />
         <p className="py-10 text-center text-[14px] text-steel">문의를 찾을 수 없습니다.</p>
       </ScreenBody>
     );
@@ -83,7 +90,7 @@ export function LeadDetailScreen({ leadId, onBack, onOpenClass }: LeadDetailScre
   return (
     <>
       <header className="px-5 pb-1 pt-5 sm:px-7 lg:px-10 lg:pt-8">
-        <BackLink onBack={onBack} />
+        <BackLink onBack={onBack} label={backLabel} />
 
         <div className="mt-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -441,7 +448,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function BackLink({ onBack }: { onBack: () => void }) {
+function BackLink({ onBack, label }: { onBack: () => void; label: string }) {
   return (
     <button
       type="button"
@@ -449,7 +456,7 @@ function BackLink({ onBack }: { onBack: () => void }) {
       className="flex items-center gap-1 text-[13.5px] font-medium text-steel transition-colors hover:text-ink"
     >
       <ArrowLeft size={15} strokeWidth={2.2} />
-      문의 목록
+      {label}
     </button>
   );
 }

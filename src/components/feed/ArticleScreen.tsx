@@ -19,9 +19,12 @@ export function ArticleScreen({
   articleId,
   onBack,
   onOpenArticle,
+  backLabel = '피드',
 }: {
   articleId: string;
   onBack: () => void;
+  /** Name of the screen 뒤로 returns to. */
+  backLabel?: string;
   onOpenArticle: (id: string) => void;
 }) {
   const article = findArticle(articleId);
@@ -30,7 +33,7 @@ export function ArticleScreen({
   if (!article) {
     return (
       <>
-        <BackBar label="피드" onBack={onBack} />
+        <BackBar label={backLabel} onBack={onBack} />
         <ScreenBody>
           <p className="py-10 text-center text-[14px] text-steel">글을 찾을 수 없습니다.</p>
         </ScreenBody>
@@ -50,7 +53,7 @@ export function ArticleScreen({
         />
       </div>
 
-      <BackBar label="피드" onBack={onBack} />
+      <BackBar label={backLabel} onBack={onBack} />
 
       <ScreenBody>
         <article className="mx-auto max-w-[680px]">

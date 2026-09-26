@@ -18,6 +18,13 @@
  * inside a tab means one step back rather than "wherever the state machine
  * decides". The phone's own back button does the same thing as the 뒤로 on the
  * screen — see `useSystemBack`.
+ *
+ * A drill-down never changes tab. Opening a 체험 from 일정 used to jump to 폼
+ * and push the lead there, so 뒤로 popped 폼's stack and dropped the user on the
+ * 문의 list — a screen they had never been on. Now the lead opens on top of
+ * 일정, the bar keeps pointing where the user is, and 뒤로 is always the screen
+ * they just left. Only a *tab tap* (or an alert, which is a tab tap) moves
+ * between tabs, and that always lands on the tab's home.
  */
 
 import { useMemo, useState } from 'react';
@@ -80,6 +87,34 @@ const EMPTY_STACKS: Stacks = { club: [], forms: [], class: [], schedule: [], fee
  * only cross-fades because the user did not move — the thing they were looking
  * at changed form.
  */
+/**
+ * Names for the 뒤로 link. Back labels used to be written into each screen
+ * ("← 달력", "문의 목록"), which was true for the one path each screen was
+ * first built for and wrong for every other way in.
+ */
+const TAB_TITLE: Record<Tab, string> = {
+  club: '클럽',
+  forms: '문의 목록',
+  class: '오늘의 클래스',
+  schedule: '일정',
+  feed: '피드',
+};
+
+const ROUTE_TITLE: Record<Route['name'], string> = {
+  class: '달력',
+  builder: '수업 설계',
+  sheet: '수업 시트',
+  attendance: '출결 기록',
+  lead: '문의',
+  student: '원생 프로필',
+  roster: '원생 명단',
+  curriculum: '커리큘럼',
+  portfolio: '내 기록',
+  activity: '활동 기록',
+  owner: '세부 관리',
+  article: '칼럼',
+};
+
 type Motion = 'push' | 'pop' | 'tab' | 'swap';
 
 const MOTION: Record<Motion, string> = {
@@ -103,6 +138,10 @@ export function FootballApp() {
   const stack = stacks[tab];
   const route = stack.length > 0 ? stack[stack.length - 1] : null;
 
+  /** What 뒤로 on the current screen returns to, named. */
+  const below = stack.length >= 2 ? stack[stack.length - 2] : null;
+  const backLabel = below ? ROUTE_TITLE[below.name] : TAB_TITLE[tab];
+
   // An owner has no `coaches` row, so `currentCoachId` is null and the day
   // builder widens to the whole centre. That is the right default for them and
   // the reason this is one number rather than a role check at each call site.
@@ -116,9 +155,8 @@ export function FootballApp() {
 
   const top = () => window.scrollTo({ top: 0 });
 
-  const push = (next: Route, onTab: Tab = tab) => {
-    setStacks((s) => ({ ...s, [onTab]: [...s[onTab], next] }));
-    if (onTab !== tab) setTab(onTab);
+  const push = (next: Route) => {
+    setStacks((s) => ({ ...s, [tab]: [...s[tab], next] }));
     setMotion('push');
     top();
   };
@@ -138,9 +176,8 @@ export function FootballApp() {
   /**
    * Go to a tab's home screen, dropping whatever was open on it.
    *
-   * This is what the bottom bar and the alert sheet both do. `push` is the only
-   * thing that may leave a tab deep, and it is never a tab *tap* — it is a
-   * cross-tab jump like 일정 → 문의 상세, where the destination is the point.
+   * This is what the bottom bar and the alert sheet both do, and it is the
+   * only way to change tab — `push` always stays on the tab it was called from.
    */
   const resetTo = (next: Tab) => {
     setStacks((s) => (s[next].length === 0 ? s : { ...s, [next]: [] }));
@@ -275,7 +312,7 @@ export function FootballApp() {
             onOpenClass={(cls) => push({ name: 'class', classId: cls.id })}
             onDesign={design}
             onRecord={record}
-            onOpenLead={(leadId) => push({ name: 'lead', leadId }, 'forms')}
+            onOpenLead={(leadId) => push({ name: 'lead', leadId })}
           />
         );
 
@@ -294,7 +331,7 @@ export function FootballApp() {
             onRecord={record}
             onOpenSheet={(cls, date) => push({ name: 'sheet', classId: cls.id, date })}
             onSeeSchedule={() => resetTo('schedule')}
-            onOpenArticle={(articleId) => push({ name: 'article', articleId }, 'feed')}
+            onOpenArticle={(articleId) => push({ name: 'article', articleId })}
           />
         );
     }
@@ -310,7 +347,7 @@ export function FootballApp() {
         return (
           <ClassCalendarScreen
             cls={cls}
-            backLabel={tab === 'schedule' ? '← 일정' : '← 오늘의 클래스'}
+            backLabel={`← ${backLabel}`}
             onDesign={(date) => design(cls, date)}
             onRecord={(date) => record(cls, date)}
             onBack={dismiss}
@@ -325,6 +362,7 @@ export function FootballApp() {
           <SessionBuilderScreen
             cls={cls}
             date={route.date}
+            backLabel={backLabel}
             onDone={() => replace({ name: 'sheet', classId: cls.id, date: route.date })}
             onBack={dismiss}
           />
@@ -358,6 +396,7 @@ export function FootballApp() {
           <AttendanceScreen
             cls={cls}
             date={route.date}
+            backLabel={backLabel}
             onDone={() => {
               // 완료 means the parents were told, not that the register was
               // filled in — the same rule the old coach flow held.
@@ -374,13 +413,20 @@ export function FootballApp() {
         return (
           <LeadDetailScreen
             leadId={route.leadId}
+            backLabel={backLabel}
             onBack={dismiss}
             onOpenClass={(cls) => push({ name: 'class', classId: cls.id })}
           />
         );
 
       case 'student':
-        return <StudentProfileScreen studentId={route.studentId} onBack={dismiss} />;
+        return (
+          <StudentProfileScreen
+            studentId={route.studentId}
+            backLabel={backLabel}
+            onBack={dismiss}
+          />
+        );
 
       case 'roster':
         return (
@@ -412,6 +458,7 @@ export function FootballApp() {
         return (
           <ArticleScreen
             articleId={route.articleId}
+            backLabel={backLabel}
             onBack={dismiss}
             onOpenArticle={(articleId) => push({ name: 'article', articleId })}
           />

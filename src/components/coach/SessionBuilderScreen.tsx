@@ -57,9 +57,17 @@ interface SessionBuilderScreenProps {
   date: ISODate;
   onDone: () => void;
   onBack: () => void;
+  /** Name of the screen 뒤로 returns to. */
+  backLabel?: string;
 }
 
-export function SessionBuilderScreen({ cls, date, onDone, onBack }: SessionBuilderScreenProps) {
+export function SessionBuilderScreen({
+  cls,
+  date,
+  onDone,
+  onBack,
+  backLabel = '달력',
+}: SessionBuilderScreenProps) {
   const { state, dispatch, blockMap } = useApp();
   const draft = state.draft;
 
@@ -102,7 +110,7 @@ export function SessionBuilderScreen({ cls, date, onDone, onBack }: SessionBuild
         onClick={onBack}
         className="mb-2 text-[13px] font-medium text-steel transition-colors hover:text-ink"
       >
-        ← 달력
+        ← {backLabel}
       </button>
 
       <div className="flex flex-wrap items-start justify-between gap-3">

@@ -26,9 +26,17 @@ interface AttendanceScreenProps {
   date: ISODate;
   onDone: () => void;
   onBack: () => void;
+  /** Name of the screen 뒤로 returns to. */
+  backLabel?: string;
 }
 
-export function AttendanceScreen({ cls, date, onDone, onBack }: AttendanceScreenProps) {
+export function AttendanceScreen({
+  cls,
+  date,
+  onDone,
+  onBack,
+  backLabel = '달력',
+}: AttendanceScreenProps) {
   const { state, dispatch, getBlock, getCoach } = useApp();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<ParentNotification[] | null>(null);
@@ -118,7 +126,7 @@ export function AttendanceScreen({ cls, date, onDone, onBack }: AttendanceScreen
           onClick={onBack}
           className="mb-2 text-[13px] font-medium text-steel transition-colors hover:text-ink"
         >
-          ← 달력
+          ← {backLabel}
         </button>
 
         <h1 className="text-[25px] font-semibold leading-[1.2] tracking-tightest text-ink lg:text-[32px]">

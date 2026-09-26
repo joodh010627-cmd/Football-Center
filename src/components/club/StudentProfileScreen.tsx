@@ -46,9 +46,12 @@ import { ScreenBody, Section } from '@/components/shell/Shell';
 export function StudentProfileScreen({
   studentId,
   onBack,
+  backLabel = '뒤로',
 }: {
   studentId: ID;
   onBack: () => void;
+  /** Name of the screen 뒤로 returns to. */
+  backLabel?: string;
 }) {
   const { state, getStudent, getClass, churnSignals } = useApp();
   const { overrides, saveEvaluation } = useWorkspace();
@@ -108,7 +111,7 @@ export function StudentProfileScreen({
   if (!student) {
     return (
       <ScreenBody>
-        <BackLink onBack={onBack} />
+        <BackLink onBack={onBack} label={backLabel} />
         <p className="py-10 text-center text-[14px] text-steel">원생을 찾을 수 없습니다.</p>
       </ScreenBody>
     );
@@ -127,7 +130,7 @@ export function StudentProfileScreen({
   return (
     <>
       <header className="px-5 pb-1 pt-5 sm:px-7 lg:px-10 lg:pt-8">
-        <BackLink onBack={onBack} />
+        <BackLink onBack={onBack} label={backLabel} />
 
         <div className="mt-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -438,7 +441,7 @@ function EvaluationEditor({
   );
 }
 
-function BackLink({ onBack }: { onBack: () => void }) {
+function BackLink({ onBack, label }: { onBack: () => void; label: string }) {
   return (
     <button
       type="button"
@@ -446,7 +449,7 @@ function BackLink({ onBack }: { onBack: () => void }) {
       className="flex items-center gap-1 text-[13.5px] font-medium text-steel transition-colors hover:text-ink"
     >
       <ArrowLeft size={15} strokeWidth={2.2} />
-      뒤로
+      {label}
     </button>
   );
 }
