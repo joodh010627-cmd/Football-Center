@@ -14,7 +14,7 @@
  */
 
 import { useMemo, useState, type ReactNode } from 'react';
-import { Check, Link2, Phone, Plus, Send } from 'lucide-react';
+import { Check, CloudOff, ExternalLink, Link2, Phone, Plus, RefreshCw, Send } from 'lucide-react';
 import type { ID } from '@/types';
 import { useApp } from '@/store/AppContext';
 import { useWorkspace } from '@/store/WorkspaceContext';
@@ -22,6 +22,10 @@ import { TODAY, dayOf } from '@/data/dates';
 import {
   countLeads,
   daysWaiting,
+  defaultFields,
+  formUrl,
+  CORE_FIELDS,
+  OPTIONAL_FIELDS,
   isOpen,
   isOverdue,
   nextStage,
@@ -43,7 +47,18 @@ import { Swap } from '@/components/ui/Motion';
 type Filter = 'open' | LeadStage;
 
 export function FormsScreen({ onOpenLead }: { onOpenLead: (leadId: ID) => void }) {
-  const { leads, formLinks, addLead, advanceLead, addFormLink, shareFormLink } = useWorkspace();
+  const {
+    mode,
+    syncError,
+    reload,
+    leads,
+    formLinks,
+    addLead,
+    advanceLead,
+    addFormLink,
+    toggleFormLink,
+    shareFormLink,
+  } = useWorkspace();
   const [filter, setFilter] = useState<Filter>('open');
   const [composing, setComposing] = useState(false);
   const [makingForm, setMakingForm] = useState(false);
@@ -60,7 +75,7 @@ export function FormsScreen({ onOpenLead }: { onOpenLead: (leadId: ID) => void }
   const oldest = queue.find((l) => isOverdue(l)) ?? queue[0] ?? null;
 
   const copy = (link: (typeof formLinks)[number]) => {
-    const url = `${window.location.origin}/f/${link.slug}`;
+    const url = formUrl(link.slug);
     void navigator.clipboard?.writeText(url);
     shareFormLink(link.id);
     setCopied(link.id);
@@ -83,6 +98,8 @@ export function FormsScreen({ onOpenLead }: { onOpenLead: (leadId: ID) => void }
       />
 
       <ScreenBody>
+        <SyncBanner mode={mode} error={syncError} onReload={reload} />
+
         {/* --- Primary action ------------------------------------------- */}
         {oldest ? (
           <NextAction lead={oldest} onAdvance={advanceLead} onOpen={() => onOpenLead(oldest.id)} />
@@ -186,12 +203,34 @@ export function FormsScreen({ onOpenLead }: { onOpenLead: (leadId: ID) => void }
                   </span>
                   <span className="mt-0.5 block truncate text-[12.5px] text-steel">
                     {FORM_KIND_LABEL[link.kind]} · 접수 {link.submissions}건
+                    {!link.active && ' · 중단됨'}
+                  </span>
+                  <span className="mt-2 flex items-center gap-3 text-[12px] font-semibold">
+                    {mode === 'db' && link.active && (
+                      <a
+                        href={formUrl(link.slug)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-1 text-primary"
+                      >
+                        <ExternalLink size={12} strokeWidth={2.4} />
+                        열어 보기
+                      </a>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => toggleFormLink(link.id)}
+                      className="text-steel transition-colors hover:text-ink"
+                    >
+                      {link.active ? '접수 중단' : '다시 열기'}
+                    </button>
                   </span>
                 </span>
                 <button
                   type="button"
                   onClick={() => copy(link)}
-                  className="shrink-0 rounded-full bg-surface px-3 py-1.5 text-[12px] font-bold text-slate transition-colors duration-200 hover:bg-hairline-soft"
+                  disabled={!link.active}
+                  className="pressable shrink-0 self-start rounded-full bg-surface px-3 py-1.5 text-[12px] font-bold text-slate hover:bg-hairline-soft disabled:opacity-50"
                 >
                   {copied === link.id ? '복사됨' : '링크 복사'}
                 </button>
@@ -222,8 +261,8 @@ export function FormsScreen({ onOpenLead }: { onOpenLead: (leadId: ID) => void }
       <FormComposer
         open={makingForm}
         onClose={() => setMakingForm(false)}
-        onSubmit={(title, kind) => {
-          addFormLink({ title, kind });
+        onSubmit={(title, kind, fields) => {
+          addFormLink({ title, kind, fields });
           setMakingForm(false);
         }}
       />
@@ -508,10 +547,27 @@ function FormComposer({
 }: {
   open: boolean;
   onClose: () => void;
-  onSubmit: (title: string, kind: FormKind) => void;
+  onSubmit: (title: string, kind: FormKind, fields: string[]) => void;
 }) {
   const [title, setTitle] = useState('');
   const [kind, setKind] = useState<FormKind>('trial');
+  const [fields, setFields] = useState<string[]>(defaultFields('trial'));
+
+  const pickKind = (k: FormKind) => {
+    setKind(k);
+    setFields(defaultFields(k));
+  };
+
+  // Questions stay in the canonical order however they were toggled, so every
+  // form a centre sends reads the same way round.
+  const toggleField = (field: string) =>
+    setFields((current) => {
+      const next = current.includes(field)
+        ? current.filter((f) => f !== field)
+        : [...current, field];
+      const order = [...CORE_FIELDS, ...OPTIONAL_FIELDS] as string[];
+      return next.sort((a, b) => order.indexOf(a) - order.indexOf(b));
+    });
 
   return (
     <Modal
@@ -524,9 +580,9 @@ function FormComposer({
           type="button"
           disabled={title.trim().length === 0}
           onClick={() => {
-            onSubmit(title.trim(), kind);
+            onSubmit(title.trim(), kind, fields);
             setTitle('');
-            setKind('trial');
+            pickKind('trial');
           }}
           className="btn-primary w-full py-3 text-[15px]"
         >
@@ -550,7 +606,7 @@ function FormComposer({
               <button
                 key={k}
                 type="button"
-                onClick={() => setKind(k)}
+                onClick={() => pickKind(k)}
                 className={cn('pill-tab', kind === k && 'pill-tab-active')}
               >
                 {FORM_KIND_LABEL[k]}
@@ -559,9 +615,26 @@ function FormComposer({
           </div>
         </Field>
 
+        <Field label="받을 항목" hint="보호자 성함·연락처는 항상 받습니다">
+          <div className="flex flex-wrap gap-1.5">
+            {OPTIONAL_FIELDS.map((f) => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => toggleField(f)}
+                aria-pressed={fields.includes(f)}
+                className={cn('pill-tab !py-1.5 !text-[13px]', fields.includes(f) && 'pill-tab-active')}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+        </Field>
+
         <p className="rounded-md bg-surface px-3.5 py-3 text-[12.5px] leading-[1.6] text-steel">
           링크로 접수된 내용은 <strong className="font-semibold text-slate">신규 문의</strong>로
-          바로 들어오고, 하루 안에 응대하지 않으면 알림에 표시됩니다.
+          바로 들어오고, 하루 안에 응대하지 않으면 알림에 표시됩니다. 학부모는 로그인 없이
+          접수하며, 접수 전 개인정보 수집·이용 동의를 받습니다.
         </p>
       </div>
     </Modal>
@@ -578,4 +651,74 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
       <span className="mt-1.5 block">{children}</span>
     </label>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Where the pipeline lives
+// ---------------------------------------------------------------------------
+
+/**
+ * Says out loud whether this screen is the real pipeline.
+ *
+ * In local mode a copied link leads nowhere and everything here vanishes on
+ * reload; an owner who didn't know that would send the link to parents and
+ * wait for enquiries that can never arrive. So local mode gets a banner that
+ * names the fix, and db mode gets a quiet line with a refresh.
+ */
+function SyncBanner({
+  mode,
+  error,
+  onReload,
+}: {
+  mode: 'loading' | 'db' | 'local';
+  error: string | null;
+  onReload: () => void;
+}) {
+  if (error) {
+    return (
+      <div className="mb-4 flex items-center gap-2.5 rounded-lg bg-tint-alert-soft px-4 py-3 text-[13px] text-error">
+        <CloudOff size={16} className="shrink-0" />
+        <span className="min-w-0 flex-1">{error}</span>
+        <button type="button" onClick={onReload} className="shrink-0 font-semibold">
+          다시 불러오기
+        </button>
+      </div>
+    );
+  }
+
+  if (mode === 'local') {
+    return (
+      <div className="mb-4 rounded-lg border border-hairline-strong bg-canvas px-4 py-3.5">
+        <p className="flex items-center gap-2 text-[13.5px] font-semibold text-ink">
+          <CloudOff size={15} className="text-steel" />
+          예시 데이터로 보는 중
+        </p>
+        <p className="mt-1 text-[12.5px] leading-[1.6] text-steel">
+          문의 DB가 아직 설치되지 않아 폼 링크가 실제로 동작하지 않고, 새로고침하면 변경 사항이
+          사라집니다. Supabase에 마이그레이션 0006을 적용하면 실제 접수가 시작됩니다.
+        </p>
+      </div>
+    );
+  }
+
+  if (mode === 'db') {
+    return (
+      <div className="mb-3 flex items-center justify-between text-[12px] text-steel">
+        <span className="flex items-center gap-1.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-success" />
+          실시간 접수 중 · 1분마다 새 문의를 확인합니다
+        </span>
+        <button
+          type="button"
+          onClick={onReload}
+          className="flex items-center gap-1 font-semibold text-slate transition-colors hover:text-ink"
+        >
+          <RefreshCw size={12} strokeWidth={2.4} />
+          새로고침
+        </button>
+      </div>
+    );
+  }
+
+  return null;
 }

@@ -50,6 +50,7 @@ import { ActivityScreen } from '@/components/club/ActivityScreen';
 import { StudentProfileScreen } from '@/components/club/StudentProfileScreen';
 import { FeedScreen } from '@/components/feed/FeedScreen';
 import { ArticleScreen } from '@/components/feed/ArticleScreen';
+import { AlimtalkScreen } from '@/components/club/AlimtalkScreen';
 import { ClassCalendarScreen } from '@/components/coach/ClassCalendarScreen';
 import { SessionBuilderScreen } from '@/components/coach/SessionBuilderScreen';
 import { SessionSheetScreen } from '@/components/coach/SessionSheetScreen';
@@ -73,7 +74,8 @@ export type Route =
   | { name: 'portfolio' }
   | { name: 'activity' }
   | { name: 'owner' }
-  | { name: 'article'; articleId: string };
+  | { name: 'article'; articleId: string }
+  | { name: 'alimtalk' };
 
 type Stacks = Record<Tab, Route[]>;
 
@@ -113,6 +115,7 @@ const ROUTE_TITLE: Record<Route['name'], string> = {
   activity: '활동 기록',
   owner: '세부 관리',
   article: '칼럼',
+  alimtalk: '알림톡',
 };
 
 type Motion = 'push' | 'pop' | 'tab' | 'swap';
@@ -445,6 +448,9 @@ export function FootballApp() {
 
       case 'activity':
         return <ActivityScreen onBack={dismiss} />;
+
+      case 'alimtalk':
+        return <AlimtalkScreen onBack={dismiss} />;
 
       case 'owner':
         return (

@@ -6,10 +6,11 @@
  * not how many enquiries arrive but how many of them are still being handled
  * three days later. A list can't tell you that. A stage with a clock can.
  *
- * Everything here is client-side for now — there is no `leads` table yet. The
- * shapes are written as if there were one (flat rows, `academyId` on every
- * record, ids minted the same way) so the day it lands is a mapper, not a
- * rewrite. See `docs/PRODUCTIZATION.md` for why the DB work waits on a pilot.
+ * Backed by the `leads` and `form_links` tables (migration 0006) since
+ * 2026-09-26, when a real parent needed somewhere for a form to land. Until
+ * that migration is applied the workspace falls back to the seeded pipeline
+ * below, in memory — see `WorkspaceContext`. The row mappers at the bottom
+ * are the only place the two spellings meet.
  */
 
 import type { ID, ISODate } from '@/types';
@@ -61,6 +62,10 @@ export interface Lead {
   /** Set when the lead converts; links the enquiry to the student row. */
   enrolledStudentId: ID | null;
   lostReason: string;
+  /** Free-form answers from a form link, keyed by the question's label. */
+  answers: Record<string, string>;
+  /** When the parent agreed to the privacy notice. Only form leads have one. */
+  consentAt: string | null;
 }
 
 /** A shareable link that collects enquiries — the centre's front door. */
@@ -377,6 +382,8 @@ export function newLead(academyId: ID, fields: Partial<Lead> = {}): Lead {
     stageChangedAt: now,
     enrolledStudentId: null,
     lostReason: '',
+    answers: {},
+    consentAt: null,
     ...fields,
   };
 }
@@ -387,8 +394,8 @@ export function newFormLink(academyId: ID, fields: Partial<FormLink> = {}): Form
     academyId,
     title: '',
     kind: 'inquiry',
-    slug: `form-${Math.random().toString(36).slice(2, 8)}`,
-    fields: ['학부모 성함', '연락처', '아이 이름', '나이'],
+    slug: newSlug(),
+    fields: defaultFields(fields.kind ?? 'inquiry'),
     active: true,
     createdAt: new Date().toISOString(),
     submissions: 0,
@@ -545,4 +552,168 @@ export function seedFormLinks(academyId: ID): FormLink[] {
       createdAt: `${addDays(TODAY, -40)}T09:00:00`,
     }),
   ];
+}
+
+// ---------------------------------------------------------------------------
+// Form questions
+// ---------------------------------------------------------------------------
+
+/**
+ * Every form asks for these, whatever else it asks — a lead nobody can call
+ * back is not a lead. The public page maps them onto real columns.
+ */
+export const CORE_FIELDS = ['학부모 성함', '연락처'] as const;
+
+/** Questions that map onto a column rather than into `answers`. */
+export const MAPPED_FIELDS = ['학부모 성함', '연락처', '아이 이름', '나이'] as const;
+
+/** Extra questions an owner can switch on. Anything here lands in `answers`. */
+export const OPTIONAL_FIELDS = [
+  '아이 이름',
+  '나이',
+  '희망 요일',
+  '축구 경험',
+  '알게 된 경로',
+  '문의 내용',
+] as const;
+
+/** Questions answered by picking rather than typing, and their choices. */
+export const FIELD_CHOICES: Record<string, string[]> = {
+  '희망 요일': ['월', '화', '수', '목', '금', '토', '일'],
+  '축구 경험': ['처음이에요', '1년 미만', '1년 이상'],
+  '알게 된 경로': ['지인 소개', '검색', 'SNS', '현수막·전단', '기타'],
+};
+
+/** Questions that want a paragraph, not a line. */
+export const LONG_FIELDS = ['문의 내용'];
+
+export function defaultFields(kind: FormKind): string[] {
+  switch (kind) {
+    case 'trial':
+      return ['학부모 성함', '연락처', '아이 이름', '나이', '희망 요일', '축구 경험'];
+    case 'enrollment':
+      return ['학부모 성함', '연락처', '아이 이름', '나이', '희망 요일'];
+    case 'survey':
+      return ['학부모 성함', '연락처', '알게 된 경로', '문의 내용'];
+    case 'inquiry':
+    default:
+      return ['학부모 성함', '연락처', '아이 이름', '나이', '문의 내용'];
+  }
+}
+
+/**
+ * The public part of a form's address. Eight characters from an unambiguous
+ * alphabet: short enough to read out over the phone, and with 32^8 of them,
+ * nobody is going to find the next centre's form by counting.
+ */
+export function newSlug(): string {
+  const alphabet = 'abcdefghjkmnpqrstuvwxyz23456789';
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join('');
+}
+
+/** The address a parent opens. A query string, because GitHub Pages cannot rewrite paths. */
+export function formUrl(slug: string): string {
+  return `${window.location.origin}${import.meta.env.BASE_URL}?f=${encodeURIComponent(slug)}`;
+}
+
+/** Digits only, rendered 010-1234-5678 when it has the shape of a mobile number. */
+export function formatPhone(raw: string): string {
+  const d = raw.replace(/D/g, '');
+  if (d.length === 11) return `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7)}`;
+  if (d.length === 10) return `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
+  return raw;
+}
+
+// ---------------------------------------------------------------------------
+// Row mappers — snake_case in Postgres, camelCase here
+// ---------------------------------------------------------------------------
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+type Row = Record<string, any>;
+
+export function leadFromRow(r: Row): Lead {
+  return {
+    id: r.id,
+    academyId: r.academy_id,
+    childName: r.child_name ?? '',
+    ageLabel: r.age_label ?? '',
+    parentName: r.parent_name ?? '',
+    parentPhone: r.parent_phone ?? '',
+    stage: r.stage,
+    source: r.source,
+    formLinkId: r.form_link_id ?? null,
+    interestClassId: r.interest_class_id ?? null,
+    trialDate: r.trial_date ?? null,
+    trialClassId: r.trial_class_id ?? null,
+    memo: r.memo ?? '',
+    createdAt: r.created_at,
+    stageChangedAt: r.stage_changed_at,
+    enrolledStudentId: r.enrolled_student_id ?? null,
+    lostReason: r.lost_reason ?? '',
+    answers: (r.answers as Record<string, string>) ?? {},
+    consentAt: r.consent_at ?? null,
+  };
+}
+
+/**
+ * A partial lead, as columns. Only the keys present in `patch` are written, so
+ * an update never clobbers a column another screen changed in the meantime.
+ * Consent is not writable from the app — only the public form function sets it.
+ */
+export function leadToRow(patch: Partial<Lead>): Row {
+  const map: Record<string, string> = {
+    id: 'id',
+    academyId: 'academy_id',
+    childName: 'child_name',
+    ageLabel: 'age_label',
+    parentName: 'parent_name',
+    parentPhone: 'parent_phone',
+    stage: 'stage',
+    source: 'source',
+    formLinkId: 'form_link_id',
+    interestClassId: 'interest_class_id',
+    trialDate: 'trial_date',
+    trialClassId: 'trial_class_id',
+    memo: 'memo',
+    createdAt: 'created_at',
+    stageChangedAt: 'stage_changed_at',
+    enrolledStudentId: 'enrolled_student_id',
+    lostReason: 'lost_reason',
+    answers: 'answers',
+  };
+  const out: Row = {};
+  for (const [key, value] of Object.entries(patch)) {
+    const column = map[key];
+    if (column) out[column] = value;
+  }
+  return out;
+}
+
+export function formLinkFromRow(r: Row): FormLink {
+  return {
+    id: r.id,
+    academyId: r.academy_id,
+    title: r.title ?? '',
+    kind: r.kind,
+    slug: r.slug,
+    fields: r.fields ?? [],
+    active: r.active,
+    createdAt: r.created_at,
+    submissions: 0,
+  };
+}
+
+export function formLinkToRow(link: FormLink): Row {
+  return {
+    id: link.id,
+    academy_id: link.academyId,
+    title: link.title,
+    kind: link.kind,
+    slug: link.slug,
+    fields: link.fields,
+    active: link.active,
+    created_at: link.createdAt,
+  };
 }

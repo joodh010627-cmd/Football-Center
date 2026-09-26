@@ -15,7 +15,15 @@
  */
 
 import { useMemo } from 'react';
-import { Activity, BookOpenCheck, ChevronRight, ClipboardList, Crown, Users } from 'lucide-react';
+import {
+  Activity,
+  BookOpenCheck,
+  ChevronRight,
+  ClipboardList,
+  Crown,
+  MessageSquare,
+  Users,
+} from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { Student } from '@/types';
 import { useApp } from '@/store/AppContext';
@@ -115,6 +123,12 @@ export function ClubScreen({ owner, onOpen, onOpenStudent }: ClubScreenProps) {
               label="활동 기록"
               meta={`${activity.length}건`}
               onClick={() => onOpen({ name: 'activity' })}
+            />
+            <HubRow
+              icon={MessageSquare}
+              label="알림톡"
+              meta="발송 기록 · 템플릿"
+              onClick={() => onOpen({ name: 'alimtalk' })}
             />
           </ul>
         </Section>

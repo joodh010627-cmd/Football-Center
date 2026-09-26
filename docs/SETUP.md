@@ -78,6 +78,18 @@ Supabase 대시보드 → **SQL Editor** 에서 아래 순서대로 붙여넣고
 | 3 | `supabase/migrations/0003_functions.sql` | 가입·초대·제한된 쓰기 RPC |
 | 4 | `supabase/migrations/0004_payments.sql` | 수납(대표 전용) + 미납 뷰 |
 | 5 | `supabase/migrations/0005_curriculum.sql` | 커리큘럼·표준 세션 + 세션 설계 자유 구성 |
+| 6 | `supabase/migrations/0006_leads_forms_alimtalk.sql` | 문의·공개 폼 링크 + 알림톡 발송 대기열 |
+
+> **이미 0005까지 적용한 프로젝트라면 0006 파일 하나만 SQL Editor에 붙여넣고 실행하세요.**
+> `APPLY_ALL.generated.sql` 은 0001부터 다시 만들려고 하므로 이미 표가 있는 프로젝트에서는
+> 첫 줄에서 멈춥니다. 0006은 0005처럼 몇 번 실행해도 안전합니다.
+>
+> 0006을 적용하기 전에도 앱은 동작합니다. 폼 탭이 "예시 데이터로 보는 중" 배너를 띄우고
+> 예전처럼 브라우저 안에서만 돌아갑니다. 적용하면 새로고침 없이 1분 안에 실제 DB로 바뀝니다.
+>
+> 적용 후 학부모 폼 링크는 `https://<배포 주소>/?f=<slug>` 형태입니다. 로그인 없이 열리고,
+> 접수는 `submit_public_form()` 함수 하나로만 들어옵니다(동의 필수·입력 검증·속도 제한).
+> 알림톡을 실제로 보내는 절차는 [`docs/ALIMTALK.md`](ALIMTALK.md) 에 있습니다.
 
 > **이미 0004까지 적용한 프로젝트라면 0005만 추가로 실행하면 됩니다.** 0005는
 > `session_plans` 의 3칸 슬롯 컬럼을 순서 있는 `items` jsonb로 이관하고 기존
@@ -94,7 +106,7 @@ Supabase 대시보드 → **SQL Editor** 에서 아래 순서대로 붙여넣고
 > 기준은 `출결 로그가 가리키는 설계 → completed → 최신` 순이고, 버려지는 행을
 > 가리켰던 출결 로그는 남는 행으로 옮겨 붙습니다.
 
-**다섯 개를 하나로 합친 `supabase/APPLY_ALL.generated.sql` 을 붙여넣는 쪽이 편합니다.**
+**처음 설치하는 프로젝트라면 여섯 개를 하나로 합친 `supabase/APPLY_ALL.generated.sql` 을 붙여넣는 쪽이 편합니다.**
 그 파일은 마이그레이션에서 생성되는 파생물이라 커밋되지 않습니다. 다시 만들려면:
 
 ```bash

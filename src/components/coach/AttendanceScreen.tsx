@@ -13,6 +13,7 @@ import { useMemo, useState } from 'react';
 import { CheckCircle2, ListChecks, MousePointerClick, Send } from 'lucide-react';
 import type { AttendanceStatus, Class, ISODate, ParentNotification } from '@/types';
 import { useApp } from '@/store/AppContext';
+import { useSession } from '@/store/AuthContext';
 import { attendanceRateForStudent, planFor, studentsInClass } from '@/data/selectors';
 import { composeParentNotification } from '@/lib/notification';
 import { ATTENDANCE_LABEL, formatDateKo } from '@/lib/format';
@@ -38,6 +39,7 @@ export function AttendanceScreen({
   backLabel = '달력',
 }: AttendanceScreenProps) {
   const { state, dispatch, getBlock, getCoach } = useApp();
+  const session = useSession();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<ParentNotification[] | null>(null);
 
@@ -81,6 +83,7 @@ export function AttendanceScreen({
         status: entry.status,
         tags: entry.tags,
         date: draft.date,
+        academyName: session.academy.name,
         className: cls.title,
         coachName,
         attendanceRate: attendanceRateForStudent(state.attendanceLogs, student.id),
@@ -243,6 +246,8 @@ export function AttendanceScreen({
       <NotificationPreviewModal
         open={notifications !== null}
         notifications={notifications ?? []}
+        academyId={state.academyId}
+        dedupeScope={`${cls.id}:${draft?.date ?? ''}`}
         onClose={() => {
           setNotifications(null);
           dispatch({ type: 'attendance/discard' });

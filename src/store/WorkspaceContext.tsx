@@ -1,14 +1,17 @@
 /**
- * Everything that has no table yet.
+ * The CRM pipeline, the form links, and everything that still has no table.
  *
- * The CRM pipeline, the form links and the coach's pentagon overrides all live
- * here, in the browser, for exactly as long as the tab is open. That is a
- * deliberate stopping point rather than an oversight: the shapes are settled
- * (`src/data/crm.ts`), the screens are real, and the one thing still missing is
- * a migration — which waits on a pilot academy, because a schema authored
- * against imagined requirements is a schema we write twice.
+ * Leads and form links are real rows since migration 0006 — a parent filling
+ * in a form link has to land somewhere that outlives the coach's browser tab.
+ * The provider loads them, applies every change optimistically, and writes it
+ * through. If the migration hasn't been applied to this Supabase project yet,
+ * it says so (`mode: 'local'`) and falls back to the seeded in-memory pipeline,
+ * so the app keeps working while the owner catches the database up.
  *
- * Two rules keep this honest while it is local:
+ * The pentagon overrides and the activity ledger are still local, and still
+ * wait on a pilot: nobody outside this app needs to write them.
+ *
+ * Two rules keep this honest:
  *
  * 1. Everything routes through `record()`. A mutation that doesn't append to the
  *    ledger is a mutation that will be invisible when the real table lands, and
@@ -23,6 +26,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useReducer,
   type ReactNode,
@@ -30,6 +34,10 @@ import {
 import type { AxisScores } from '@/lib/axes';
 import type { ID, ISODate } from '@/types';
 import {
+  formLinkFromRow,
+  formLinkToRow,
+  leadFromRow,
+  leadToRow,
   newFormLink,
   newLead,
   seedFormLinks,
@@ -46,6 +54,10 @@ import {
   type ActivityEvent,
   type EventDraft,
 } from '@/data/activity';
+import { formatDateKo } from '@/lib/format';
+import { supabase } from '@/lib/supabase';
+import { enqueue, isMissingSchema, type EnqueueResult } from '@/lib/alimtalk/outbox';
+import { render } from '@/lib/alimtalk/templates';
 import { useApp } from '@/store/AppContext';
 import { useSession } from '@/store/AuthContext';
 
@@ -62,7 +74,19 @@ export interface EvaluationOverride {
   ratedAt: string;
 }
 
+/**
+ * Where leads and form links live right now.
+ *
+ *   loading — first fetch in flight
+ *   db      — the `leads` / `form_links` tables; changes are written through
+ *   local   — migration 0006 not applied; seeded, in memory, gone on reload
+ */
+export type WorkspaceMode = 'loading' | 'db' | 'local';
+
 interface WorkspaceState {
+  mode: WorkspaceMode;
+  /** The last write that failed, in words. Cleared by the next good load. */
+  syncError: string | null;
   leads: Lead[];
   formLinks: FormLink[];
   overrides: Record<ID, EvaluationOverride>;
@@ -73,6 +97,9 @@ interface WorkspaceState {
 
 type WorkspaceAction =
   | { type: 'seed'; leads: Lead[]; formLinks: FormLink[] }
+  | { type: 'load'; leads: Lead[]; formLinks: FormLink[] }
+  | { type: 'local' }
+  | { type: 'sync/error'; message: string }
   | { type: 'lead/add'; lead: Lead; event: ActivityEvent }
   | { type: 'lead/patch'; leadId: ID; patch: Partial<Lead>; event: ActivityEvent }
   | { type: 'form/add'; link: FormLink; event: ActivityEvent }
@@ -81,6 +108,8 @@ type WorkspaceAction =
   | { type: 'record'; event: ActivityEvent };
 
 const EMPTY: WorkspaceState = {
+  mode: 'loading',
+  syncError: null,
   leads: [],
   formLinks: [],
   overrides: {},
@@ -95,6 +124,24 @@ function reducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState
       // moved thirty seconds ago.
       if (state.seeded) return state;
       return { ...state, leads: action.leads, formLinks: action.formLinks, seeded: true };
+
+    case 'load':
+      // The server is the truth. A reload lands after every failed write, so
+      // anything optimistic has either been persisted or been reported.
+      return {
+        ...state,
+        mode: 'db',
+        syncError: null,
+        leads: action.leads,
+        formLinks: action.formLinks,
+        seeded: true,
+      };
+
+    case 'local':
+      return state.mode === 'local' ? state : { ...state, mode: 'local' };
+
+    case 'sync/error':
+      return { ...state, syncError: action.message };
 
     case 'lead/add':
       return {
@@ -146,6 +193,11 @@ function reducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState
 // ---------------------------------------------------------------------------
 
 interface WorkspaceValue {
+  mode: WorkspaceMode;
+  syncError: string | null;
+  /** Re-read leads and form links — a parent may have just submitted a form. */
+  reload: () => void;
+
   leads: Lead[];
   formLinks: FormLink[];
   overrides: Record<ID, EvaluationOverride>;
@@ -156,7 +208,8 @@ interface WorkspaceValue {
   addLead: (fields: Partial<Lead>) => Lead;
   /** Move a lead to a new stage, stamping the clock and writing the ledger row. */
   advanceLead: (leadId: ID, stage: LeadStage, note?: string) => void;
-  bookTrial: (leadId: ID, date: ISODate, classId: ID | null) => void;
+  /** Resolves with what happened to the 체험 안내 알림톡, or null when none was queued. */
+  bookTrial: (leadId: ID, date: ISODate, classId: ID | null) => Promise<EnqueueResult | null>;
   updateLead: (leadId: ID, patch: Partial<Lead>, summary: string) => void;
 
   addFormLink: (fields: Partial<FormLink>) => FormLink;
@@ -177,18 +230,86 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [ws, dispatch] = useReducer(reducer, EMPTY);
 
   const academyId = state.academyId;
+  const academyName = session.academy.name;
   const actorName = session.membership.displayName || session.email;
 
-  // Seeding waits for the first fetch so trial leads can point at real classes.
-  // Doing it in render rather than an effect keeps the very first paint of the
-  // 폼 tab from flashing an empty state it is about to fill.
-  if (!ws.seeded && !loading && state.classes.length > 0) {
+  // Local mode only: seeding waits for the first fetch so trial leads can point
+  // at real classes.
+  if (ws.mode === 'local' && !ws.seeded && !loading && state.classes.length > 0) {
     dispatch({
       type: 'seed',
-      leads: seedLeads(academyId, state.classes.map((c) => c.id)),
+      leads: seedLeads(
+        academyId,
+        state.classes.map((c) => c.id),
+      ),
       formLinks: seedFormLinks(academyId),
     });
   }
+
+  const reload = useCallback(() => {
+    if (!academyId) return;
+    void (async () => {
+      const [leadsRes, linksRes] = await Promise.all([
+        supabase
+          .from('leads')
+          .select('*')
+          .eq('academy_id', academyId)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('form_links')
+          .select('*')
+          .eq('academy_id', academyId)
+          .order('created_at', { ascending: false }),
+      ]);
+      const error = leadsRes.error ?? linksRes.error;
+      if (error) {
+        if (isMissingSchema(error)) dispatch({ type: 'local' });
+        else dispatch({ type: 'sync/error', message: '문의 목록을 불러오지 못했습니다' });
+        return;
+      }
+      dispatch({
+        type: 'load',
+        leads: (leadsRes.data ?? []).map(leadFromRow),
+        formLinks: (linksRes.data ?? []).map(formLinkFromRow),
+      });
+    })();
+  }, [academyId]);
+
+  // First load, then again whenever the app comes back to the foreground and
+  // once a minute while it's visible — a form submission has no other way to
+  // announce itself.
+  useEffect(() => {
+    if (!academyId) return;
+    reload();
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') reload();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    const timer = window.setInterval(onVisible, 60_000);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.clearInterval(timer);
+    };
+  }, [academyId, reload]);
+
+  /**
+   * Write through to Postgres when there is a Postgres to write to. On failure
+   * the optimistic change is rolled back by reloading, and the user is told —
+   * silently diverging from the server is the one outcome worse than an error.
+   */
+  const persist = useCallback(
+    (label: string, write: () => PromiseLike<{ error: unknown }>): Promise<boolean> => {
+      if (ws.mode !== 'db') return Promise.resolve(true);
+      return Promise.resolve(write()).then(({ error }) => {
+        if (!error) return true;
+        console.error('[workspace]', label, error);
+        dispatch({ type: 'sync/error', message: `${label}에 실패했습니다. 다시 시도해 주세요.` });
+        reload();
+        return false;
+      });
+    },
+    [ws.mode, reload],
+  );
 
   // Every event from this provider is attributed to whoever is signed in, and
   // a caller cannot override that — `actorName` is applied after the spread.
@@ -219,9 +340,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           detail: lead.memo || undefined,
         }),
       });
+      void persist('문의 등록', () => supabase.from('leads').insert(leadToRow(lead)));
       return lead;
     },
-    [academyId, make],
+    [academyId, make, persist],
   );
 
   const advanceLead = useCallback(
@@ -229,16 +351,17 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       const kind =
         stage === 'enrolled' ? 'lead.enrolled' : stage === 'lost' ? 'lead.lost' : 'lead.advanced';
       const lead = ws.leads.find((l) => l.id === leadId);
+      const patch: Partial<Lead> = {
+        stage,
+        stageChangedAt: new Date().toISOString(),
+        ...(stage === 'lost' ? { lostReason: note } : {}),
+        ...(note && stage !== 'lost' ? { memo: note } : {}),
+      };
 
       dispatch({
         type: 'lead/patch',
         leadId,
-        patch: {
-          stage,
-          stageChangedAt: new Date().toISOString(),
-          ...(stage === 'lost' ? { lostReason: note } : {}),
-          ...(note && stage !== 'lost' ? { memo: note } : {}),
-        },
+        patch,
         event: make({
           kind,
           subjectType: 'lead',
@@ -248,22 +371,27 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           detail: note || undefined,
         }),
       });
+      void persist('단계 변경', () =>
+        supabase.from('leads').update(leadToRow(patch)).eq('id', leadId),
+      );
     },
-    [make, ws.leads],
+    [make, persist, ws.leads],
   );
 
   const bookTrial = useCallback(
-    (leadId: ID, date: ISODate, classId: ID | null) => {
+    async (leadId: ID, date: ISODate, classId: ID | null): Promise<EnqueueResult | null> => {
       const lead = ws.leads.find((l) => l.id === leadId);
+      const patch: Partial<Lead> = {
+        stage: 'trial_booked',
+        trialDate: date,
+        trialClassId: classId,
+        stageChangedAt: new Date().toISOString(),
+      };
+
       dispatch({
         type: 'lead/patch',
         leadId,
-        patch: {
-          stage: 'trial_booked',
-          trialDate: date,
-          trialClassId: classId,
-          stageChangedAt: new Date().toISOString(),
-        },
+        patch,
         event: make({
           kind: 'lead.trial_booked',
           subjectType: 'lead',
@@ -272,8 +400,37 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           summary: `${date} 체험 수업 예약`,
         }),
       });
+
+      const saved = await persist('체험 예약', () =>
+        supabase.from('leads').update(leadToRow(patch)).eq('id', leadId),
+      );
+      if (ws.mode !== 'db' || !saved || !lead) return null;
+
+      // After the update, not alongside it: the queue reads the lead's number
+      // from the row, so the row has to be settled first.
+      const variables = {
+        학원명: academyName,
+        보호자명: lead.parentName || '보호자',
+        아이이름: lead.childName || '자녀',
+        체험일: formatDateKo(date),
+        반이름: state.classes.find((c) => c.id === classId)?.title ?? '상담 후 안내',
+      };
+      try {
+        return await enqueue(academyId, [
+          {
+            templateCode: 'trial_booked',
+            leadId,
+            variables,
+            body: render('trial_booked', variables),
+            dedupeKey: `lead:${leadId}:trial:${date}`,
+          },
+        ]);
+      } catch (error) {
+        console.error('[workspace] 체험 안내 알림톡', error);
+        return null;
+      }
     },
-    [make, ws.leads],
+    [academyId, academyName, make, persist, state.classes, ws.leads, ws.mode],
   );
 
   const updateLead = useCallback(
@@ -291,8 +448,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           summary,
         }),
       });
+      void persist('문의 수정', () =>
+        supabase.from('leads').update(leadToRow(patch)).eq('id', leadId),
+      );
     },
-    [make, ws.leads],
+    [make, persist, ws.leads],
   );
 
   const addFormLink = useCallback(
@@ -309,9 +469,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           summary: '새 폼 링크 생성',
         }),
       });
+      void persist('폼 링크 생성', () => supabase.from('form_links').insert(formLinkToRow(link)));
       return link;
     },
-    [academyId, make],
+    [academyId, make, persist],
   );
 
   const toggleFormLink = useCallback(
@@ -328,8 +489,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           summary: link?.active ? '폼 링크 중단' : '폼 링크 재개',
         }),
       });
+      void persist('폼 링크 변경', () =>
+        supabase.from('form_links').update({ active: !link?.active }).eq('id', linkId),
+      );
     },
-    [make, ws.formLinks],
+    [make, persist, ws.formLinks],
   );
 
   const shareFormLink = useCallback(
@@ -350,7 +514,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     (studentId: ID, label: string, scores: AxisScores, note: string) => {
       dispatch({
         type: 'evaluation/save',
-        override: { studentId, scores, note, ratedBy: actorName, ratedAt: new Date().toISOString() },
+        override: {
+          studentId,
+          scores,
+          note,
+          ratedBy: actorName,
+          ratedAt: new Date().toISOString(),
+        },
         event: make({
           kind: 'student.evaluated',
           subjectType: 'student',
@@ -373,17 +543,30 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [slice, state.csActions, academyId],
   );
 
-  const activity = useMemo(
-    () => mergeActivity(derived, ws.recorded),
-    [derived, ws.recorded],
-  );
+  const activity = useMemo(() => mergeActivity(derived, ws.recorded), [derived, ws.recorded]);
 
   const getLead = useCallback((id: ID) => ws.leads.find((l) => l.id === id), [ws.leads]);
 
+  // In the database a link's submission count is simply its leads. Locally the
+  // seeded number stands in, since the seeded leads carry no link ids.
+  const formLinks = useMemo(
+    () =>
+      ws.mode === 'db'
+        ? ws.formLinks.map((f) => ({
+            ...f,
+            submissions: ws.leads.filter((l) => l.formLinkId === f.id).length,
+          }))
+        : ws.formLinks,
+    [ws.mode, ws.formLinks, ws.leads],
+  );
+
   const value = useMemo<WorkspaceValue>(
     () => ({
+      mode: ws.mode,
+      syncError: ws.syncError,
+      reload,
       leads: ws.leads,
-      formLinks: ws.formLinks,
+      formLinks,
       overrides: ws.overrides,
       activity,
       getLead,
@@ -398,8 +581,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       record,
     }),
     [
+      ws.mode,
+      ws.syncError,
+      reload,
       ws.leads,
-      ws.formLinks,
+      formLinks,
       ws.overrides,
       activity,
       getLead,

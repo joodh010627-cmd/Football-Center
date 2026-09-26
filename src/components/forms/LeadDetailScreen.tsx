@@ -41,6 +41,7 @@ import { formatDateKo } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { Modal } from '@/components/ui/Modal';
 import { ScreenBody, Section } from '@/components/shell/Shell';
+import type { EnqueueResult } from '@/lib/alimtalk/outbox';
 
 interface LeadDetailScreenProps {
   leadId: ID;
@@ -61,6 +62,8 @@ export function LeadDetailScreen({
   const [booking, setBooking] = useState(false);
   const [closing, setClosing] = useState(false);
   const [memo, setMemo] = useState('');
+  /** What happened to the 체험 안내 알림톡 after the last booking. */
+  const [notice, setNotice] = useState<string | null>(null);
 
   const lead = getLead(leadId);
 
@@ -187,6 +190,51 @@ export function LeadDetailScreen({
             </p>
           )}
         </div>
+
+        {notice && (
+          <p className="mt-3 flex items-start gap-2 rounded-lg bg-primary-wash px-4 py-3 text-[13px] leading-[1.55] text-charcoal">
+            <MessageSquare size={15} className="mt-0.5 shrink-0 text-primary" />
+            {notice}
+          </p>
+        )}
+
+        {/* --- What the parent wrote ------------------------------------------
+            Only for leads that came in through a form link. The consent line
+            is here because it is the answer to "can we call this number" — and
+            because the day a parent asks, it has to be findable. */}
+        {(Object.keys(lead.answers).length > 0 || lead.consentAt) && (
+          <Section title="폼 응답">
+            <dl className="overflow-hidden rounded-lg border border-hairline bg-canvas">
+              {Object.entries(lead.answers).map(([question, answer]) => (
+                <div
+                  key={question}
+                  className="flex gap-3 border-b border-hairline-soft px-4 py-3 last:border-b-0"
+                >
+                  <dt className="w-[84px] shrink-0 text-[13px] font-semibold text-steel">
+                    {question}
+                  </dt>
+                  <dd className="min-w-0 whitespace-pre-wrap text-[14px] leading-[1.6] text-ink">
+                    {answer}
+                  </dd>
+                </div>
+              ))}
+              {lead.consentAt && (
+                <div className="flex gap-3 px-4 py-3">
+                  <dt className="w-[84px] shrink-0 text-[13px] font-semibold text-steel">
+                    개인정보 동의
+                  </dt>
+                  <dd className="text-[13px] text-slate">
+                    {new Date(lead.consentAt).toLocaleString('ko-KR', {
+                      dateStyle: 'medium',
+                      timeStyle: 'short',
+                    })}{' '}
+                    동의
+                  </dd>
+                </div>
+              )}
+            </dl>
+          </Section>
+        )}
 
         {/* --- Onboarding checklist ---------------------------------------- */}
         <Section title="온보딩 진행" meta={`${done}/${steps.length}`}>
@@ -328,8 +376,12 @@ export function LeadDetailScreen({
         defaultClassId={lead.trialClassId ?? lead.interestClassId ?? ''}
         onClose={() => setBooking(false)}
         onSubmit={(date, classId) => {
-          bookTrial(lead.id, date, classId || null);
           setBooking(false);
+          setNotice(null);
+          void bookTrial(lead.id, date, classId || null).then((result) => {
+            if (!result) return;
+            setNotice(describeEnqueue(result));
+          });
         }}
       />
 
@@ -459,4 +511,21 @@ function BackLink({ onBack, label }: { onBack: () => void; label: string }) {
       {label}
     </button>
   );
+}
+
+/** One line on what became of a queued 알림톡, in the owner's words. */
+function describeEnqueue(result: EnqueueResult): string {
+  if (result.state === 'unavailable') return `체험 안내 알림톡은 보내지 못했습니다 — ${result.reason}`;
+  if (result.queued === 0) return '체험 안내 알림톡은 이미 대기열에 있습니다.';
+  switch (result.dispatch) {
+    case 'sent':
+      return '체험 안내 알림톡을 보냈습니다.';
+    case 'dry_run':
+      return '체험 안내 알림톡을 드라이런으로 처리했습니다 — 발송 대행사 키를 넣으면 실제로 나갑니다.';
+    case 'partial':
+      return `체험 안내 알림톡 발송에 문제가 있습니다 (${result.detail ?? ''}).`;
+    case 'not_connected':
+    default:
+      return '체험 안내 알림톡을 발송 대기열에 넣었습니다. 발송 서버가 연결되면 나갑니다.';
+  }
 }

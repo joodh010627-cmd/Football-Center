@@ -427,5 +427,9 @@ export interface ParentNotification {
   studentName: string;
   parentName: string;
   parentPhone: string;
+  /** The rendered 알림톡 — exactly what the parent would receive. */
   message: string;
+  /** Which approved template `message` was rendered from. */
+  templateCode: 'attendance_report';
+  variables: Record<string, string>;
 }
