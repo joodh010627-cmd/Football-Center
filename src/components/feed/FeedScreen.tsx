@@ -1,54 +1,107 @@
 /**
- * 피드 — not built yet, and said so.
+ * 피드 — the journal.
  *
- * The tab exists because the structure is settled: 피드 is where the centre's
- * content will live, the thing that gives a parent a reason to open the app on a
- * day their child isn't training. That dwell time is the precondition for the
- * ad slots the homepage and Archive+ already assume.
+ * This is where a parent gets a reason to open the app on a day their child
+ * isn't training, which is the precondition for the ad slots the homepage and
+ * Archive+ already assume. Until a pilot team's coaches write for it, it runs
+ * on the sample columns in `data/editorial.ts` — plain, useful pieces for
+ * players and parents rather than lorem ipsum, so the shape can be judged with
+ * real reading in it.
  *
- * It is deliberately *not* built now. Parents have no login yet, and a content
- * surface with no audience is a surface that gets written twice. A stub that
- * names the plan is more honest than an empty list styled to look finished.
+ * Order is deliberate: the lead column first, then a few more, and the one
+ * brand slot only after the reader has already got something from the page.
  */
 
-import { Newspaper } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ARTICLES, AUDIENCE_LABEL, type Audience } from '@/data/editorial';
+import { cn } from '@/lib/cn';
 import { ScreenBody, ScreenHeader } from '@/components/shell/Shell';
+import { Swap } from '@/components/ui/Motion';
+import { ArticleRow, FeatureCard } from '@/components/feed/ArticleCard';
+import { BrandStory } from '@/components/feed/BrandStory';
 
-export function FeedScreen() {
+type Filter = 'all' | Audience;
+
+const FILTERS: Filter[] = ['all', 'parent', 'player', 'coach'];
+
+export function FeedScreen({ onOpenArticle }: { onOpenArticle: (id: string) => void }) {
+  const [filter, setFilter] = useState<Filter>('all');
+
+  const list = useMemo(
+    () => (filter === 'all' ? ARTICLES : ARTICLES.filter((a) => a.audience.includes(filter))),
+    [filter],
+  );
+  const [lead, ...rest] = list;
+  const before = rest.slice(0, 3);
+  const after = rest.slice(3);
+
   return (
     <>
       <ScreenHeader eyebrow="FC Growth Journal" title="축구 밖의 성장까지." />
 
       <ScreenBody>
-        <div className="rounded-xl border border-dashed border-hairline-strong bg-canvas px-5 py-12 text-center">
-          <Newspaper size={28} className="mx-auto text-primary-soft" strokeWidth={1.7} />
-          <p className="mt-3.5 text-[17px] font-bold text-ink">준비 중입니다</p>
-          <p className="mx-auto mt-2 max-w-[320px] text-[13.5px] leading-[1.7] text-steel">
-            코칭 노트와 클럽 소식을 학부모에게 전하는 공간입니다. 학부모 계정이 열리는 시점에 함께
-            공개됩니다.
-          </p>
+        <div className="-mx-5 flex gap-1.5 overflow-x-auto px-5 no-scrollbar sm:mx-0 sm:px-0">
+          {FILTERS.map((f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setFilter(f)}
+              className={cn(
+                'pill-tab shrink-0 whitespace-nowrap',
+                filter === f && 'pill-tab-active',
+              )}
+            >
+              {f === 'all' ? '전체' : `${AUDIENCE_LABEL[f]}를 위한`}
+            </button>
+          ))}
         </div>
 
-        <ul className="mt-4 space-y-2">
-          {[
-            ['코칭 노트', '이번 주 수업에서 다룬 것을 학부모의 언어로'],
-            ['클럽 소식', '경기 결과, 일정 변경, 새 학기 안내'],
-            ['성장 리포트', '원생별 5개 영역 변화를 월 단위로'],
-          ].map(([title, detail]) => (
-            <li
-              key={title}
-              className="flex items-start gap-3 rounded-lg border border-hairline bg-canvas px-4 py-3.5 opacity-70"
-            >
-              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-hairline-strong" />
-              <span className="min-w-0">
-                <span className="block text-[14.5px] font-semibold text-charcoal">{title}</span>
-                <span className="mt-0.5 block text-[12.5px] leading-[1.5] text-stone">
-                  {detail}
-                </span>
-              </span>
-            </li>
-          ))}
-        </ul>
+        <Swap k={filter}>
+          <div className="mt-6 flex items-end justify-between gap-3">
+            <div>
+              <p className="eyebrow-ink">This week</p>
+              <h2 className="mt-2 text-[21px] font-bold tracking-[-0.02em] text-ink">
+                이번 주, 함께 읽어요
+              </h2>
+            </div>
+            <span className="shrink-0 text-[12.5px] tabular-nums text-steel">{list.length}편</span>
+          </div>
+
+          {lead && (
+            <div className="mt-4">
+              <FeatureCard article={lead} onOpen={() => onOpenArticle(lead.id)} />
+            </div>
+          )}
+
+          {before.length > 0 && (
+            <div className="stagger mt-3 grid gap-2 lg:grid-cols-2">
+              {before.map((a) => (
+                <ArticleRow key={a.id} article={a} onOpen={() => onOpenArticle(a.id)} />
+              ))}
+            </div>
+          )}
+        </Swap>
+
+        <div className="mt-9 border-t border-hairline pt-7">
+          <BrandStory />
+        </div>
+
+        {after.length > 0 && (
+          <Swap k={filter}>
+            <h2 className="mt-9 text-[19px] font-bold tracking-[-0.02em] text-ink">더 읽을거리</h2>
+            <div className="stagger mt-3 grid gap-2 lg:grid-cols-2">
+              {after.map((a) => (
+                <ArticleRow key={a.id} article={a} onOpen={() => onOpenArticle(a.id)} />
+              ))}
+            </div>
+          </Swap>
+        )}
+
+        <p className="mt-8 text-center text-[12px] leading-[1.6] text-stone">
+          칼럼은 FC Growth 편집 예시이며 일반적인 정보입니다.
+          <br />
+          광고는 모두 가상 브랜드를 사용한 디자인 예시입니다.
+        </p>
       </ScreenBody>
     </>
   );

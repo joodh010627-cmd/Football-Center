@@ -21,6 +21,10 @@ import { curriculumForClass, sessionDuration } from '@/data/selectors';
 import { formatDateKo } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { ScreenBody, ScreenHeader, Section } from '@/components/shell/Shell';
+import { articleOfTheDay } from '@/data/editorial';
+import { FeatureCard } from '@/components/feed/ArticleCard';
+import { BrandStory } from '@/components/feed/BrandStory';
+import { KitPicks } from '@/components/feed/KitPicks';
 
 const STATE_PILL: Record<SessionState, { label: string; className: string }> = {
   now: { label: '진행 중', className: 'bg-primary text-white' },
@@ -38,6 +42,7 @@ interface ClassHomeScreenProps {
   onRecord: (cls: Class, date: ISODate) => void;
   onOpenSheet: (cls: Class, date: ISODate) => void;
   onSeeSchedule: () => void;
+  onOpenArticle: (articleId: string) => void;
 }
 
 export function ClassHomeScreen({
@@ -49,9 +54,11 @@ export function ClassHomeScreen({
   onRecord,
   onOpenSheet,
   onSeeSchedule,
+  onOpenArticle,
 }: ClassHomeScreenProps) {
   const hero = upNext(entries);
   const unlogged = entries.filter((e) => e.state === 'needs_log');
+  const column = articleOfTheDay(TODAY);
 
   return (
     <>
@@ -75,7 +82,7 @@ export function ClassHomeScreen({
         {entries.length === 0 ? (
           <EmptyDay owner={owner} onSeeSchedule={onSeeSchedule} />
         ) : (
-          <>
+          <div className="stagger">
             {hero && (
               <HeroCard
                 entry={hero}
@@ -94,7 +101,7 @@ export function ClassHomeScreen({
               <button
                 type="button"
                 onClick={() => onRecord(unlogged[0].cls, TODAY)}
-                className="mt-3 flex w-full items-center gap-2.5 rounded-lg border border-hairline bg-tint-yellow px-4 py-3 text-left transition-colors duration-200 hover:bg-tint-yellow-bold"
+                className="pressable mt-3 flex w-full items-center gap-2.5 rounded-lg border border-hairline bg-tint-yellow px-4 py-3 text-left hover:bg-tint-yellow-bold"
               >
                 <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-steel" />
                 <span className="min-w-0 flex-1 text-[13.5px] font-medium text-charcoal">
@@ -124,7 +131,7 @@ export function ClassHomeScreen({
                 ))}
               </ul>
             </Section>
-          </>
+          </div>
         )}
 
         <button
@@ -136,6 +143,41 @@ export function ClassHomeScreen({
           이번 주 전체 일정 보기
         </button>
       </ScreenBody>
+
+      {/* --- Below the work -------------------------------------------------
+          Reading and the ad slots live under everything a coach came here to
+          do, on their own band, so they are there for the quiet minutes before
+          a session and invisible during the busy ones. Nothing here is above
+          the fold on a phone. */}
+      <div className="mt-6 border-t border-hairline bg-canvas/60">
+        <div className="space-y-10 px-5 pb-8 pt-7 sm:px-7 lg:px-10">
+          <section>
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <p className="eyebrow-ink">FC Growth Journal</p>
+                <h2 className="mt-2 text-[19px] font-bold tracking-[-0.02em] text-ink">
+                  오늘의 칼럼
+                </h2>
+              </div>
+            </div>
+            <div className="mt-3">
+              <FeatureCard
+                article={column}
+                caption={column.dek}
+                onOpen={() => onOpenArticle(column.id)}
+              />
+            </div>
+          </section>
+
+          <BrandStory compact />
+
+          <KitPicks />
+
+          <p className="text-center text-[11.5px] text-stone">
+            광고는 모두 가상 브랜드를 사용한 디자인 예시입니다.
+          </p>
+        </div>
+      </div>
     </>
   );
 }
@@ -227,8 +269,7 @@ function HeroCard({
       {focus && <p className="mt-1.5 text-[15px] leading-[1.5] text-charcoal">{focus}</p>}
 
       <p className="mt-2 text-[13.5px] text-slate">
-        {coach?.name ?? '미배정'} 코치 · {entry.headcount}명
-        {minutes > 0 && ` · ${minutes}분 구성`}
+        {coach?.name ?? '미배정'} 코치 · {entry.headcount}명{minutes > 0 && ` · ${minutes}분 구성`}
         {entry.unplanned && entry.state !== 'needs_log' && (
           <span className="ml-1.5 font-semibold text-charcoal">· 미설계</span>
         )}
@@ -238,7 +279,7 @@ function HeroCard({
         <button
           type="button"
           onClick={onOpen}
-          className="rounded-full bg-primary px-6 py-3 text-[15px] font-semibold text-white transition-colors duration-200 hover:bg-primary-pressed active:bg-primary-deep"
+          className="pressable rounded-full bg-primary px-6 py-3 text-[15px] font-semibold text-white hover:bg-primary-pressed active:bg-primary-deep"
         >
           {cta}
         </button>
@@ -248,7 +289,15 @@ function HeroCard({
   );
 }
 
-function DayRow({ entry, onOpen, onAct }: { entry: DayEntry; onOpen: () => void; onAct: () => void }) {
+function DayRow({
+  entry,
+  onOpen,
+  onAct,
+}: {
+  entry: DayEntry;
+  onOpen: () => void;
+  onAct: () => void;
+}) {
   const { getCoach } = useApp();
   const pill = STATE_PILL[entry.state];
 
@@ -271,7 +320,7 @@ function DayRow({ entry, onOpen, onAct }: { entry: DayEntry; onOpen: () => void;
         type="button"
         onClick={onAct}
         className={cn(
-          'shrink-0 rounded-full px-3 py-1.5 text-[12px] font-bold transition-opacity duration-200 hover:opacity-85',
+          'pressable shrink-0 rounded-full px-3 py-1.5 text-[12px] font-bold hover:opacity-85',
           pill.className,
         )}
       >

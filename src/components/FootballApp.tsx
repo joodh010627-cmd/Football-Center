@@ -42,6 +42,7 @@ import { OwnerConsole } from '@/components/club/OwnerConsole';
 import { ActivityScreen } from '@/components/club/ActivityScreen';
 import { StudentProfileScreen } from '@/components/club/StudentProfileScreen';
 import { FeedScreen } from '@/components/feed/FeedScreen';
+import { ArticleScreen } from '@/components/feed/ArticleScreen';
 import { ClassCalendarScreen } from '@/components/coach/ClassCalendarScreen';
 import { SessionBuilderScreen } from '@/components/coach/SessionBuilderScreen';
 import { SessionSheetScreen } from '@/components/coach/SessionSheetScreen';
@@ -64,11 +65,29 @@ export type Route =
   | { name: 'curriculum' }
   | { name: 'portfolio' }
   | { name: 'activity' }
-  | { name: 'owner' };
+  | { name: 'owner' }
+  | { name: 'article'; articleId: string };
 
 type Stacks = Record<Tab, Route[]>;
 
 const EMPTY_STACKS: Stacks = { club: [], forms: [], class: [], schedule: [], feed: [] };
+
+/**
+ * How the next screen arrives, by what the user just did.
+ *
+ * The motion is the answer to "where am I now". Deeper comes in from the right,
+ * shallower from the left, a tab tap rises in place, and a replace (설계 → 시트)
+ * only cross-fades because the user did not move — the thing they were looking
+ * at changed form.
+ */
+type Motion = 'push' | 'pop' | 'tab' | 'swap';
+
+const MOTION: Record<Motion, string> = {
+  push: 'animate-screen-push',
+  pop: 'animate-screen-pop',
+  tab: 'animate-tab-in',
+  swap: 'animate-swap-in',
+};
 
 export function FootballApp() {
   const { state, slice, dispatch } = useApp();
@@ -79,6 +98,7 @@ export function FootballApp() {
   const [tab, setTab] = useState<Tab>('class');
   const [stacks, setStacks] = useState<Stacks>(EMPTY_STACKS);
   const [leaving, setLeaving] = useState(false);
+  const [motion, setMotion] = useState<Motion>('tab');
 
   const stack = stacks[tab];
   const route = stack.length > 0 ? stack[stack.length - 1] : null;
@@ -88,10 +108,7 @@ export function FootballApp() {
   // the reason this is one number rather than a role check at each call site.
   const coachId = state.currentCoachId;
 
-  const today = useMemo(
-    () => buildDay(slice, TODAY, TODAY, coachId),
-    [slice, coachId],
-  );
+  const today = useMemo(() => buildDay(slice, TODAY, TODAY, coachId), [slice, coachId]);
   const summary = useMemo(() => summarise(today), [today]);
   const leadCounts = useMemo(() => countLeads(leads), [leads]);
 
@@ -102,16 +119,19 @@ export function FootballApp() {
   const push = (next: Route, onTab: Tab = tab) => {
     setStacks((s) => ({ ...s, [onTab]: [...s[onTab], next] }));
     if (onTab !== tab) setTab(onTab);
+    setMotion('push');
     top();
   };
 
   const pop = () => {
     setStacks((s) => ({ ...s, [tab]: s[tab].slice(0, -1) }));
+    setMotion('pop');
     top();
   };
 
   const replace = (next: Route) => {
     setStacks((s) => ({ ...s, [tab]: [...s[tab].slice(0, -1), next] }));
+    setMotion('swap');
     top();
   };
 
@@ -125,6 +145,7 @@ export function FootballApp() {
   const resetTo = (next: Tab) => {
     setStacks((s) => (s[next].length === 0 ? s : { ...s, [next]: [] }));
     setTab(next);
+    setMotion('tab');
     top();
   };
 
@@ -220,13 +241,12 @@ export function FootballApp() {
 
   return (
     <>
-      <Shell
-        tabs={tabs}
-        active={tab}
-        onSelect={(key) => resetTo(key as Tab)}
-        alerts={alerts}
-      >
-        {route ? renderRoute() : renderTab()}
+      <Shell tabs={tabs} active={tab} onSelect={(key) => resetTo(key as Tab)} alerts={alerts}>
+        {/* Keyed by position so every move remounts — and so a push from one
+            student to another never inherits the first one's local state. */}
+        <div key={`${tab}/${stack.length}/${route?.name ?? 'root'}`} className={MOTION[motion]}>
+          {route ? renderRoute() : renderTab()}
+        </div>
       </Shell>
       {leaving && <Toast>한 번 더 누르면 종료됩니다</Toast>}
     </>
@@ -260,7 +280,7 @@ export function FootballApp() {
         );
 
       case 'feed':
-        return <FeedScreen />;
+        return <FeedScreen onOpenArticle={(articleId) => push({ name: 'article', articleId })} />;
 
       case 'class':
       default:
@@ -274,6 +294,7 @@ export function FootballApp() {
             onRecord={record}
             onOpenSheet={(cls, date) => push({ name: 'sheet', classId: cls.id, date })}
             onSeeSchedule={() => resetTo('schedule')}
+            onOpenArticle={(articleId) => push({ name: 'article', articleId }, 'feed')}
           />
         );
     }
@@ -384,6 +405,15 @@ export function FootballApp() {
           <OwnerConsole
             onBack={dismiss}
             onOpenStudent={(s) => push({ name: 'student', studentId: s.id })}
+          />
+        );
+
+      case 'article':
+        return (
+          <ArticleScreen
+            articleId={route.articleId}
+            onBack={dismiss}
+            onOpenArticle={(articleId) => push({ name: 'article', articleId })}
           />
         );
 
