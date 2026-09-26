@@ -19,6 +19,7 @@ import { STUDENT_STATUS_LABEL } from '@/data/dates';
 import { AT_RISK_THRESHOLD } from '@/data/churn';
 import { cn } from '@/lib/cn';
 import { ScreenBody, ScreenHeader } from '@/components/shell/Shell';
+import { Swap } from '@/components/ui/Motion';
 
 type Filter = 'all' | 'at_risk' | 'inactive';
 
@@ -106,71 +107,74 @@ export function RosterScreen({ owner, onBack, onOpenStudent }: RosterScreenProps
           </FilterChip>
         </div>
 
-        {rows.length === 0 ? (
-          <p className="mt-4 rounded-lg border border-dashed border-hairline-strong bg-canvas px-4 py-10 text-center text-[13.5px] text-steel">
-            조건에 맞는 원생이 없습니다.
-          </p>
-        ) : (
-          <ul className="mt-4 overflow-hidden rounded-lg border border-hairline bg-canvas">
-            {rows.map((student) => {
-              const signal = churnSignals.get(student.id);
-              const cls = getClass(student.classId);
+        <Swap k={filter}>
+          {rows.length === 0 ? (
+            <p className="mt-4 rounded-lg border border-dashed border-hairline-strong bg-canvas px-4 py-10 text-center text-[13.5px] text-steel">
+              조건에 맞는 원생이 없습니다.
+            </p>
+          ) : (
+            <ul className="mt-4 overflow-hidden rounded-lg border border-hairline bg-canvas">
+              {rows.map((student) => {
+                const signal = churnSignals.get(student.id);
+                const cls = getClass(student.classId);
 
-              return (
-                <li key={student.id} className="border-b border-hairline-soft last:border-b-0">
-                  <button
-                    type="button"
-                    onClick={() => onOpenStudent(student)}
-                    className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors duration-150 hover:bg-surface-soft"
-                  >
-                    <span
-                      className={cn(
-                        'flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[13px] font-bold tabular-nums',
-                        !signal?.computable
-                          ? 'bg-surface text-stone'
-                          : student.churnScore >= 75
-                            ? 'bg-error text-white'
-                            : student.churnScore >= AT_RISK_THRESHOLD
-                              ? 'bg-tint-alert text-error'
-                              : 'bg-primary-wash text-primary',
-                      )}
+                return (
+                  <li key={student.id} className="border-b border-hairline-soft last:border-b-0">
+                    <button
+                      type="button"
+                      onClick={() => onOpenStudent(student)}
+                      className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors duration-150 hover:bg-surface-soft"
                     >
-                      {/* A student with no attendance history has no score. "0"
+                      <span
+                        className={cn(
+                          'flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[13px] font-bold tabular-nums',
+                          !signal?.computable
+                            ? 'bg-surface text-stone'
+                            : student.churnScore >= 75
+                              ? 'bg-error text-white'
+                              : student.churnScore >= AT_RISK_THRESHOLD
+                                ? 'bg-tint-alert text-error'
+                                : 'bg-primary-wash text-primary',
+                        )}
+                      >
+                        {/* A student with no attendance history has no score. "0"
                           would read as "safe" when it means "unknown". */}
-                      {signal?.computable ? student.churnScore : '—'}
-                    </span>
+                        {signal?.computable ? student.churnScore : '—'}
+                      </span>
 
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-baseline gap-1.5">
-                        <span className="truncate text-[15.5px] font-semibold text-ink">
-                          {student.name}
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-baseline gap-1.5">
+                          <span className="truncate text-[15.5px] font-semibold text-ink">
+                            {student.name}
+                          </span>
+                          <span className="shrink-0 text-[12.5px] text-steel">
+                            {student.ageGroup}
+                          </span>
                         </span>
-                        <span className="shrink-0 text-[12.5px] text-steel">
-                          {student.ageGroup}
+                        <span className="mt-0.5 block truncate text-[13px] text-steel">
+                          {cls?.title ?? '미배정'}
+                          {owner &&
+                            getFee(student.id) > 0 &&
+                            ` · 월 ${(getFee(student.id) / 10_000).toFixed(0)}만원`}
                         </span>
                       </span>
-                      <span className="mt-0.5 block truncate text-[13px] text-steel">
-                        {cls?.title ?? '미배정'}
-                        {owner && getFee(student.id) > 0 &&
-                          ` · 월 ${(getFee(student.id) / 10_000).toFixed(0)}만원`}
-                      </span>
-                    </span>
 
-                    <span
-                      className={cn(
-                        'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold',
-                        STATUS_STYLE[student.status],
-                      )}
-                    >
-                      {STUDENT_STATUS_LABEL[student.status]}
-                    </span>
-                    <ChevronRight size={16} className="shrink-0 text-stone" />
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+                      <span
+                        className={cn(
+                          'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold',
+                          STATUS_STYLE[student.status],
+                        )}
+                      >
+                        {STUDENT_STATUS_LABEL[student.status]}
+                      </span>
+                      <ChevronRight size={16} className="shrink-0 text-stone" />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Swap>
       </ScreenBody>
     </>
   );

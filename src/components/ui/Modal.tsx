@@ -1,6 +1,7 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { usePresence } from '@/components/ui/Motion';
 
 interface ModalProps {
   open: boolean;
@@ -31,12 +32,22 @@ export function Modal({
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
-  if (!open) return null;
+  const { mounted, closing } = usePresence(open);
+
+  // While closing, render what was on screen when it was still open. Callers
+  // often derive `open` from the same value the body reads (`open={!!lead}`),
+  // so the live children may already be pointing at nothing.
+  const shown = useRef({ title, children, footer });
+  if (open) shown.current = { title, children, footer };
+  const body = shown.current;
+
+  if (!mounted) return null;
 
   return (
     <div
       className={cn(
-        'fixed inset-0 z-50 flex animate-fade-in bg-ink-deep/45 p-4',
+        'fixed inset-0 z-50 flex bg-ink-deep/45 p-4',
+        closing ? 'pointer-events-none animate-fade-out' : 'animate-fade-in',
         variant === 'sheet'
           ? 'items-end justify-center p-0 sm:items-center sm:p-4'
           : 'items-center justify-center',
@@ -51,14 +62,19 @@ export function Modal({
         className={cn(
           'flex max-h-full w-full flex-col overflow-hidden bg-canvas shadow-modal',
           variant === 'sheet'
-            ? 'animate-slide-up rounded-t-2xl sm:max-w-lg sm:rounded-lg'
-            : 'max-w-lg animate-pop-in rounded-lg',
+            ? cn(
+                'rounded-t-2xl sm:max-w-lg sm:rounded-lg',
+                closing ? 'animate-slide-down' : 'animate-slide-up',
+              )
+            : cn('max-w-lg rounded-lg', closing ? 'animate-pop-out' : 'animate-pop-in'),
           className,
         )}
       >
-        {title && (
+        {body.title && (
           <header className="flex shrink-0 items-start justify-between gap-4 border-b border-hairline px-6 py-5">
-            <div className="min-w-0 text-[18px] font-semibold leading-[1.4] text-ink">{title}</div>
+            <div className="min-w-0 text-[18px] font-semibold leading-[1.4] text-ink">
+              {body.title}
+            </div>
             <button
               type="button"
               onClick={onClose}
@@ -70,11 +86,11 @@ export function Modal({
           </header>
         )}
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{body.children}</div>
 
-        {footer && (
+        {body.footer && (
           <footer className="shrink-0 border-t border-hairline bg-surface-soft px-6 py-4">
-            {footer}
+            {body.footer}
           </footer>
         )}
       </div>

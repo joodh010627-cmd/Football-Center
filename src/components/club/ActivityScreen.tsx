@@ -25,6 +25,7 @@ import {
 import { formatDateKo } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { ScreenBody, ScreenHeader } from '@/components/shell/Shell';
+import { Swap } from '@/components/ui/Motion';
 
 type Filter = 'all' | ActivityGroup;
 
@@ -39,17 +40,12 @@ export function ActivityScreen({ onBack }: { onBack: () => void }) {
 
   const days = useMemo(() => {
     const rows =
-      filter === 'all'
-        ? activity
-        : activity.filter((e) => ACTIVITY_META[e.kind].group === filter);
+      filter === 'all' ? activity : activity.filter((e) => ACTIVITY_META[e.kind].group === filter);
     return groupByDay(rows.slice(0, LIMIT));
   }, [activity, filter]);
 
   const counts = useMemo(() => {
-    const out = { session: 0, lead: 0, student: 0, curriculum: 0 } as Record<
-      ActivityGroup,
-      number
-    >;
+    const out = { session: 0, lead: 0, student: 0, curriculum: 0 } as Record<ActivityGroup, number>;
     for (const event of activity) out[ACTIVITY_META[event.kind].group] += 1;
     return out;
   }, [activity]);
@@ -88,56 +84,60 @@ export function ActivityScreen({ onBack }: { onBack: () => void }) {
           ))}
         </div>
 
-        {days.length === 0 ? (
-          <p className="mt-4 rounded-lg border border-dashed border-hairline-strong bg-canvas px-4 py-10 text-center text-[13.5px] text-steel">
-            아직 기록된 활동이 없습니다.
-          </p>
-        ) : (
-          <div className="mt-5 space-y-6">
-            {days.map(([day, events]) => (
-              <section key={day}>
-                <h2 className="sticky top-14 z-10 -mx-1 bg-surface-soft/90 px-1 py-1 text-[12.5px] font-bold text-steel backdrop-blur lg:top-0">
-                  {day === TODAY
-                    ? '오늘'
-                    : day === addDays(TODAY, -1)
-                      ? '어제'
-                      : formatDateKo(day)}
-                </h2>
+        <Swap k={filter}>
+          {days.length === 0 ? (
+            <p className="mt-4 rounded-lg border border-dashed border-hairline-strong bg-canvas px-4 py-10 text-center text-[13.5px] text-steel">
+              아직 기록된 활동이 없습니다.
+            </p>
+          ) : (
+            <div className="mt-5 space-y-6">
+              {days.map(([day, events]) => (
+                <section key={day}>
+                  <h2 className="sticky top-14 z-10 -mx-1 bg-surface-soft/90 px-1 py-1 text-[12.5px] font-bold text-steel backdrop-blur lg:top-0">
+                    {day === TODAY
+                      ? '오늘'
+                      : day === addDays(TODAY, -1)
+                        ? '어제'
+                        : formatDateKo(day)}
+                  </h2>
 
-                <ol className="relative mt-2 space-y-4 border-l border-hairline-soft pl-4">
-                  {events.map((event) => (
-                    <li key={event.id} className="relative">
-                      <span
-                        className={cn(
-                          'absolute -left-[21px] top-[7px] h-2 w-2 rounded-full ring-2 ring-surface-soft',
-                          ACTIVITY_META[event.kind].dot,
+                  <ol className="relative mt-2 space-y-4 border-l border-hairline-soft pl-4">
+                    {events.map((event) => (
+                      <li key={event.id} className="relative">
+                        <span
+                          className={cn(
+                            'absolute -left-[21px] top-[7px] h-2 w-2 rounded-full ring-2 ring-surface-soft',
+                            ACTIVITY_META[event.kind].dot,
+                          )}
+                        />
+                        <div className="flex items-baseline justify-between gap-2">
+                          <p className="min-w-0 text-[14.5px] font-semibold text-ink">
+                            <span className="text-primary">{event.subjectLabel}</span>
+                            <span className="ml-1.5 font-normal text-charcoal">
+                              {event.summary}
+                            </span>
+                          </p>
+                          <span className="shrink-0 text-[12px] tabular-nums text-stone">
+                            {timeOf(event.at)}
+                          </span>
+                        </div>
+                        {event.detail && (
+                          <p className="mt-0.5 text-[13px] leading-[1.55] text-slate">
+                            {event.detail}
+                          </p>
                         )}
-                      />
-                      <div className="flex items-baseline justify-between gap-2">
-                        <p className="min-w-0 text-[14.5px] font-semibold text-ink">
-                          <span className="text-primary">{event.subjectLabel}</span>
-                          <span className="ml-1.5 font-normal text-charcoal">{event.summary}</span>
+                        <p className="mt-0.5 text-[12px] text-stone">
+                          {ACTIVITY_META[event.kind].label}
+                          {event.actorName && ` · ${event.actorName}`}
                         </p>
-                        <span className="shrink-0 text-[12px] tabular-nums text-stone">
-                          {timeOf(event.at)}
-                        </span>
-                      </div>
-                      {event.detail && (
-                        <p className="mt-0.5 text-[13px] leading-[1.55] text-slate">
-                          {event.detail}
-                        </p>
-                      )}
-                      <p className="mt-0.5 text-[12px] text-stone">
-                        {ACTIVITY_META[event.kind].label}
-                        {event.actorName && ` · ${event.actorName}`}
-                      </p>
-                    </li>
-                  ))}
-                </ol>
-              </section>
-            ))}
-          </div>
-        )}
+                      </li>
+                    ))}
+                  </ol>
+                </section>
+              ))}
+            </div>
+          )}
+        </Swap>
 
         {activity.length > LIMIT && (
           <p className="mt-6 text-center text-[12.5px] text-stone">

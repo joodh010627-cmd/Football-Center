@@ -38,6 +38,7 @@ import {
 import { cn } from '@/lib/cn';
 import { Modal } from '@/components/ui/Modal';
 import { ScreenBody, ScreenHeader, Section } from '@/components/shell/Shell';
+import { Swap } from '@/components/ui/Motion';
 
 type Filter = 'open' | LeadStage;
 
@@ -141,17 +142,19 @@ export function FormsScreen({ onOpenLead }: { onOpenLead: (leadId: ID) => void }
           title={filter === 'open' ? '최근 문의' : STAGE_META[filter].label}
           meta={`${queue.length}건`}
         >
-          {queue.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-hairline-strong bg-canvas px-4 py-8 text-center text-[13.5px] text-steel">
-              해당하는 문의가 없습니다.
-            </p>
-          ) : (
-            <ul className="overflow-hidden rounded-lg border border-hairline bg-canvas">
-              {queue.map((lead) => (
-                <LeadRow key={lead.id} lead={lead} onOpen={() => onOpenLead(lead.id)} />
-              ))}
-            </ul>
-          )}
+          <Swap k={filter}>
+            {queue.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-hairline-strong bg-canvas px-4 py-8 text-center text-[13.5px] text-steel">
+                해당하는 문의가 없습니다.
+              </p>
+            ) : (
+              <ul className="overflow-hidden rounded-lg border border-hairline bg-canvas">
+                {queue.map((lead) => (
+                  <LeadRow key={lead.id} lead={lead} onOpen={() => onOpenLead(lead.id)} />
+                ))}
+              </ul>
+            )}
+          </Swap>
 
           <button
             type="button"
@@ -565,15 +568,7 @@ function FormComposer({
   );
 }
 
-function Field({
-  label,
-  hint,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  children: ReactNode;
-}) {
+function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <label className="block">
       <span className="flex items-baseline gap-2">

@@ -165,6 +165,59 @@ export default {
           '0%': { opacity: '0', transform: 'scale(0.96)' },
           '100%': { opacity: '1', transform: 'scale(1)' },
         },
+        'fade-out': {
+          from: { opacity: '1' },
+          to: { opacity: '0' },
+        },
+        'slide-down': {
+          from: { opacity: '1', transform: 'translateY(0)' },
+          to: { opacity: '0', transform: 'translateY(24px)' },
+        },
+        'pop-out': {
+          from: { opacity: '1', transform: 'scale(1)' },
+          to: { opacity: '0', transform: 'scale(0.97)' },
+        },
+        /* --- Navigation -----------------------------------------------
+           Three verbs, three motions. A drill-down comes in from the right
+           (deeper), 뒤로 comes back from the left (shallower), and a tab tap
+           rises in place (sideways move, no depth). The distance is short on
+           purpose: this is orientation, not spectacle, and a coach tapping
+           through five screens before a session must never wait on it. */
+        'screen-push': {
+          from: { opacity: '0', transform: 'translateX(32px)' },
+          to: { opacity: '1', transform: 'translateX(0)' },
+        },
+        'screen-pop': {
+          from: { opacity: '0', transform: 'translateX(-24px)' },
+          to: { opacity: '1', transform: 'translateX(0)' },
+        },
+        'tab-in': {
+          from: { opacity: '0', transform: 'translateY(10px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+        /** Content swapped inside a screen — a filter, a segment. */
+        'swap-in': {
+          from: { opacity: '0', transform: 'translateY(6px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+        'tab-pop': {
+          '0%': { transform: 'scale(0.82)' },
+          '55%': { transform: 'scale(1.08)' },
+          '100%': { transform: 'scale(1)' },
+        },
+        'check-pop': {
+          '0%': { transform: 'scale(0.4)', opacity: '0' },
+          '60%': { transform: 'scale(1.15)', opacity: '1' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
+        },
+        'dot-fill': {
+          from: { transform: 'scaleX(0)' },
+          to: { transform: 'scaleX(1)' },
+        },
+        'slow-zoom': {
+          from: { transform: 'scale(1.06)' },
+          to: { transform: 'scale(1)' },
+        },
         /* --- Boot sequence ------------------------------------------- */
         'crest-in': {
           '0%': { opacity: '0', transform: 'scale(0.84)' },
@@ -188,6 +241,20 @@ export default {
         'fade-in': 'fade-in 220ms ease-out',
         'slide-up': 'slide-up 260ms cubic-bezier(0.22, 1, 0.36, 1)',
         'pop-in': 'pop-in 200ms cubic-bezier(0.22, 1, 0.36, 1)',
+        'fade-out': 'fade-out 180ms ease-in forwards',
+        'slide-down': 'slide-down 200ms cubic-bezier(0.4, 0, 1, 1) forwards',
+        'pop-out': 'pop-out 160ms ease-in forwards',
+        /* `backwards`, never `both`: a transform left on the screen wrapper
+           after the animation would become the containing block for every
+           `position: fixed` modal inside it. */
+        'screen-push': 'screen-push 340ms cubic-bezier(0.22, 1, 0.36, 1) backwards',
+        'screen-pop': 'screen-pop 300ms cubic-bezier(0.22, 1, 0.36, 1) backwards',
+        'tab-in': 'tab-in 280ms cubic-bezier(0.22, 1, 0.36, 1) backwards',
+        'swap-in': 'swap-in 240ms cubic-bezier(0.22, 1, 0.36, 1) backwards',
+        'tab-pop': 'tab-pop 360ms cubic-bezier(0.22, 1, 0.36, 1)',
+        'check-pop': 'check-pop 260ms cubic-bezier(0.22, 1, 0.36, 1)',
+        'dot-fill': 'dot-fill 5000ms linear forwards',
+        'slow-zoom': 'slow-zoom 1200ms cubic-bezier(0.22, 1, 0.36, 1) backwards',
         'crest-in': 'crest-in 900ms cubic-bezier(0.22, 1, 0.36, 1) both',
         'boot-rise': 'boot-rise 700ms cubic-bezier(0.22, 1, 0.36, 1) both',
         'boot-progress': 'boot-progress 1500ms cubic-bezier(0.5, 0, 0.2, 1) both',

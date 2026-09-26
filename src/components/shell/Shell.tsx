@@ -19,6 +19,7 @@ import { Bell, ChevronLeft, LogOut, X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Crest } from '@/components/ui/Crest';
 import { useAuth, useSession } from '@/store/AuthContext';
+import { usePresence } from '@/components/ui/Motion';
 
 export interface TabItem {
   key: string;
@@ -51,6 +52,7 @@ export function Shell({ tabs, active, onSelect, alerts, children }: ShellProps) 
   const session = useSession();
   const { signOut } = useAuth();
   const [bellOpen, setBellOpen] = useState(false);
+  const sheet = usePresence(bellOpen);
 
   const urgent = alerts.some((a) => a.tone === 'urgent');
 
@@ -133,9 +135,10 @@ export function Shell({ tabs, active, onSelect, alerts, children }: ShellProps) 
         ))}
       </nav>
 
-      {bellOpen && (
+      {sheet.mounted && (
         <AlertSheet
           alerts={alerts}
+          closing={sheet.closing}
           onClose={() => setBellOpen(false)}
           onSignOut={() => void signOut()}
         />
@@ -168,15 +171,18 @@ function BottomTab({
       className={cn(
         // 60px, not the old 56: with the label under the icon this is the
         // smallest height that still gives the icon a 44px touch box.
-        'relative flex h-[60px] flex-1 flex-col items-center justify-center gap-[5px] transition-colors duration-200',
+        'pressable relative flex h-[60px] flex-1 flex-col items-center justify-center gap-[5px]',
         active ? 'text-primary' : 'text-stone',
         tab.disabled && 'opacity-40',
       )}
     >
       <span
         className={cn(
-          'relative flex h-6 w-11 items-center justify-center rounded-full transition-colors duration-200',
-          active && 'bg-primary-wash',
+          // The wash grows out from the icon rather than blinking on, and the
+          // icon gives one small bounce — the tap is acknowledged where the
+          // thumb is, before the screen above has finished arriving.
+          'relative flex h-6 items-center justify-center rounded-full transition-all duration-300 ease-smooth',
+          active ? 'w-11 bg-primary-wash animate-tab-pop' : 'w-7 bg-transparent',
         )}
       >
         <Icon size={19} strokeWidth={active ? 2.4 : 2} />
@@ -207,7 +213,7 @@ function RailTab({
       disabled={tab.disabled}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'flex w-full items-center gap-2.5 rounded-full px-3.5 py-2.5 text-[14.5px] transition-colors duration-200',
+        'pressable flex w-full items-center gap-2.5 rounded-full px-3.5 py-2.5 text-[14.5px]',
         active
           ? 'bg-primary-wash font-semibold text-primary'
           : 'font-medium text-slate hover:bg-surface hover:text-ink',
@@ -269,22 +275,36 @@ function BellButton({
 
 function AlertSheet({
   alerts,
+  closing,
   onClose,
   onSignOut,
 }: {
   alerts: Alert[];
+  closing: boolean;
   onClose: () => void;
   onSignOut: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true">
+    <div
+      className={cn('fixed inset-0 z-50 lg:hidden', closing && 'pointer-events-none')}
+      role="dialog"
+      aria-modal="true"
+    >
       <button
         type="button"
         aria-label="닫기"
         onClick={onClose}
-        className="absolute inset-0 animate-fade-in bg-ink/30 backdrop-blur-sm"
+        className={cn(
+          'absolute inset-0 bg-ink/30 backdrop-blur-sm',
+          closing ? 'animate-fade-out' : 'animate-fade-in',
+        )}
       />
-      <div className="absolute inset-x-0 bottom-0 max-h-[78vh] animate-slide-up overflow-y-auto rounded-t-2xl bg-canvas pb-[env(safe-area-inset-bottom)] shadow-modal">
+      <div
+        className={cn(
+          'absolute inset-x-0 bottom-0 max-h-[78vh] overflow-y-auto rounded-t-2xl bg-canvas pb-[env(safe-area-inset-bottom)] shadow-modal',
+          closing ? 'animate-slide-down' : 'animate-slide-up',
+        )}
+      >
         <header className="glass sticky top-0 flex items-center justify-between border-b border-hairline px-5 py-4">
           <h2 className="text-[17px] font-semibold tracking-[-0.02em] text-ink">
             오늘 확인할 것 {alerts.length}
@@ -329,7 +349,12 @@ function AlertList({
 }) {
   if (alerts.length === 0) {
     return (
-      <p className={cn('text-steel', compact ? 'px-3 text-[12.5px]' : 'py-6 text-center text-[14px]')}>
+      <p
+        className={cn(
+          'text-steel',
+          compact ? 'px-3 text-[12.5px]' : 'py-6 text-center text-[14px]',
+        )}
+      >
         {compact ? '확인할 항목 없음' : '지금 확인할 항목이 없습니다.'}
       </p>
     );
@@ -369,10 +394,7 @@ function AlertList({
                 {alert.label}
               </span>
               <span
-                className={cn(
-                  'mt-0.5 block text-steel',
-                  compact ? 'text-[11.5px]' : 'text-[13px]',
-                )}
+                className={cn('mt-0.5 block text-steel', compact ? 'text-[11.5px]' : 'text-[13px]')}
               >
                 {alert.detail}
               </span>
