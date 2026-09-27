@@ -1,14 +1,11 @@
 /**
  * Standardisation control.
  *
- * Answers the owner's question "is every class actually running the curriculum
- * I designed?" — coach by coach, from session-plan history rather than trust.
- *
- * Two numbers, because they fail differently. 표준 세션 준수율 asks whether the
- * session a coach ran was one of the standard sessions authored for that class's
- * track; 표준 블록 사용률 asks what share of their blocks are flagged core. A coach
- * can score high on the second while assembling drills from three unrelated
- * tracks, which is precisely the drift the first one catches.
+ * Answers the owner's question "are classes running named sessions, or drills
+ * strung together on the day?" — coach by coach, from plan history rather than
+ * trust. A named session carries a goal a parent can be told; a hand-built list
+ * of blocks does not. The number in brackets is the share of blocks drawn from
+ * the standard or core library.
  */
 
 import { BookOpenCheck, Star } from 'lucide-react';
@@ -39,11 +36,10 @@ export function CurriculumPanel() {
       <header className="mb-4">
         <h2 className="flex items-center gap-2 text-[18px] font-semibold leading-[1.4] text-ink">
           <BookOpenCheck size={17} className="text-primary" />
-          커리큘럼 표준화 현황
+          세션 사용 현황
         </h2>
         <p className="mt-1 text-[13px] leading-[1.5] text-slate">
-          표준 세션 준수율. 목표 {formatPercent(ADHERENCE_TARGET)} 미만이면 수업 품질 편차가
-          발생합니다. 괄호 안은 표준 블록 사용률입니다.
+          세션을 골라 진행한 수업의 비율 · 목표 {formatPercent(ADHERENCE_TARGET)}
         </p>
       </header>
 

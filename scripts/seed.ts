@@ -224,6 +224,9 @@ async function main() {
         withAcademy({
           id: uuidFor(t.id),
           curriculum_id: uuidFor(t.curriculumId),
+          // 0007 columns — apply that migration before seeding.
+          ability: t.ability,
+          age_groups: [curricula.find((c) => c.id === t.curriculumId)?.ageGroup].filter(Boolean),
           title: t.title,
           week: t.week,
           goal: t.goal,

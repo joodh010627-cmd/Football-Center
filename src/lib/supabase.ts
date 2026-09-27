@@ -52,3 +52,33 @@ export function friendlyError(error: unknown, fallback = '문제가 발생했습
   console.error('[supabase]', error);
   return fallback;
 }
+
+/**
+ * Upsert that survives a database one migration behind the app.
+ *
+ * PostgREST answers a write naming a column it doesn't know with `PGRST204`
+ * and the column's name. Rather than make every new field wait for the owner
+ * to paste a migration, the column is dropped and the write retried — the row
+ * still lands, minus the field the database cannot hold yet. Anything else is
+ * a real error and is thrown.
+ */
+export async function upsertCompat(
+  table: string,
+  row: Record<string, unknown>,
+  options?: { onConflict?: string; insertOnly?: boolean },
+): Promise<void> {
+  const payload = { ...row };
+  for (let attempt = 0; attempt < 6; attempt++) {
+    // `insertOnly` for tables where the caller has no update policy — a
+    // coach's proposal is an insert and nothing else.
+    const { error } = options?.insertOnly
+      ? await supabase.from(table).insert(payload)
+      : await supabase.from(table).upsert(payload, { onConflict: options?.onConflict });
+    if (!error) return;
+    const missing =
+      error.code === 'PGRST204' ? /'([^']+)' column/.exec(error.message)?.[1] : undefined;
+    if (!missing || !(missing in payload)) throw error;
+    delete payload[missing];
+  }
+  throw new Error(`${table}: too many unknown columns`);
+}

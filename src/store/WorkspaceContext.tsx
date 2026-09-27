@@ -56,6 +56,7 @@ import {
 } from '@/data/activity';
 import { formatDateKo } from '@/lib/format';
 import { supabase } from '@/lib/supabase';
+import { PREVIEW } from '@/dev/preview';
 import { enqueue, isMissingSchema, type EnqueueResult } from '@/lib/alimtalk/outbox';
 import { render } from '@/lib/alimtalk/templates';
 import { useApp } from '@/store/AppContext';
@@ -248,6 +249,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const reload = useCallback(() => {
     if (!academyId) return;
+    if (PREVIEW) {
+      dispatch({ type: 'local' });
+      return;
+    }
     void (async () => {
       const [leadsRes, linksRes] = await Promise.all([
         supabase

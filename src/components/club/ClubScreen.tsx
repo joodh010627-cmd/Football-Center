@@ -2,7 +2,7 @@
  * 클럽 — the people and the standards.
  *
  * Everything that isn't "what am I doing right now" lives behind this tab: the
- * roster, the coaches, the curriculum, the ledger. It is a hub of destinations
+ * roster, the coaches, the session library, the ledger. It is a hub of destinations
  * rather than a screen of content, which is what lets the other four tabs stay
  * single-purpose.
  *
@@ -103,12 +103,12 @@ export function ClubScreen({ owner, onOpen, onOpenStudent }: ClubScreenProps) {
             />
             <HubRow
               icon={BookOpenCheck}
-              label="커리큘럼"
-              meta={`${state.curricula.length}개 트랙`}
+              label="세션 라이브러리"
+              meta={`${state.sessionTemplates.filter((t) => t.status === 'published').length}개 세션`}
               badge={
                 proposals.length > 0 && owner ? `승인 대기 ${proposals.length}` : undefined
               }
-              onClick={() => onOpen({ name: 'curriculum' })}
+              onClick={() => onOpen({ name: 'library' })}
             />
             {!owner && (
               <HubRow

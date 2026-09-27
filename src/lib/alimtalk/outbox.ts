@@ -20,6 +20,7 @@
  * moment the function and its keys exist.
  */
 
+import { PREVIEW } from '@/dev/preview';
 import { supabase } from '@/lib/supabase';
 import type { ID } from '@/types';
 import type { TemplateCode } from './templates';
@@ -78,6 +79,8 @@ export function isMissingSchema(error: unknown): boolean {
 
 export async function enqueue(academyId: ID, items: EnqueueItem[]): Promise<EnqueueResult> {
   if (items.length === 0) return { state: 'queued', queued: 0, dispatch: 'not_connected' };
+  // The dev preview has no session; a write here would hit the real project.
+  if (PREVIEW) return { state: 'unavailable', reason: '미리보기에서는 발송하지 않습니다' };
 
   const { data, error } = await supabase.rpc('enqueue_alimtalk', {
     p_academy_id: academyId,

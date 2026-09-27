@@ -9,14 +9,16 @@
 
 import { useState } from 'react';
 import { Send } from 'lucide-react';
-import type { AgeGroup, TrainingCategory } from '@/types';
+import type { Ability, AgeGroup, TrainingCategory } from '@/types';
 import { useApp } from '@/store/AppContext';
+import { useSession } from '@/store/AuthContext';
+import { can } from '@/lib/permissions';
 import { cn } from '@/lib/cn';
 import { Modal } from '@/components/ui/Modal';
-import { CATEGORY_META } from '@/components/coach/TrainingBlockCard';
-import { AGE_ORDER } from './curriculumMeta';
+import { ABILITY_META, ABILITY_ORDER, CATEGORY_META } from '@/components/session/meta';
 
 const CATEGORIES: TrainingCategory[] = ['warmup', 'skill', 'game'];
+const AGE_ORDER: AgeGroup[] = ['U7', 'U9', 'U11', 'U13', 'U15'];
 
 interface BlockProposalModalProps {
   open: boolean;
@@ -31,13 +33,18 @@ export function BlockProposalModal({
   defaultAgeGroups = [],
 }: BlockProposalModalProps) {
   const { state, dispatch } = useApp();
+  // The owner's block goes straight into the library; a coach's waits for them.
+  const owner = can(useSession(), 'curriculum:manage');
 
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<TrainingCategory>('skill');
+  const [ability, setAbility] = useState<Ability>('technical');
   const [durationMin, setDurationMin] = useState(20);
   const [description, setDescription] = useState('');
   const [equipment, setEquipment] = useState('');
-  const [ageGroups, setAgeGroups] = useState<AgeGroup[]>(defaultAgeGroups);
+  const [ageGroups, setAgeGroups] = useState<AgeGroup[]>(
+    defaultAgeGroups.length > 0 ? defaultAgeGroups : AGE_ORDER,
+  );
 
   const canSend = title.trim().length > 0 && description.trim().length > 0 && ageGroups.length > 0;
 
@@ -48,10 +55,13 @@ export function BlockProposalModal({
       block: {
         id: crypto.randomUUID(),
         academyId: state.academyId,
+        source: 'center',
         title: title.trim(),
         category,
+        ability,
         durationMin,
         description: description.trim(),
+        coachingPoints: [],
         ageGroups,
         equipment: equipment
           .split(',')
@@ -61,8 +71,8 @@ export function BlockProposalModal({
         // Whether a block is standard curriculum is the owner's call, and the
         // insert policy refuses a proposal that claims otherwise.
         isCoreCurriculum: false,
-        status: 'pending',
-        proposedBy: state.currentCoachId,
+        status: owner ? 'published' : 'pending',
+        proposedBy: owner ? null : state.currentCoachId,
       },
     });
     onClose();
@@ -72,7 +82,7 @@ export function BlockProposalModal({
     <Modal
       open={open}
       onClose={onClose}
-      title="새 훈련 블록 제안"
+      title={owner ? '새 훈련 블록' : '새 훈련 블록 제안'}
       footer={
         <div className="flex justify-end gap-2">
           <button type="button" onClick={onClose} className="btn-secondary">
@@ -80,7 +90,7 @@ export function BlockProposalModal({
           </button>
           <button type="button" onClick={send} disabled={!canSend} className="btn-primary">
             <Send size={15} strokeWidth={2.4} />
-            승인 요청
+            {owner ? '추가' : '승인 요청'}
           </button>
         </div>
       }
@@ -97,7 +107,26 @@ export function BlockProposalModal({
         </label>
 
         <div>
-          <span className="mb-1.5 block text-[12px] font-semibold text-charcoal">분류</span>
+          <span className="mb-1.5 block text-[12px] font-semibold text-charcoal">능력</span>
+          <div className="flex flex-wrap gap-1.5">
+            {ABILITY_ORDER.map((a) => (
+              <button
+                key={a}
+                type="button"
+                onClick={() => setAbility(a)}
+                className={cn(
+                  'pill-tab !px-3.5 !py-1.5 !text-[13px]',
+                  ability === a && 'pill-tab-active',
+                )}
+              >
+                {ABILITY_META[a].label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <span className="mb-1.5 block text-[12px] font-semibold text-charcoal">순서</span>
           <div className="flex gap-1.5">
             {CATEGORIES.map((c) => (
               <button

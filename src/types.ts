@@ -35,21 +35,6 @@ export type AttendanceStatus = 'present' | 'absent' | 'injured';
 export type TrainingCategory = 'warmup' | 'skill' | 'game';
 
 /**
- * What a curriculum is *for*, independent of age. The centre's philosophy is
- * expressed as `track × ageGroup`: 킨더 U7 and 주말 U9 클럽 are both "play
- * first", but they are not the same curriculum, and a U9 in the weekday
- * foundation track is not doing what the weekend club is doing.
- */
-export type CurriculumTrack =
-  | 'kinder'
-  | 'foundation'
-  | 'skill'
-  | 'tactical'
-  | 'elite'
-  | 'physical'
-  | 'club';
-
-/**
  * Approval state for anything a coach can *propose* into the shared library.
  *
  * `pending` rows exist in the same table as published ones, which is what makes
@@ -189,9 +174,9 @@ export interface Class {
   capacity: number;
   venue: string;
   /**
-   * The standard curriculum this class runs. `null` is legal — a newly created
-   * class has no track assigned yet — and the builder degrades to the whole
-   * block library when it is missing, rather than showing nothing.
+   * Legacy link to a curriculum track (0005). Nothing reads it any more — a
+   * class no longer walks a fixed weekly cycle, it picks a session per day.
+   * Kept so the column's data survives until a migration drops it.
    */
   curriculumId: ID | null;
 }
@@ -218,53 +203,46 @@ export interface ClassSchedule {
 }
 
 // ---------------------------------------------------------------------------
-// Curriculum
+// Sessions & blocks
 // ---------------------------------------------------------------------------
 
 /**
- * A standard curriculum — one per `track × ageGroup` the centre offers.
- *
- * This is the layer *above* session design, and it is authored from the owner's
- * interview rather than accumulated from what coaches happen to run. Read
- * downward it is philosophy → curriculum → standard session → block; read
- * upward it is the claim that a tapped block is not an isolated drill but a line
- * item in the centre's promise to a parent.
+ * The five abilities a session trains — the same five the growth pentagon is
+ * drawn on (`lib/axes.ts`). A session is filed under exactly one, so a coach
+ * looking for "something for passing" opens 기술 and not a curriculum tree.
  */
-export interface Curriculum {
-  id: ID;
-  academyId: ID;
-  /** e.g. "킨더 U7 — 놀이로 배우는 첫 축구". */
-  title: string;
-  ageGroup: AgeGroup;
-  track: CurriculumTrack;
-  /** One sentence: what a child who finishes this track can do. */
-  objective: string;
-  /** The competences this track owns, rendered as chips. */
-  focusAreas: string[];
-  /** How many standard sessions make up one cycle. */
-  cycleWeeks: number;
-  sortOrder: number;
-}
+export type Ability = 'technical' | 'tactical' | 'physical' | 'mental' | 'attitude';
 
 /**
- * A standard session inside a curriculum — the smallest unit the owner
- * standardises, and the thing a coach's day is assembled from.
+ * Where a session or block came from.
  *
- * `blockIds` is an *ordered, free-length* list, not three fixed slots: two skill
- * blocks, a game before the skill work, or warmup-then-game-only are all real
- * sessions, and a schema that can't express them pushes coaches into logging a
- * session they didn't run.
+ * `standard` rows ship with the app (`data/sessionLibrary.ts`) and are the same
+ * for every academy; `center` rows are the academy's own, in the database. The
+ * split is what lets a licensed library (a federation's, say) be dropped in
+ * later without touching anyone's own sessions.
+ */
+export type ContentSource = 'standard' | 'center';
+
+/**
+ * A session: one goal, and the blocks that serve it, in order.
+ *
+ * Picking a session is the whole of planning — its blocks come along as the
+ * default. There is no week number: an academy's roster turns over every
+ * month, so a cycle that assumes the same children in week 5 as in week 1
+ * describes no real class.
  */
 export interface SessionTemplate {
   id: ID;
   academyId: ID;
-  curriculumId: ID;
+  source: ContentSource;
+  ability: Ability;
+  /** Short name, e.g. "패스 정확도". This is what the coach reads first. */
   title: string;
-  /** Position in the curriculum cycle, 1-based. */
-  week: number;
-  /** What this session is trying to move. Shown to the coach before the blocks. */
+  /** What this session moves, in one sentence. Shown behind 더 보기. */
   goal: string;
   blockIds: ID[];
+  /** Age groups it suits. Empty = any. */
+  ageGroups: AgeGroup[];
   status: ApprovalStatus;
   /** The coach who proposed it. `null` when the owner authored it directly. */
   proposedBy: ID | null;
@@ -273,15 +251,24 @@ export interface SessionTemplate {
   /** How many session plans started from this template. */
   usageCount: number;
   createdAt: string;
+  /** Legacy (0005). `null` for anything authored since. */
+  curriculumId: ID | null;
 }
 
 export interface TrainingBlock {
   id: ID;
   academyId: ID;
+  source: ContentSource;
   title: string;
+  /** Where it sits in the hour: 준비 · 훈련 · 게임. */
   category: TrainingCategory;
+  /** Which ability the block mainly trains. Library filter and chip colour. */
+  ability: Ability;
   durationMin: number;
+  /** How to run it — one or two sentences. */
   description: string;
+  /** What the coach watches for. Shown only when the block is opened. */
+  coachingPoints: string[];
 
   ageGroups: AgeGroup[];
   /** Equipment the coach must set up — rendered as chips on the block card. */
@@ -300,12 +287,10 @@ export interface TrainingBlock {
 // ---------------------------------------------------------------------------
 
 /**
- * A designed session for one class on one date.
+ * The session chosen for one class on one date.
  *
- * `status` is what the calendar colours itself from, and the three values are
- * the three things an owner or coach needs to tell apart at a glance:
- * `draft` — the class meets but nobody has planned it; `scheduled` — a plan is
- * registered; `completed` — it ran, attendance is logged and parents were told.
+ * Choosing *is* saving — there is no separate "register" step, so `draft` is
+ * only ever seen on legacy rows. `completed` means the session was wrapped up.
  */
 export interface SessionPlan {
   id: ID;
@@ -314,7 +299,11 @@ export interface SessionPlan {
   coachId: ID;
   date: ISODate;
   items: SessionItem[];
-  /** The standard session this was built from. `null` = assembled from scratch. */
+  /**
+   * The session this plan runs — a standard-library key (`std-…`) or a
+   * centre session's uuid. `null` = blocks assembled by hand. Editing the
+   * blocks keeps the link: the goal is still the goal.
+   */
   templateId: ID | null;
   createdAt: string;
   status: SessionPlanStatus;

@@ -6,6 +6,7 @@
  */
 
 import type {
+  Ability,
   AgeGroup,
   AttendanceLog,
   ChurnSignal,
@@ -13,7 +14,6 @@ import type {
   ClassFinance,
   ClassPerformance,
   Coach,
-  Curriculum,
   DashboardKpis,
   ID,
   ISODate,
@@ -22,10 +22,9 @@ import type {
   SessionTemplate,
   Student,
   TrainingBlock,
-  TrainingCategory,
 } from '@/types';
 import { AT_RISK_THRESHOLD } from './churn';
-import { TODAY, diffDays, inMonth, monthGrid, type YearMonth } from './dates';
+import { TODAY, diffDays, toISODate } from './dates';
 
 /**
  * Owner-only figures, keyed by the id they belong to.
@@ -53,7 +52,6 @@ export interface DataSlice extends OwnerFinancials {
   attendanceLogs: AttendanceLog[];
   trainingBlocks: TrainingBlock[];
   sessionPlans: SessionPlan[];
-  curricula: Curriculum[];
   sessionTemplates: SessionTemplate[];
   resolvedStudentIds: ID[];
 }
@@ -104,113 +102,85 @@ export function daysUntilNextSession(cls: Class, from: ISODate = TODAY): number 
 }
 
 // ---------------------------------------------------------------------------
-// Curriculum
+// Sessions
 // ---------------------------------------------------------------------------
 
-export const curriculumForClass = (
-  curricula: Curriculum[],
-  cls: Pick<Class, 'curriculumId'>,
-): Curriculum | null => curricula.find((c) => c.id === cls.curriculumId) ?? null;
-
-/** A curriculum's standard sessions, in the order a coach walks the cycle. */
-export const templatesForCurriculum = (
-  templates: SessionTemplate[],
-  curriculumId: ID,
-): SessionTemplate[] =>
-  templates
-    .filter((t) => t.curriculumId === curriculumId)
-    .sort((a, b) => a.week - b.week || a.title.localeCompare(b.title, 'ko'));
-
-/** Every block a curriculum's published sessions actually call for. */
-export function blockIdsForCurriculum(
-  templates: SessionTemplate[],
-  curriculumId: ID,
-): Set<ID> {
-  const ids = new Set<ID>();
-  for (const t of publishedTemplates(templates)) {
-    if (t.curriculumId !== curriculumId) continue;
-    for (const id of t.blockIds) ids.add(id);
-  }
-  return ids;
-}
-
-const AGE_ORDER: AgeGroup[] = ['U7', 'U9', 'U11', 'U13', 'U15'];
-
 /**
- * How far one curriculum is from another. Lower is closer, 0 is itself.
+ * Sessions a coach can pick, for one ability (or all), suited to an age group.
  *
- * Track identity dominates age: a U9 in the weekend club is doing something
- * closer to a U11 weekend club than to the weekday U9 foundation track, because
- * the *purpose* of the session is what decides whether a drill transfers. Age
- * then breaks ties, one point per step up the ladder.
+ * The centre's own sessions come first — they are the ones the owner chose to
+ * write down — then the standard library. Within each, most-used first, so the
+ * session a class keeps coming back to is at the top without anyone curating.
  */
-export function curriculumDistance(a: Curriculum, b: Curriculum): number {
-  const ageGap = Math.abs(AGE_ORDER.indexOf(a.ageGroup) - AGE_ORDER.indexOf(b.ageGroup));
-  return (a.track === b.track ? 0 : 6) + ageGap;
-}
-
-/** The class's own curriculum first, then the rest by relatedness. */
-export function relatedCurricula(curricula: Curriculum[], base: Curriculum): Curriculum[] {
-  return curricula
-    .filter((c) => c.id !== base.id)
+export function sessionsFor(
+  templates: SessionTemplate[],
+  ability: Ability | 'all',
+  ageGroup?: AgeGroup,
+): SessionTemplate[] {
+  return publishedTemplates(templates)
+    .filter((t) => ability === 'all' || t.ability === ability)
+    .filter((t) => !ageGroup || t.ageGroups.length === 0 || t.ageGroups.includes(ageGroup))
     .sort(
-      (x, y) =>
-        curriculumDistance(base, x) - curriculumDistance(base, y) ||
-        x.sortOrder - y.sortOrder,
+      (a, b) =>
+        Number(a.source === 'standard') - Number(b.source === 'standard') ||
+        b.usageCount - a.usageCount,
     );
 }
 
-/** One group of library blocks, labelled by where they came from. */
-export interface BlockGroup {
-  /** `null` = blocks no published standard session calls for yet. */
-  curriculum: Curriculum | null;
-  /** 0 for the class's own curriculum. */
-  rank: number;
-  blocks: TrainingBlock[];
+/** Blocks for the add-a-block list, same ordering rule as `sessionsFor`. */
+export function blocksFor(
+  blocks: TrainingBlock[],
+  ability: Ability | 'all',
+  ageGroup?: AgeGroup,
+): TrainingBlock[] {
+  return publishedBlocks(blocks)
+    .filter((b) => ability === 'all' || b.ability === ability)
+    .filter((b) => !ageGroup || b.ageGroups.length === 0 || b.ageGroups.includes(ageGroup))
+    .sort(
+      (a, b) =>
+        Number(a.source === 'standard') - Number(b.source === 'standard') ||
+        b.usageCount - a.usageCount,
+    );
 }
 
-/**
- * The session builder's library, ordered the way the owner describes it:
- *
- *   1. the blocks this class's own curriculum prescribes, most-used first;
- *   2. then the next-most-related curriculum's blocks, most-used first;
- *   3. …and so on, with anything no curriculum has claimed last.
- *
- * A block claimed by several curricula is listed under the closest one only, so
- * scrolling never shows the same card twice.
- */
-export function blockGroupsForCurriculum(
-  slice: Pick<DataSlice, 'trainingBlocks' | 'curricula' | 'sessionTemplates'>,
-  base: Curriculum | null,
-  category: TrainingCategory,
-): BlockGroup[] {
-  const pool = publishedBlocks(slice.trainingBlocks).filter((b) => b.category === category);
-  const byUsage = (a: TrainingBlock, b: TrainingBlock) => b.usageCount - a.usageCount;
+/** A class's sessions that have already happened, newest first. */
+export function pastSessions(
+  slice: Pick<DataSlice, 'sessionPlans' | 'attendanceLogs'>,
+  cls: Class,
+  asOf: ISODate = TODAY,
+  limit = 6,
+): Array<{
+  date: ISODate;
+  plan: SessionPlan | null;
+  present: number;
+  total: number;
+}> {
+  const dates = new Set<ISODate>();
+  for (const p of slice.sessionPlans) if (p.classId === cls.id && p.date < asOf) dates.add(p.date);
+  for (const l of slice.attendanceLogs)
+    if (l.classId === cls.id && l.date < asOf) dates.add(l.date);
 
-  // No track assigned: there is no "related" to order by, so one flat list of
-  // everything beats an empty screen with a filter on it.
-  if (!base) return [{ curriculum: null, rank: 0, blocks: [...pool].sort(byUsage) }];
+  return [...dates]
+    .sort((a, b) => (a < b ? 1 : -1))
+    .slice(0, limit)
+    .map((date) => {
+      const logs = slice.attendanceLogs.filter((l) => l.classId === cls.id && l.date === date);
+      return {
+        date,
+        plan: planFor(slice.sessionPlans, cls.id, date),
+        present: logs.filter((l) => l.status === 'present').length,
+        total: logs.length,
+      };
+    });
+}
 
-  const order = [base, ...relatedCurricula(slice.curricula, base)];
-  const claimed = new Set<ID>();
-  const groups: BlockGroup[] = [];
-
-  order.forEach((curriculum, rank) => {
-    const wanted = blockIdsForCurriculum(slice.sessionTemplates, curriculum.id);
-    const blocks = pool
-      .filter((b) => wanted.has(b.id) && !claimed.has(b.id))
-      .sort(byUsage);
-    if (blocks.length === 0) return;
-    for (const b of blocks) claimed.add(b.id);
-    groups.push({ curriculum, rank, blocks });
-  });
-
-  const unclaimed = pool.filter((b) => !claimed.has(b.id)).sort(byUsage);
-  if (unclaimed.length > 0) {
-    groups.push({ curriculum: null, rank: order.length, blocks: unclaimed });
-  }
-
-  return groups;
+/** The next day this class meets, today included. */
+export function nextMeeting(cls: Class, from: ISODate = TODAY): ISODate | null {
+  const offset = daysUntilNextSession(cls, from);
+  if (offset === null) return null;
+  const d = new Date(`${from}T00:00:00`);
+  d.setDate(d.getDate() + offset);
+  return toISODate(d);
 }
 
 // ---------------------------------------------------------------------------
@@ -225,73 +195,12 @@ export function sessionDuration(items: SessionItem[], blocks: Map<ID, TrainingBl
   }, 0);
 }
 
-export const planFor = (
-  plans: SessionPlan[],
-  classId: ID,
-  date: ISODate,
-): SessionPlan | null => plans.find((p) => p.classId === classId && p.date === date) ?? null;
-
-/**
- * What one calendar cell shows.
- *
- * `off` is not a state of a session, it is the absence of one — the class does
- * not meet that weekday. Keeping it in the same union is what stops the calendar
- * from rendering an inviting empty cell on a day nobody is coming.
- */
-export type ScheduleState = 'off' | 'unplanned' | 'scheduled' | 'completed';
+export const planFor = (plans: SessionPlan[], classId: ID, date: ISODate): SessionPlan | null =>
+  plans.find((p) => p.classId === classId && p.date === date) ?? null;
 
 export function meetsOn(cls: Class, date: ISODate): boolean {
   const day = new Date(`${date}T00:00:00`).getDay();
   return cls.schedule.days.includes(day as Class['schedule']['days'][number]);
-}
-
-export function scheduleStateFor(
-  cls: Class,
-  plans: SessionPlan[],
-  logs: AttendanceLog[],
-  date: ISODate,
-): ScheduleState {
-  if (!meetsOn(cls, date)) return 'off';
-  const plan = planFor(plans, cls.id, date);
-  if (plan?.status === 'completed') return 'completed';
-  // Attendance can exist without a plan — imported history, or a session logged
-  // before this flow existed. It still ran, so the cell must say so.
-  if (logs.some((l) => l.classId === cls.id && l.date === date)) return 'completed';
-  if (plan && plan.items.some((i) => i.blockId)) return 'scheduled';
-  return 'unplanned';
-}
-
-export interface CalendarCell {
-  date: ISODate;
-  state: ScheduleState;
-  /** False for the leading/trailing days borrowed from the neighbouring months. */
-  inMonth: boolean;
-  plan: SessionPlan | null;
-}
-
-export function buildCalendar(
-  cls: Class,
-  slice: Pick<DataSlice, 'sessionPlans' | 'attendanceLogs'>,
-  ym: YearMonth,
-): CalendarCell[] {
-  return monthGrid(ym).map((date) => ({
-    date,
-    state: scheduleStateFor(cls, slice.sessionPlans, slice.attendanceLogs, date),
-    inMonth: inMonth(date, ym),
-    plan: planFor(slice.sessionPlans, cls.id, date),
-  }));
-}
-
-/** Cell counts for the month header — "8회 중 3회 설계 완료". */
-export function monthSummary(cells: CalendarCell[]): Record<ScheduleState, number> {
-  const counts: Record<ScheduleState, number> = {
-    off: 0,
-    unplanned: 0,
-    scheduled: 0,
-    completed: 0,
-  };
-  for (const cell of cells) if (cell.inMonth) counts[cell.state] += 1;
-  return counts;
 }
 
 // ---------------------------------------------------------------------------
@@ -487,13 +396,10 @@ export interface CoachPortfolio {
   blockUsage: Array<{ block: TrainingBlock; count: number }>;
   coreCurriculumRate: number;
   /**
-   * Share of designed sessions that started from a standard session of the
-   * class's own curriculum.
-   *
-   * This is the honest version of "does this coach follow the curriculum".
-   * `coreCurriculumRate` counts flagged blocks and so rewards a coach who picks
-   * three core blocks that belong to three different tracks; this one asks
-   * whether the *session* was one the owner actually designed for that class.
+   * Share of planned days that ran a named session (standard or the centre's
+   * own) rather than blocks assembled by hand. A session carries a goal; a
+   * hand-assembled list does not, and a parent report without a goal is a
+   * list of drills.
    */
   templateAdherenceRate: number;
   categoryMix: Record<TrainingBlock['category'], number>;
@@ -502,7 +408,6 @@ export interface CoachPortfolio {
 export function buildCoachPortfolio(slice: DataSlice, coachId: ID): CoachPortfolio {
   const blockMap = byId(slice.trainingBlocks);
   const templateMap = byId(slice.sessionTemplates);
-  const classMap = byId(slice.classes);
   const plans = slice.sessionPlans.filter((p) => p.coachId === coachId);
 
   const counts = new Map<ID, number>();
@@ -522,10 +427,7 @@ export function buildCoachPortfolio(slice: DataSlice, coachId: ID): CoachPortfol
       if (block.isCoreCurriculum) coreHits += 1;
     }
 
-    const template = plan.templateId ? templateMap.get(plan.templateId) : undefined;
-    if (template && template.curriculumId === classMap.get(plan.classId)?.curriculumId) {
-      onCurriculum += 1;
-    }
+    if (plan.templateId && templateMap.has(plan.templateId)) onCurriculum += 1;
   }
 
   return {

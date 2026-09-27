@@ -23,6 +23,7 @@ import {
 import type { Session as AuthSession } from '@supabase/supabase-js';
 import type { Membership, Session } from '@/types';
 import { friendlyError, supabase } from '@/lib/supabase';
+import { PREVIEW, previewSession } from '@/dev/preview';
 
 type Status = 'loading' | 'signed-out' | 'no-membership' | 'ready';
 
@@ -57,8 +58,8 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [status, setStatus] = useState<Status>('loading');
-  const [session, setSession] = useState<Session | null>(null);
+  const [status, setStatus] = useState<Status>(PREVIEW ? 'ready' : 'loading');
+  const [session, setSession] = useState<Session | null>(PREVIEW ? previewSession : null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -120,6 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (PREVIEW) return;
     let alive = true;
 
     supabase.auth.getSession().then(({ data }) => {

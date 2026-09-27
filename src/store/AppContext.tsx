@@ -37,7 +37,6 @@ import type {
   ClassFinance,
   Coach,
   CsAction,
-  Curriculum,
   ID,
   ISODate,
   Session,
@@ -46,15 +45,16 @@ import type {
   SessionTemplate,
   Student,
   TrainingBlock,
-  TrainingCategory,
 } from '@/types';
 import { TODAY } from '@/data/dates';
 import { buildChurnSignals, rescoreStudents } from '@/data/churn';
 import type { DataSlice } from '@/data/selectors';
-import { supabase, friendlyError } from '@/lib/supabase';
+import { supabase, friendlyError, upsertCompat } from '@/lib/supabase';
+import { STANDARD_BLOCKS, STANDARD_SESSIONS, isStandardId } from '@/data/sessionLibrary';
 import { can } from '@/lib/permissions';
 import { useSession } from '@/store/AuthContext';
 import * as map from '@/data/mappers';
+import { PREVIEW, previewData } from '@/dev/preview';
 
 // ---------------------------------------------------------------------------
 // State
@@ -67,25 +67,6 @@ export interface AttendanceDraft {
   entries: Record<ID, { status: AttendanceStatus; tags: string[] }>;
 }
 
-/**
- * A session being designed, for one class on one date.
- *
- * The date is part of the draft rather than implicitly "today". That is the
- * whole difference between a tool for running today's class and a tool for
- * planning a month: the builder is now reached by tapping a square on a
- * calendar, and it has to remember which square.
- */
-export interface SessionDraft {
-  classId: ID;
-  date: ISODate;
-  /** Ordered. Length and category order are the coach's to choose. */
-  items: SessionItem[];
-  /** The standard session this started from, if any. */
-  templateId: ID | null;
-  /** True once the coach has committed a composition and is filling blocks. */
-  shaped: boolean;
-}
-
 export interface AppState {
   // --- Tables -----------------------------------------------------------
   students: Student[];
@@ -95,7 +76,6 @@ export interface AppState {
   behaviorTags: BehaviorTag[];
   attendanceLogs: AttendanceLog[];
   sessionPlans: SessionPlan[];
-  curricula: Curriculum[];
   sessionTemplates: SessionTemplate[];
   csActions: CsAction[];
 
@@ -112,8 +92,6 @@ export interface AppState {
   // --- Ephemeral UI state ------------------------------------------------
   /** Students the owner has already handled — hidden from the alert queue. */
   resolvedStudentIds: ID[];
-  /** The session currently being assembled in the builder. */
-  draft: SessionDraft | null;
   attendanceDraft: AttendanceDraft | null;
 }
 
@@ -126,7 +104,6 @@ export interface LoadedData {
   behaviorTags: BehaviorTag[];
   attendanceLogs: AttendanceLog[];
   sessionPlans: SessionPlan[];
-  curricula: Curriculum[];
   sessionTemplates: SessionTemplate[];
   csActions: CsAction[];
   billing: Record<ID, number>;
@@ -136,22 +113,24 @@ export interface LoadedData {
 
 export type AppAction =
   | { type: 'data/loaded'; data: LoadedData }
-  // --- Session design ---------------------------------------------------
-  | { type: 'builder/open'; classId: ID; date: ISODate }
-  | { type: 'builder/shape'; categories: TrainingCategory[] }
-  | { type: 'builder/applyTemplate'; templateId: ID }
-  | { type: 'builder/setBlock'; index: number; blockId: ID | null }
-  | { type: 'builder/setDuration'; index: number; durationMin: number | null }
-  | { type: 'builder/addItem'; category: TrainingCategory }
-  | { type: 'builder/removeItem'; index: number }
-  | { type: 'builder/moveItem'; index: number; delta: -1 | 1 }
-  | { type: 'builder/reshape' }
-  | { type: 'builder/close' }
-  | { type: 'plan/schedule' }
+  // --- Session plans ----------------------------------------------------
+  /** Choose or edit the session for one class on one day. Saving is choosing. */
+  | {
+      type: 'plan/save';
+      classId: ID;
+      date: ISODate;
+      items: SessionItem[];
+      templateId: ID | null;
+    }
   | { type: 'plan/complete'; planId: ID }
   // --- Curriculum authoring ---------------------------------------------
   | { type: 'template/save'; template: SessionTemplate }
-  | { type: 'template/review'; templateId: ID; status: ApprovalStatus; note: string }
+  | {
+      type: 'template/review';
+      templateId: ID;
+      status: ApprovalStatus;
+      note: string;
+    }
   | { type: 'template/withdraw'; templateId: ID }
   | { type: 'block/propose'; block: TrainingBlock }
   | { type: 'block/review'; blockId: ID; status: ApprovalStatus }
@@ -176,7 +155,6 @@ export function createInitialState(session: Session): AppState {
     behaviorTags: [],
     attendanceLogs: [],
     sessionPlans: [],
-    curricula: [],
     sessionTemplates: [],
     csActions: [],
     billing: {},
@@ -185,17 +163,9 @@ export function createInitialState(session: Session): AppState {
     academyId: session.membership.academyId,
     currentCoachId: session.membership.coachId,
     resolvedStudentIds: [],
-    draft: null,
     attendanceDraft: null,
   };
 }
-
-/** The default shape a coach starts from — still the classic three, just no
- *  longer the only shape the data model can hold. */
-export const DEFAULT_SHAPE: TrainingCategory[] = ['warmup', 'skill', 'game'];
-
-const emptyItems = (categories: TrainingCategory[]): SessionItem[] =>
-  categories.map((category) => ({ category, blockId: null, durationMin: null }));
 
 /**
  * Ids are minted client-side so the optimistic row and the persisted row are
@@ -208,22 +178,35 @@ const uid = (): ID =>
     ? crypto.randomUUID()
     : `${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`;
 
-/**
- * Is the draft still the standard session it claims to be?
- *
- * Swapping one block out makes the answer no, and the link has to drop — the
- * owner's adherence figure is only worth reading if "ran the standard session"
- * means the blocks were the standard session's blocks.
- */
-function matchesTemplate(state: AppState, items: SessionItem[]): boolean {
-  const template = state.sessionTemplates.find((t) => t.id === state.draft?.templateId);
-  if (!template) return false;
-  const chosen = items.map((i) => i.blockId).filter(Boolean);
-  return (
-    chosen.length === template.blockIds.length &&
-    chosen.every((id, i) => id === template.blockIds[i])
-  );
+/** A session's blocks as plan items, in order. Retired blocks drop out. */
+export function itemsForSession(
+  template: SessionTemplate,
+  blocks: Map<ID, TrainingBlock>,
+): SessionItem[] {
+  return template.blockIds.flatMap((blockId) => {
+    const block = blocks.get(blockId);
+    return block ? [{ category: block.category, blockId, durationMin: null }] : [];
+  });
 }
+
+/**
+ * Before 0007 there is no column to hold a standard session's key, so a plan
+ * made by picking one comes back with `templateId: null`. If its blocks are
+ * exactly that session's blocks, it *is* that session — relink it. An edited
+ * plan stays unlinked rather than being guessed at.
+ */
+function relinkStandardSession(plan: SessionPlan): SessionPlan {
+  if (plan.templateId || plan.items.length === 0) return plan;
+  const ids = plan.items.map((i) => i.blockId);
+  const match = STANDARD_SESSIONS.find(
+    (t) => t.blockIds.length === ids.length && t.blockIds.every((id, k) => id === ids[k]),
+  );
+  return match ? { ...plan, templateId: match.id } : plan;
+}
+
+/** The coach a class belongs to — who a plan is filed under when an owner saves it. */
+const classCoach = (state: AppState, classId: ID): ID =>
+  state.classes.find((c) => c.id === classId)?.coachId ?? '';
 
 // ---------------------------------------------------------------------------
 // Reducer — pure, local, and identical to the prototype's
@@ -242,142 +225,40 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         // actually meets — a fortnight away means very different things at 주1회
         // and 주3회.
         students: rescoreStudents(students, attendanceLogs, TODAY, action.data.classes),
+        // The standard library rides alongside the centre's own rows, so every
+        // lookup (`blockMap`, `getTemplate`) finds both without knowing which
+        // is which. `source` is how writes tell them apart.
+        trainingBlocks: [...STANDARD_BLOCKS, ...action.data.trainingBlocks],
+        sessionTemplates: [...STANDARD_SESSIONS, ...action.data.sessionTemplates],
+        sessionPlans: action.data.sessionPlans.map(relinkStandardSession),
       };
     }
 
-    // --- Session design --------------------------------------------------
+    // --- Session plans ----------------------------------------------------
 
-    case 'builder/open': {
-      // Reopening a day that already has a plan is editing, not starting over.
-      // Anything else would quietly discard the session the coach registered.
-      const existing = state.sessionPlans.find(
-        (p) => p.classId === action.classId && p.date === action.date,
-      );
-      return {
-        ...state,
-        draft: {
-          classId: action.classId,
-          date: action.date,
-          items: existing ? existing.items : emptyItems(DEFAULT_SHAPE),
-          templateId: existing?.templateId ?? null,
-          shaped: Boolean(existing),
-        },
-      };
-    }
-
-    case 'builder/shape': {
-      if (!state.draft) return state;
-      // Keep whatever blocks already sit on a matching category in the same
-      // position, so nudging the shape doesn't empty the board.
-      const previous = state.draft.items;
-      const items = action.categories.map((category, i) => {
-        const prev = previous[i];
-        return prev && prev.category === category
-          ? prev
-          : { category, blockId: null, durationMin: null };
-      });
-      return { ...state, draft: { ...state.draft, items, shaped: true } };
-    }
-
-    case 'builder/reshape':
-      return state.draft ? { ...state, draft: { ...state.draft, shaped: false } } : state;
-
-    case 'builder/applyTemplate': {
-      if (!state.draft) return state;
-      const template = state.sessionTemplates.find((t) => t.id === action.templateId);
-      if (!template) return state;
-      const blockMap = new Map(state.trainingBlocks.map((b) => [b.id, b]));
-      const items: SessionItem[] = template.blockIds.flatMap((blockId) => {
-        const block = blockMap.get(blockId);
-        // A template can outlive a block the owner retired. Dropping the item
-        // is right: the alternative is a slot the coach cannot fill or clear.
-        return block ? [{ category: block.category, blockId, durationMin: null }] : [];
-      });
-      return {
-        ...state,
-        draft: { ...state.draft, items, templateId: template.id, shaped: true },
-      };
-    }
-
-    case 'builder/setBlock': {
-      if (!state.draft) return state;
-      const items = state.draft.items.map((item, i) =>
-        i === action.index ? { ...item, blockId: action.blockId } : item,
-      );
-      // Diverging from the standard session means this is no longer that
-      // session. Keeping the link would inflate the adherence metric.
-      const templateId = matchesTemplate(state, items) ? state.draft.templateId : null;
-      return { ...state, draft: { ...state.draft, items, templateId } };
-    }
-
-    case 'builder/setDuration': {
-      if (!state.draft) return state;
-      const items = state.draft.items.map((item, i) =>
-        i === action.index ? { ...item, durationMin: action.durationMin } : item,
-      );
-      return { ...state, draft: { ...state.draft, items } };
-    }
-
-    case 'builder/addItem': {
-      if (!state.draft) return state;
-      return {
-        ...state,
-        draft: {
-          ...state.draft,
-          items: [
-            ...state.draft.items,
-            { category: action.category, blockId: null, durationMin: null },
-          ],
-          templateId: null,
-        },
-      };
-    }
-
-    case 'builder/removeItem': {
-      if (!state.draft) return state;
-      const items = state.draft.items.filter((_, i) => i !== action.index);
-      return { ...state, draft: { ...state.draft, items, templateId: null } };
-    }
-
-    case 'builder/moveItem': {
-      if (!state.draft) return state;
-      const target = action.index + action.delta;
-      if (target < 0 || target >= state.draft.items.length) return state;
-      const items = [...state.draft.items];
-      [items[action.index], items[target]] = [items[target], items[action.index]];
-      return { ...state, draft: { ...state.draft, items, templateId: null } };
-    }
-
-    case 'builder/close':
-      return { ...state, draft: null };
-
-    case 'plan/schedule': {
-      const draft = state.draft;
-      if (!draft) return state;
-
+    case 'plan/save': {
       const previous = state.sessionPlans.find(
-        (p) => p.classId === draft.classId && p.date === draft.date,
+        (p) => p.classId === action.classId && p.date === action.date,
       );
 
       const plan: SessionPlan = {
-        // Reuse the id when re-registering a day, so the unique (class, date)
-        // index treats it as the same row and the attendance logs that point at
-        // it keep pointing at it.
+        // Reuse the id when re-saving a day, so the unique (class, date) index
+        // treats it as the same row and attendance logs keep pointing at it.
         id: previous?.id ?? uid(),
         academyId: state.academyId,
-        classId: draft.classId,
-        coachId: state.currentCoachId ?? previous?.coachId ?? '',
-        date: draft.date,
-        items: draft.items.filter((i) => i.blockId),
-        templateId: draft.templateId,
+        classId: action.classId,
+        coachId: state.currentCoachId ?? previous?.coachId ?? classCoach(state, action.classId),
+        date: action.date,
+        items: action.items.filter((i) => i.blockId),
+        templateId: action.templateId,
         createdAt: previous?.createdAt ?? new Date().toISOString(),
-        // A day that already ran stays completed; re-registering it is an edit
-        // to the record of what happened, not a reopening.
+        // A day that already ran stays completed; changing its blocks is an
+        // edit to the record of what happened, not a reopening.
         status: previous?.status === 'completed' ? 'completed' : 'scheduled',
       };
 
-      // Usage counts are what turn a coach's history into a portfolio — and
-      // what orders the library next time. Only count a day once.
+      // Usage counts order the library and feed the coach's portfolio. Count a
+      // block once per day, however often the day is re-saved.
       const usedIds = new Set(plan.items.map((i) => i.blockId as ID));
       const alreadyCounted = new Set(
         (previous?.items ?? []).map((i) => i.blockId).filter(Boolean) as ID[],
@@ -400,12 +281,11 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         sessionPlans: [
           plan,
           ...state.sessionPlans.filter(
-            (p) => !(p.classId === draft.classId && p.date === draft.date),
+            (p) => !(p.classId === action.classId && p.date === action.date),
           ),
         ],
         trainingBlocks,
         sessionTemplates,
-        draft: null,
       };
     }
 
@@ -424,9 +304,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         sessionTemplates: exists
-          ? state.sessionTemplates.map((t) =>
-              t.id === action.template.id ? action.template : t,
-            )
+          ? state.sessionTemplates.map((t) => (t.id === action.template.id ? action.template : t))
           : [...state.sessionTemplates, action.template],
       };
     }
@@ -601,6 +479,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 const HISTORY_DAYS = 180;
 
 async function fetchAll(session: Session): Promise<LoadedData> {
+  if (PREVIEW) return previewData();
   const academyId = session.membership.academyId;
   const since = new Date();
   since.setDate(since.getDate() - HISTORY_DAYS);
@@ -618,7 +497,6 @@ async function fetchAll(session: Session): Promise<LoadedData> {
     tags,
     logs,
     plans,
-    curricula,
     templates,
     csActions,
     billing,
@@ -639,7 +517,6 @@ async function fetchAll(session: Session): Promise<LoadedData> {
     // paging back to last term must see what was run — one row per class per
     // session day is two orders of magnitude smaller than the attendance table.
     table('session_plans'),
-    supabase.from('curricula').select('*').eq('academy_id', academyId).order('sort_order'),
     table('session_templates'),
     // Skipping these for a coach saves four round trips that RLS would answer
     // with zero rows anyway. The permission check is an optimisation here —
@@ -650,7 +527,7 @@ async function fetchAll(session: Session): Promise<LoadedData> {
     seesFinance ? table('coach_evaluations') : empty(),
   ]);
 
-  const failed = [students, classes, coaches, blocks, tags, logs, plans, curricula, templates].find(
+  const failed = [students, classes, coaches, blocks, tags, logs, plans, templates].find(
     (r) => r.error,
   );
   if (failed?.error) throw failed.error;
@@ -663,7 +540,6 @@ async function fetchAll(session: Session): Promise<LoadedData> {
     behaviorTags: (tags.data ?? []).map(map.toBehaviorTag),
     attendanceLogs: (logs.data ?? []).map(map.toAttendanceLog),
     sessionPlans: (plans.data ?? []).map(map.toSessionPlan),
-    curricula: (curricula.data ?? []).map(map.toCurriculum),
     sessionTemplates: (templates.data ?? []).map(map.toSessionTemplate),
     csActions: (csActions.data ?? []).map(map.toCsAction),
     billing: map.billingMap(billing.data ?? []),
@@ -686,17 +562,21 @@ const empty = async () => ({ data: [] as Record<string, unknown>[], error: null 
  * triggers a refetch — the screen never silently disagrees with the database.
  */
 async function persist(action: AppAction, next: AppState, session: Session): Promise<void> {
+  if (PREVIEW) return;
   switch (action.type) {
-    case 'plan/schedule': {
+    case 'plan/save': {
       const plan = next.sessionPlans[0];
-      // Upsert, not insert: re-registering a day edits the row the unique
+      // Upsert, not insert: re-saving a day edits the row the unique
       // (class_id, date) index already holds.
-      const { error } = await supabase
-        .from('session_plans')
-        .upsert(map.fromSessionPlan(plan), { onConflict: 'class_id,date' });
-      if (error) throw error;
+      await upsertCompat('session_plans', map.fromSessionPlan(plan), {
+        onConflict: 'class_id,date',
+      });
 
-      const usedIds = plan.items.map((i) => i.blockId).filter(Boolean) as ID[];
+      // Only the centre's own rows have counters in the database; the
+      // standard library's live in code and are not tracked per academy.
+      const usedIds = plan.items
+        .map((i) => i.blockId)
+        .filter((id): id is ID => Boolean(id) && !isStandardId(id));
       if (usedIds.length > 0) {
         // Coaches have no write access to training_blocks; this RPC is the only
         // door, and it only opens for usage_count.
@@ -706,7 +586,7 @@ async function persist(action: AppAction, next: AppState, session: Session): Pro
         if (rpcError) throw rpcError;
       }
 
-      if (plan.templateId) {
+      if (plan.templateId && !isStandardId(plan.templateId)) {
         const { error: rpcError } = await supabase.rpc('increment_template_usage', {
           p_template_id: plan.templateId,
         });
@@ -724,12 +604,9 @@ async function persist(action: AppAction, next: AppState, session: Session): Pro
       return;
     }
 
-    case 'template/save': {
-      const row = map.fromSessionTemplate(action.template);
-      const { error } = await supabase.from('session_templates').upsert(row);
-      if (error) throw error;
+    case 'template/save':
+      await upsertCompat('session_templates', map.fromSessionTemplate(action.template));
       return;
-    }
 
     case 'template/review': {
       const { error } = await supabase
@@ -749,13 +626,11 @@ async function persist(action: AppAction, next: AppState, session: Session): Pro
       return;
     }
 
-    case 'block/propose': {
-      const { error } = await supabase
-        .from('training_blocks')
-        .insert(map.fromTrainingBlock(action.block));
-      if (error) throw error;
+    case 'block/propose':
+      await upsertCompat('training_blocks', map.fromTrainingBlock(action.block), {
+        insertOnly: true,
+      });
       return;
-    }
 
     case 'block/review': {
       const { error } = await supabase
@@ -821,7 +696,7 @@ async function persist(action: AppAction, next: AppState, session: Session): Pro
 }
 
 const PERSISTED: ReadonlySet<AppAction['type']> = new Set([
-  'plan/schedule',
+  'plan/save',
   'plan/complete',
   'template/save',
   'template/review',
@@ -851,7 +726,6 @@ interface AppContextValue {
   getClass: (id: ID) => Class | undefined;
   getCoach: (id: ID) => Coach | undefined;
   getBlock: (id: ID) => TrainingBlock | undefined;
-  getCurriculum: (id: ID) => Curriculum | undefined;
   getTemplate: (id: ID) => SessionTemplate | undefined;
   /** Block lookup as a map — what `sessionDuration` wants. */
   blockMap: Map<ID, TrainingBlock>;
@@ -927,7 +801,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       attendanceLogs: state.attendanceLogs,
       trainingBlocks: state.trainingBlocks,
       sessionPlans: state.sessionPlans,
-      curricula: state.curricula,
       sessionTemplates: state.sessionTemplates,
       resolvedStudentIds: state.resolvedStudentIds,
       billing: state.billing,
@@ -941,7 +814,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       state.attendanceLogs,
       state.trainingBlocks,
       state.sessionPlans,
-      state.curricula,
       state.sessionTemplates,
       state.resolvedStudentIds,
       state.billing,
@@ -963,10 +835,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [state.trainingBlocks],
   );
 
-  const curriculumMap = useMemo(
-    () => new Map(state.curricula.map((c) => [c.id, c])),
-    [state.curricula],
-  );
   const templateMap = useMemo(
     () => new Map(state.sessionTemplates.map((t) => [t.id, t])),
     [state.sessionTemplates],
@@ -976,7 +844,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const getClass = useCallback((id: ID) => classMap.get(id), [classMap]);
   const getCoach = useCallback((id: ID) => coachMap.get(id), [coachMap]);
   const getBlock = useCallback((id: ID) => blockMap.get(id), [blockMap]);
-  const getCurriculum = useCallback((id: ID) => curriculumMap.get(id), [curriculumMap]);
   const getTemplate = useCallback((id: ID) => templateMap.get(id), [templateMap]);
   const getFee = useCallback((id: ID) => state.billing[id] ?? 0, [state.billing]);
 
@@ -993,7 +860,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       getClass,
       getCoach,
       getBlock,
-      getCurriculum,
       getTemplate,
       blockMap,
       getFee,
@@ -1010,7 +876,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       getClass,
       getCoach,
       getBlock,
-      getCurriculum,
       getTemplate,
       blockMap,
       getFee,

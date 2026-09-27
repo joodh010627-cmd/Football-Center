@@ -51,11 +51,12 @@ import { StudentProfileScreen } from '@/components/club/StudentProfileScreen';
 import { FeedScreen } from '@/components/feed/FeedScreen';
 import { ArticleScreen } from '@/components/feed/ArticleScreen';
 import { AlimtalkScreen } from '@/components/club/AlimtalkScreen';
-import { ClassCalendarScreen } from '@/components/coach/ClassCalendarScreen';
-import { SessionBuilderScreen } from '@/components/coach/SessionBuilderScreen';
-import { SessionSheetScreen } from '@/components/coach/SessionSheetScreen';
 import { AttendanceScreen } from '@/components/coach/AttendanceScreen';
-import { CurriculumScreen } from '@/components/curriculum/CurriculumScreen';
+import { ClassDetailScreen } from '@/components/session/ClassDetailScreen';
+import { SessionScreen } from '@/components/session/SessionScreen';
+import { SessionPickerScreen } from '@/components/session/SessionPickerScreen';
+import { BlockEditorScreen } from '@/components/session/BlockEditorScreen';
+import { SessionLibraryScreen } from '@/components/session/SessionLibraryScreen';
 import { PortfolioScreen } from '@/components/coach/PortfolioScreen';
 import { RosterScreen } from '@/components/club/RosterScreen';
 
@@ -64,13 +65,14 @@ export type Tab = 'club' | 'forms' | 'class' | 'schedule' | 'feed';
 /** One screen on a tab's stack. The tab root is the empty stack. */
 export type Route =
   | { name: 'class'; classId: ID }
-  | { name: 'builder'; classId: ID; date: ISODate }
-  | { name: 'sheet'; classId: ID; date: ISODate }
+  | { name: 'session'; classId: ID; date: ISODate }
+  | { name: 'pick'; classId: ID; date: ISODate }
+  | { name: 'blocks'; classId: ID; date: ISODate }
   | { name: 'attendance'; classId: ID; date: ISODate }
   | { name: 'lead'; leadId: ID }
   | { name: 'student'; studentId: ID }
   | { name: 'roster' }
-  | { name: 'curriculum' }
+  | { name: 'library' }
   | { name: 'portfolio' }
   | { name: 'activity' }
   | { name: 'owner' }
@@ -85,7 +87,7 @@ const EMPTY_STACKS: Stacks = { club: [], forms: [], class: [], schedule: [], fee
  * How the next screen arrives, by what the user just did.
  *
  * The motion is the answer to "where am I now". Deeper comes in from the right,
- * shallower from the left, a tab tap rises in place, and a replace (설계 → 시트)
+ * shallower from the left, a tab tap rises in place, and a replace (고르기 → 수업)
  * only cross-fades because the user did not move — the thing they were looking
  * at changed form.
  */
@@ -103,14 +105,15 @@ const TAB_TITLE: Record<Tab, string> = {
 };
 
 const ROUTE_TITLE: Record<Route['name'], string> = {
-  class: '달력',
-  builder: '수업 설계',
-  sheet: '수업 시트',
-  attendance: '출결 기록',
+  class: '클래스',
+  session: '수업',
+  pick: '세션 고르기',
+  blocks: '블록 편집',
+  attendance: '수업 마무리',
   lead: '문의',
   student: '원생 프로필',
   roster: '원생 명단',
-  curriculum: '커리큘럼',
+  library: '세션 라이브러리',
   portfolio: '내 기록',
   activity: '활동 기록',
   owner: '세부 관리',
@@ -198,7 +201,6 @@ export function FootballApp() {
    * than in each button's `onClick` where only the visible one would run it.
    */
   const dismiss = () => {
-    if (route?.name === 'builder') dispatch({ type: 'builder/close' });
     if (route?.name === 'attendance') dispatch({ type: 'attendance/discard' });
     pop();
   };
@@ -210,14 +212,14 @@ export function FootballApp() {
 
   // --- Session flow -------------------------------------------------------
   //
-  // Design and record are reachable from three places (the home hero, the
-  // calendar, the schedule list), so they live here rather than in whichever
-  // screen happened to be on top.
+  // Opening, picking and wrapping up a session are reachable from the home
+  // hero, the day list, 일정 and a class page, so they live here rather than
+  // in whichever screen happened to be on top.
 
-  const design = (cls: Class, date: ISODate) => {
-    dispatch({ type: 'builder/open', classId: cls.id, date });
-    push({ name: 'builder', classId: cls.id, date });
-  };
+  const openSession = (cls: Class, date: ISODate) =>
+    push({ name: 'session', classId: cls.id, date });
+
+  const pick = (cls: Class, date: ISODate) => push({ name: 'pick', classId: cls.id, date });
 
   const record = (cls: Class, date: ISODate) => {
     dispatch({ type: 'attendance/start', classId: cls.id, date });
@@ -238,8 +240,8 @@ export function FootballApp() {
     if (summary.needsLog > 0) {
       out.push({
         id: 'needs-log',
-        label: `기록이 필요한 수업 ${summary.needsLog}개`,
-        detail: '출결을 남기지 않으면 이탈 신호를 계산할 수 없습니다',
+        label: `마무리하지 않은 수업 ${summary.needsLog}개`,
+        detail: '출석을 남기지 않으면 이탈 신호를 계산할 수 없습니다',
         tone: 'urgent',
         onOpen: () => resetTo('class'),
       });
@@ -312,8 +314,8 @@ export function FootballApp() {
         return (
           <ScheduleScreen
             coachId={coachId}
-            onOpenClass={(cls) => push({ name: 'class', classId: cls.id })}
-            onDesign={design}
+            onOpenSession={openSession}
+            onPick={pick}
             onRecord={record}
             onOpenLead={(leadId) => push({ name: 'lead', leadId })}
           />
@@ -328,11 +330,9 @@ export function FootballApp() {
           <ClassHomeScreen
             entries={today}
             summary={summary}
-            owner={owner}
-            onOpenClass={(cls) => push({ name: 'class', classId: cls.id })}
-            onDesign={design}
+            onOpenSession={openSession}
+            onPick={pick}
             onRecord={record}
-            onOpenSheet={(cls, date) => push({ name: 'sheet', classId: cls.id, date })}
             onSeeSchedule={() => resetTo('schedule')}
             onOpenArticle={(articleId) => push({ name: 'article', articleId })}
           />
@@ -348,46 +348,75 @@ export function FootballApp() {
         const cls = getClass(route.classId);
         if (!cls) return null;
         return (
-          <ClassCalendarScreen
+          <ClassDetailScreen
             cls={cls}
-            backLabel={`← ${backLabel}`}
-            onDesign={(date) => design(cls, date)}
-            onRecord={(date) => record(cls, date)}
+            backLabel={backLabel}
             onBack={dismiss}
+            onOpenSession={(date) => openSession(cls, date)}
           />
         );
       }
 
-      case 'builder': {
+      case 'session': {
         const cls = getClass(route.classId);
         if (!cls) return null;
         return (
-          <SessionBuilderScreen
+          <SessionScreen
             cls={cls}
             date={route.date}
             backLabel={backLabel}
-            onDone={() => replace({ name: 'sheet', classId: cls.id, date: route.date })}
             onBack={dismiss}
+            onPick={() => pick(cls, route.date)}
+            onEditBlocks={() => push({ name: 'blocks', classId: cls.id, date: route.date })}
+            onRecord={() => record(cls, route.date)}
+            onOpenClass={() => push({ name: 'class', classId: cls.id })}
           />
         );
       }
 
-      case 'sheet': {
+      case 'pick': {
         const cls = getClass(route.classId);
         if (!cls) return null;
         return (
-          <SessionSheetScreen
+          <SessionPickerScreen
             cls={cls}
             date={route.date}
-            onRegister={() => {
-              dispatch({ type: 'plan/schedule' });
-              pop();
-            }}
-            onEdit={() => replace({ name: 'builder', classId: cls.id, date: route.date })}
-            onDiscard={() => {
-              dispatch({ type: 'builder/close' });
-              pop();
-            }}
+            backLabel={backLabel}
+            onBack={dismiss}
+            // Came from the session page: go back to it. Came straight from a
+            // list: show the day you just planned.
+            onChosen={() =>
+              below?.name === 'session'
+                ? pop()
+                : replace({
+                    name: 'session',
+                    classId: cls.id,
+                    date: route.date,
+                  })
+            }
+            onBuildOwn={() => replace({ name: 'blocks', classId: cls.id, date: route.date })}
+          />
+        );
+      }
+
+      case 'blocks': {
+        const cls = getClass(route.classId);
+        if (!cls) return null;
+        return (
+          <BlockEditorScreen
+            cls={cls}
+            date={route.date}
+            backLabel={backLabel}
+            onBack={dismiss}
+            onSaved={() =>
+              below?.name === 'session'
+                ? pop()
+                : replace({
+                    name: 'session',
+                    classId: cls.id,
+                    date: route.date,
+                  })
+            }
           />
         );
       }
@@ -401,8 +430,6 @@ export function FootballApp() {
             date={route.date}
             backLabel={backLabel}
             onDone={() => {
-              // 완료 means the parents were told, not that the register was
-              // filled in — the same rule the old coach flow held.
               const plan = planFor(state.sessionPlans, cls.id, route.date);
               if (plan) dispatch({ type: 'plan/complete', planId: plan.id });
               pop();
@@ -440,8 +467,8 @@ export function FootballApp() {
           />
         );
 
-      case 'curriculum':
-        return <CurriculumScreen onBack={dismiss} />;
+      case 'library':
+        return <SessionLibraryScreen backLabel={backLabel} onBack={dismiss} />;
 
       case 'portfolio':
         return <PortfolioScreen onBack={dismiss} />;

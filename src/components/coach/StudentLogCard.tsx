@@ -62,7 +62,7 @@ export function StudentLogCard({
               )}
             </span>
             <span className="mt-0.5 block truncate text-[12px] text-stone">
-              {tags.length > 0 ? tags.join(' · ') : `${student.ageGroup} · 태그를 추가하려면 탭`}
+              {tags.length > 0 ? tags.join(' · ') : student.ageGroup}
             </span>
           </span>
 
