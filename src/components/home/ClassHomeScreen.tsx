@@ -26,7 +26,7 @@ const STATE_PILL: Record<SessionState, { label: string; className: string }> = {
   now: { label: '진행 중', className: 'bg-primary text-white' },
   upcoming: { label: '예정', className: 'bg-primary-wash text-primary' },
   done: { label: '완료', className: 'bg-tint-mint text-brand-green' },
-  needs_log: { label: '기록', className: 'bg-tint-peach text-brand-orange-deep' },
+  needs_log: { label: '기록', className: 'bg-primary-soft text-white' },
 };
 
 const CARD_LABEL: Record<SessionState, string> = {
@@ -38,10 +38,10 @@ const CARD_LABEL: Record<SessionState, string> = {
 
 /** The dot beside a start time in the timetable row. */
 const STATE_DOT: Record<SessionState, string> = {
-  now: 'bg-primary animate-pulse',
-  upcoming: 'bg-muted',
+  now: 'bg-primary-soft animate-pulse',
+  upcoming: 'bg-primary/25',
   done: 'bg-primary',
-  needs_log: 'bg-brand-orange',
+  needs_log: 'bg-primary-soft',
 };
 
 interface ClassHomeScreenProps {
@@ -191,10 +191,17 @@ function TodayLessons({
               aria-label={`${e.startTime} ${e.cls.title} · ${CARD_LABEL[e.state]}`}
               className={cn(
                 'pressable flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-[14px] font-semibold tabular-nums',
-                i === index ? 'bg-ink text-white' : 'bg-canvas text-charcoal',
+                i === index ? 'bg-primary text-white' : 'bg-canvas text-charcoal',
               )}
             >
-              <span className={cn('h-1.5 w-1.5 rounded-full', STATE_DOT[e.state])} />
+              <span
+                className={cn(
+                  'h-1.5 w-1.5 rounded-full',
+                  i === index
+                    ? cn('bg-white', e.state === 'now' && 'animate-pulse')
+                    : STATE_DOT[e.state],
+                )}
+              />
               {e.startTime}
             </button>
           ))}
@@ -256,19 +263,10 @@ function LessonCard({
 
   return (
     <article
-      className={cn(
-        'mesh rounded-2xl p-5',
-        entry.state === 'needs_log' && 'mesh-warm',
-        className,
-      )}
+      className={cn('mesh rounded-2xl p-5', className)}
     >
       <div className="flex items-center justify-between gap-3">
-        <p
-          className={cn(
-            'text-[13px] font-bold',
-            entry.state === 'needs_log' ? 'text-brand-orange-deep' : 'text-primary',
-          )}
-        >
+        <p className="text-[13px] font-bold text-primary">
           {CARD_LABEL[entry.state]}
         </p>
         <p className="shrink-0 text-[15px] font-semibold tabular-nums text-charcoal">

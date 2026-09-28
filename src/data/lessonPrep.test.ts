@@ -7,7 +7,8 @@
 import { describe, expect, it } from 'vitest';
 import type { SessionTemplate } from '@/types';
 import { STANDARD_BLOCKS, STANDARD_SESSIONS } from './sessionLibrary';
-import { composeLesson, goalOptions, minPlayers } from './lessonPrep';
+import { blockAsRun, composeLesson, goalOptions, minPlayers } from './lessonPrep';
+import { fromSessionPlan, toSessionPlan } from './mappers';
 import { sessionDuration } from './selectors';
 
 const blockMap = new Map(STANDARD_BLOCKS.map((b) => [b.id, b]));
@@ -116,5 +117,31 @@ describe('goalOptions', () => {
   it('sinks goals run recently below ones that have not been', () => {
     const list = goalOptions(STANDARD_SESSIONS, { ageGroup: 'U9', curriculumId: null }, 'technical', ['std-s-pass']);
     expect(list[list.length - 1].id).toBe('std-s-pass');
+  });
+});
+
+describe('blockAsRun', () => {
+  const block = STANDARD_BLOCKS[0];
+
+  it('is the library block when the lesson did not rewrite it', () => {
+    expect(blockAsRun(block, {})).toBe(block);
+  });
+
+  it("lays the lesson's rewrite over the library block", () => {
+    const run = blockAsRun(block, { edit: { title: '오늘은 왼발만', coachingPoints: ['왼발'] } });
+    expect(run.title).toBe('오늘은 왼발만');
+    expect(run.coachingPoints).toEqual(['왼발']);
+    expect(run.description).toBe(block.description);
+  });
+});
+
+describe('plan items round-trip', () => {
+  it('keeps a lesson edit through the database mappers', () => {
+    const plan = {
+      id: 'p', academyId: 'a', classId: 'c', coachId: 'k', date: '2026-09-28',
+      templateId: null, createdAt: '', status: 'scheduled' as const,
+      items: [{ category: 'skill' as const, blockId: 'std-t-gates', durationMin: null, edit: { title: '수정' } }],
+    };
+    expect(toSessionPlan(fromSessionPlan(plan)).items[0].edit).toEqual({ title: '수정' });
   });
 });

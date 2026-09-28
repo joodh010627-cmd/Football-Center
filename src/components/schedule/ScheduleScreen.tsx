@@ -138,7 +138,7 @@ export function ScheduleScreen({
                         className={cn(
                           'h-1.5 w-1.5 rounded-full',
                           needsLog && i === 0
-                            ? 'bg-brand-orange'
+                            ? 'bg-primary-deep'
                             : own
                               ? 'bg-primary-soft'
                               : 'bg-hairline',

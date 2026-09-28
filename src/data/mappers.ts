@@ -182,6 +182,7 @@ export const toSessionPlan = (r: Row): SessionPlan => ({
     category: i.category as TrainingCategory,
     blockId: i.blockId ?? null,
     durationMin: i.durationMin ?? null,
+    ...(i.edit ? { edit: i.edit as SessionItem['edit'] } : {}),
   })),
   // `session_key` (0007) holds either kind of session; `template_id` can only
   // hold a centre uuid, so it is the fallback for rows written before 0007.

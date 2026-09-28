@@ -22,6 +22,7 @@ import { NEXT_STATUS, StudentLogCard } from './StudentLogCard';
 import { NotificationPreviewModal } from './NotificationPreviewModal';
 import { TagRail } from './TagRail';
 import { DetailHeader } from '@/components/session/parts';
+import { blockAsRun } from '@/data/lessonPrep';
 
 interface AttendanceScreenProps {
   cls: Class;
@@ -51,7 +52,10 @@ export function AttendanceScreen({ cls, date, onDone, onBack, backLabel }: Atten
   /** The plan registered for this day — its blocks go into the parent report. */
   const plan = planFor(state.sessionPlans, cls.id, date);
   const sessionSummary = (plan?.items ?? [])
-    .map((item) => (item.blockId ? getBlock(item.blockId)?.title : undefined))
+    .map((item) => {
+      const block = item.blockId ? getBlock(item.blockId) : undefined;
+      return block && blockAsRun(block, item).title;
+    })
     .filter((t): t is string => Boolean(t));
 
   if (!draft) {

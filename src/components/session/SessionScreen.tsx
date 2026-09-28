@@ -15,7 +15,6 @@ import { TODAY } from '@/data/dates';
 import { fromMinutes, minutesNow, stateOf } from '@/data/today';
 import { planFor, sessionDuration } from '@/data/selectors';
 import { formatDateKo } from '@/lib/format';
-import { cn } from '@/lib/cn';
 import { AbilityTag, BlockList, DetailHeader, LessonProgress, useSessionOf } from './parts';
 
 interface SessionScreenProps {
@@ -70,7 +69,7 @@ export function SessionScreen({
       />
 
       <div className="px-5 py-5 sm:px-7 lg:max-w-2xl lg:px-10">
-        <section className={cn('mesh rounded-2xl p-5', lesson === 'needs_log' && 'mesh-warm')}>
+        <section className="mesh rounded-2xl p-5">
           {planned ? (
             <>
               <div className="flex items-center gap-2">

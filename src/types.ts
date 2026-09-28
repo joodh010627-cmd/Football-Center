@@ -318,6 +318,19 @@ export interface SessionItem {
   blockId: ID | null;
   /** Coach's override; falls back to the block's own `durationMin`. */
   durationMin: number | null;
+  /**
+   * The coach's rewrite of the block for this one lesson. The library block is
+   * untouched, and because it rides in the plan's jsonb the lesson keeps what
+   * was actually run even if the library changes later.
+   */
+  edit?: BlockEdit;
+}
+
+/** Fields a coach can rewrite on a block for one lesson. Absent = as written. */
+export interface BlockEdit {
+  title?: string;
+  description?: string;
+  coachingPoints?: string[];
 }
 
 export interface AttendanceLog {

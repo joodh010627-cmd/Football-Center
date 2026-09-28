@@ -24,6 +24,18 @@ import type {
 } from '@/types';
 import { pastSessions, publishedBlocks, sessionsFor } from './selectors';
 
+/** A block as it runs in one lesson — the library version with the coach's edit on top. */
+export function blockAsRun(block: TrainingBlock, item: Pick<SessionItem, 'edit'>): TrainingBlock {
+  const e = item.edit;
+  if (!e) return block;
+  return {
+    ...block,
+    title: e.title ?? block.title,
+    description: e.description ?? block.description,
+    coachingPoints: e.coachingPoints ?? block.coachingPoints,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // What happened before
 // ---------------------------------------------------------------------------

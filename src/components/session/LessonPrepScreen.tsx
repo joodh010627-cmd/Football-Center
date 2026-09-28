@@ -13,14 +13,15 @@
  */
 
 import { useMemo, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, Minus, Plus, Repeat2, Sparkles, X } from 'lucide-react';
-import type { Ability, Class, ID, ISODate, SessionItem, TrainingBlock } from '@/types';
+import { ArrowDown, ArrowUp, ChevronDown, Minus, Pencil, Plus, Repeat2, Sparkles, X } from 'lucide-react';
+import type { Ability, BlockEdit, Class, ID, ISODate, SessionItem, TrainingBlock } from '@/types';
 import { useApp } from '@/store/AppContext';
 import { useWorkspace } from '@/store/WorkspaceContext';
 import { trialsOn } from '@/data/crm';
 import { fromMinutes } from '@/data/today';
 import { blocksFor, planFor, sessionDuration, studentsInClass } from '@/data/selectors';
 import {
+  blockAsRun,
   composeLesson,
   goalOptions,
   recentLessons,
@@ -133,7 +134,7 @@ export function LessonPrepScreen({ cls, date, backLabel, onBack, onDone }: Lesso
               </span>
               <span className="text-[15px] font-semibold text-ink">명</span>
               {trials.length > 0 && (
-                <span className="ml-1 rounded-full bg-tint-peach px-2 py-0.5 text-[12px] font-bold text-brand-orange-deep">
+                <span className="ml-1 rounded-full bg-primary-wash px-2 py-0.5 text-[12px] font-bold text-primary">
                   체험 {trials.length}
                 </span>
               )}
@@ -147,12 +148,7 @@ export function LessonPrepScreen({ cls, date, backLabel, onBack, onDone }: Lesso
                   {roster.map((s) => (
                     <li
                       key={s.id}
-                      className={cn(
-                        'rounded-full px-2.5 py-1 text-[13px] font-medium',
-                        s.status === 'at_risk'
-                          ? 'bg-tint-alert text-error'
-                          : 'bg-surface-soft text-charcoal',
-                      )}
+                      className="rounded-full bg-surface-soft px-2.5 py-1 text-[13px] font-medium text-charcoal"
                     >
                       {s.name}
                     </li>
@@ -160,7 +156,7 @@ export function LessonPrepScreen({ cls, date, backLabel, onBack, onDone }: Lesso
                   {trials.map((l) => (
                     <li
                       key={l.id}
-                      className="rounded-full bg-tint-peach px-2.5 py-1 text-[13px] font-medium text-brand-orange-deep"
+                      className="rounded-full bg-primary-wash px-2.5 py-1 text-[13px] font-medium text-primary"
                     >
                       {l.childName} · 체험
                     </li>
@@ -259,7 +255,7 @@ export function LessonPrepScreen({ cls, date, backLabel, onBack, onDone }: Lesso
               <span
                 className={cn(
                   'text-[13px] tabular-nums',
-                  total > cls.schedule.durationMin ? 'text-brand-orange-deep' : 'text-steel',
+                  total > cls.schedule.durationMin ? 'font-semibold text-ink' : 'text-steel',
                 )}
               >
                 {items.length}개 · {total}분 / {cls.schedule.durationMin}분
@@ -412,9 +408,10 @@ function FocusPicker({
  * The lesson's blocks, editable in place.
  *
  * A row is name and minutes. Tapping it opens what the block is — how to run
- * it, what to look for — and under that the four edits a coach actually makes:
- * minutes, order, swap for another, drop. Swapping opens the library on the
- * block's own ability, so "something else that trains passing" is one tap.
+ * it, what to look for — and under that every edit a coach makes: minutes and
+ * order on top, then 내용 수정 (rewrite it for today), 다른 블록 (swap it for
+ * another that trains the same ability) and 빼기. The actions carry words, not
+ * just icons — a coach should never have to guess which circle means "edit".
  */
 function BlockPlan({
   items,
@@ -429,12 +426,13 @@ function BlockPlan({
 }) {
   const { blockMap } = useApp();
   const [open, setOpen] = useState<number | null>(null);
-  const [swapping, setSwapping] = useState<number | null>(null);
+  const [mode, setMode] = useState<'view' | 'edit' | 'swap'>('view');
   const [adding, setAdding] = useState(false);
 
   const set = (next: SessionItem[], nextOpen: number | null = open) => {
     onChange(next);
     setOpen(nextOpen);
+    setMode('view');
   };
 
   const move = (i: number, d: -1 | 1) => {
@@ -445,8 +443,8 @@ function BlockPlan({
     set(next, j);
   };
 
-  const minutes = (i: number, value: number) =>
-    set(items.map((it, k) => (k === i ? { ...it, durationMin: Math.max(5, value) } : it)));
+  const patch = (i: number, change: Partial<SessionItem>) =>
+    set(items.map((it, k) => (k === i ? { ...it, ...change } : it)));
 
   const toItem = (b: TrainingBlock): SessionItem => ({
     category: b.category,
@@ -456,9 +454,13 @@ function BlockPlan({
 
   return (
     <>
+      {items.length > 0 && (
+        <p className="mt-1 text-[13px] text-steel">블록을 누르면 내용을 고치거나 바꿀 수 있어요</p>
+      )}
       <ol className="mt-3 overflow-hidden rounded-xl border border-hairline bg-canvas">
         {items.map((item, i) => {
-          const block = item.blockId ? blockMap.get(item.blockId) : undefined;
+          const base = item.blockId ? blockMap.get(item.blockId) : undefined;
+          const block = base && blockAsRun(base, item);
           const min = item.durationMin ?? block?.durationMin ?? 0;
           const isOpen = open === i;
           return (
@@ -467,7 +469,7 @@ function BlockPlan({
                 type="button"
                 onClick={() => {
                   setOpen(isOpen ? null : i);
-                  setSwapping(null);
+                  setMode('view');
                 }}
                 aria-expanded={isOpen}
                 className="flex w-full items-center gap-3 px-4 py-3.5 text-left"
@@ -482,80 +484,115 @@ function BlockPlan({
                   {block && (
                     <span className="mt-0.5 block text-[12.5px] text-steel">
                       {CATEGORY_META[block.category].label} · {ABILITY_META[block.ability].label}
+                      {item.edit && <span className="font-semibold text-primary"> · 수정함</span>}
                     </span>
                   )}
                 </span>
                 <span className="shrink-0 text-[14px] font-semibold tabular-nums text-charcoal">
                   {min}분
                 </span>
+                <ChevronDown
+                  size={15}
+                  className={cn('shrink-0 text-stone transition-transform', isOpen && 'rotate-180')}
+                />
               </button>
 
-              {isOpen && block && (
+              {isOpen && block && base && (
                 <div className="animate-fade-in px-4 pb-4 pl-12">
-                  <p className="text-[14px] leading-[1.6] text-charcoal">{block.description}</p>
-                  {block.coachingPoints.length > 0 && (
-                    <ul className="mt-2 space-y-0.5 text-[13.5px] leading-[1.55] text-slate">
-                      {block.coachingPoints.map((p) => (
-                        <li key={p}>· {p}</li>
-                      ))}
-                    </ul>
-                  )}
-                  {block.equipment.length > 0 && (
-                    <p className="mt-2 text-[12.5px] text-steel">준비물 {block.equipment.join(', ')}</p>
-                  )}
-
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <span className="flex items-center gap-1 rounded-full border border-hairline px-1 py-0.5">
-                      <button
-                        type="button"
-                        onClick={() => minutes(i, min - 5)}
-                        aria-label="시간 줄이기"
-                        className="p-1.5 text-steel hover:text-ink"
-                      >
-                        <Minus size={14} />
-                      </button>
-                      <span className="min-w-[40px] text-center text-[13px] font-semibold tabular-nums text-ink">
-                        {min}분
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => minutes(i, min + 5)}
-                        aria-label="시간 늘리기"
-                        className="p-1.5 text-steel hover:text-ink"
-                      >
-                        <Plus size={14} />
-                      </button>
-                    </span>
-                    <Round label="위로" onClick={() => move(i, -1)} disabled={i === 0}>
-                      <ArrowUp size={15} />
-                    </Round>
-                    <Round label="아래로" onClick={() => move(i, 1)} disabled={i === items.length - 1}>
-                      <ArrowDown size={15} />
-                    </Round>
-                    <Round label="바꾸기" onClick={() => setSwapping(swapping === i ? null : i)}>
-                      <Repeat2 size={15} />
-                    </Round>
-                    <Round
-                      label="빼기"
-                      onClick={() => set(items.filter((_, k) => k !== i), null)}
-                    >
-                      <X size={15} />
-                    </Round>
-                  </div>
-
-                  {swapping === i && (
-                    <SwapList
+                  {mode === 'edit' ? (
+                    <BlockEditForm
+                      original={base}
                       current={block}
-                      ageGroup={ageGroup}
-                      exclude={items.map((it) => it.blockId)}
-                      onPick={(b) => {
-                        // The new block takes over the slot, minutes included,
-                        // so a swap never throws the hour out.
-                        const slot = { ...toItem(b), durationMin: min === b.durationMin ? null : min };
-                        set(items.map((it, k) => (k === i ? slot : it)));
-                        setSwapping(null);
-                      }}
+                      edited={Boolean(item.edit)}
+                      onCancel={() => setMode('view')}
+                      onApply={(edit) => patch(i, { edit })}
                     />
+                  ) : (
+                    <>
+                      <p className="text-[14px] leading-[1.6] text-charcoal">{block.description}</p>
+                      {block.coachingPoints.length > 0 && (
+                        <ul className="mt-2 space-y-0.5 text-[13.5px] leading-[1.55] text-slate">
+                          {block.coachingPoints.map((p) => (
+                            <li key={p}>· {p}</li>
+                          ))}
+                        </ul>
+                      )}
+                      {block.equipment.length > 0 && (
+                        <p className="mt-2 text-[12.5px] text-steel">
+                          준비물 {block.equipment.join(', ')}
+                        </p>
+                      )}
+
+                      <div className="mt-3 flex items-center gap-2">
+                        <span className="flex items-center gap-1 rounded-full border border-hairline px-1 py-0.5">
+                          <button
+                            type="button"
+                            onClick={() => patch(i, { durationMin: Math.max(5, min - 5) })}
+                            aria-label="시간 줄이기"
+                            className="p-1.5 text-steel hover:text-ink"
+                          >
+                            <Minus size={14} />
+                          </button>
+                          <span className="min-w-[40px] text-center text-[13px] font-semibold tabular-nums text-ink">
+                            {min}분
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => patch(i, { durationMin: min + 5 })}
+                            aria-label="시간 늘리기"
+                            className="p-1.5 text-steel hover:text-ink"
+                          >
+                            <Plus size={14} />
+                          </button>
+                        </span>
+                        <Round label="위로" onClick={() => move(i, -1)} disabled={i === 0}>
+                          <ArrowUp size={15} />
+                        </Round>
+                        <Round
+                          label="아래로"
+                          onClick={() => move(i, 1)}
+                          disabled={i === items.length - 1}
+                        >
+                          <ArrowDown size={15} />
+                        </Round>
+                      </div>
+
+                      <div className="mt-2 grid grid-cols-3 gap-1.5">
+                        <Action onClick={() => setMode('edit')}>
+                          <Pencil size={14} />
+                          내용 수정
+                        </Action>
+                        <Action
+                          active={mode === 'swap'}
+                          onClick={() => setMode(mode === 'swap' ? 'view' : 'swap')}
+                        >
+                          <Repeat2 size={14} />
+                          다른 블록
+                        </Action>
+                        <Action onClick={() => set(items.filter((_, k) => k !== i), null)}>
+                          <X size={14} />
+                          빼기
+                        </Action>
+                      </div>
+
+                      {mode === 'swap' && (
+                        <SwapList
+                          current={base}
+                          ageGroup={ageGroup}
+                          exclude={items.map((it) => it.blockId)}
+                          onPick={(b) =>
+                            // The new block takes over the slot, minutes
+                            // included, so a swap never throws the hour out.
+                            // Today's rewrite belonged to the old block.
+                            patch(i, {
+                              ...toItem(b),
+                              durationMin: min === b.durationMin ? null : min,
+                              edit: undefined,
+                            })
+                          }
+                        />
+                      )}
+                    </>
                   )}
                 </div>
               )}
@@ -591,6 +628,122 @@ function BlockPlan({
         </button>
       )}
     </>
+  );
+}
+
+/**
+ * Rewrite a block for this lesson only.
+ *
+ * Only what differs from the library is kept, so "원래대로" is simply dropping
+ * the edit, and a block that was opened and saved unchanged stays unedited.
+ */
+function BlockEditForm({
+  original,
+  current,
+  edited,
+  onCancel,
+  onApply,
+}: {
+  original: TrainingBlock;
+  current: TrainingBlock;
+  edited: boolean;
+  onCancel: () => void;
+  onApply: (edit: BlockEdit | undefined) => void;
+}) {
+  const [title, setTitle] = useState(current.title);
+  const [description, setDescription] = useState(current.description);
+  const [points, setPoints] = useState(current.coachingPoints.join('\n'));
+
+  const apply = () => {
+    const nextPoints = points
+      .split('\n')
+      .map((p) => p.trim())
+      .filter(Boolean);
+    const edit: BlockEdit = {};
+    if (title.trim() && title.trim() !== original.title) edit.title = title.trim();
+    if (description.trim() !== original.description) edit.description = description.trim();
+    if (nextPoints.join('\n') !== original.coachingPoints.join('\n')) edit.coachingPoints = nextPoints;
+    onApply(Object.keys(edit).length > 0 ? edit : undefined);
+  };
+
+  return (
+    <div className="animate-fade-in space-y-3">
+      <Field label="블록 이름">
+        <input value={title} onChange={(e) => setTitle(e.target.value)} className="input-field" />
+      </Field>
+      <Field label="진행 방법">
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={3}
+          className="input-field resize-none leading-[1.55]"
+        />
+      </Field>
+      <Field label="코칭 포인트" hint="한 줄에 하나씩">
+        <textarea
+          value={points}
+          onChange={(e) => setPoints(e.target.value)}
+          rows={3}
+          className="input-field resize-none leading-[1.55]"
+        />
+      </Field>
+      <p className="text-[12.5px] text-steel">이 수업에만 적용돼요. 라이브러리의 블록은 그대로예요.</p>
+      <div className="flex items-center gap-2">
+        {edited && (
+          <button
+            type="button"
+            onClick={() => onApply(undefined)}
+            className="mr-auto text-[13.5px] font-semibold text-steel hover:text-ink"
+          >
+            원래대로
+          </button>
+        )}
+        <button type="button" onClick={onCancel} className="btn-secondary ml-auto py-2.5">
+          취소
+        </button>
+        <button type="button" onClick={apply} className="btn-primary py-2.5">
+          적용
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 flex items-baseline gap-2 text-[12.5px] font-semibold text-charcoal">
+        {label}
+        {hint && <span className="font-normal text-stone">{hint}</span>}
+      </span>
+      {children}
+    </label>
+  );
+}
+
+function Action({
+  active = false,
+  onClick,
+  children,
+}: {
+  active?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        'pressable flex items-center justify-center gap-1.5 rounded-full border py-2 text-[13px] font-semibold',
+        active
+          ? 'border-primary bg-primary-wash text-primary'
+          : 'border-hairline text-charcoal hover:border-hairline-strong',
+      )}
+    >
+      {children}
+    </button>
   );
 }
 

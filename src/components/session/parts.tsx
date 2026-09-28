@@ -13,6 +13,7 @@ import type { Ability, ID, SessionItem, SessionTemplate, TrainingBlock } from '@
 import { useApp } from '@/store/AppContext';
 import { sessionDuration } from '@/data/selectors';
 import type { SessionState } from '@/data/today';
+import { blockAsRun } from '@/data/lessonPrep';
 import { cn } from '@/lib/cn';
 import { ABILITY_META, ABILITY_ORDER, CATEGORY_META } from './meta';
 
@@ -151,11 +152,14 @@ export function BlockRow({
   index,
   block,
   minutes,
+  edited = false,
   trailing,
 }: {
   index?: number;
   block: TrainingBlock | undefined;
   minutes: number;
+  /** The coach rewrote this block for the lesson. */
+  edited?: boolean;
   trailing?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -180,6 +184,7 @@ export function BlockRow({
             <span className="block truncate text-[15px] font-semibold text-ink">{block.title}</span>
             <span className="mt-0.5 block text-[12.5px] text-steel">
               {CATEGORY_META[block.category].label} · {minutes}분
+              {edited && <span className="font-semibold text-primary"> · 수정함</span>}
             </span>
           </span>
           <ChevronDown
@@ -214,13 +219,15 @@ export function BlockList({ items }: { items: SessionItem[] }) {
   return (
     <ol className="overflow-hidden rounded-lg border border-hairline bg-canvas">
       {items.map((item, i) => {
-        const block = item.blockId ? blockMap.get(item.blockId) : undefined;
+        const base = item.blockId ? blockMap.get(item.blockId) : undefined;
+        const block = base && blockAsRun(base, item);
         return (
           <BlockRow
             key={`${item.blockId}-${i}`}
             index={i}
             block={block}
             minutes={item.durationMin ?? block?.durationMin ?? 0}
+            edited={Boolean(item.edit)}
           />
         );
       })}
@@ -323,8 +330,12 @@ type Step = 'done' | 'current' | 'live' | 'todo';
  *
  * A lesson's day has exactly three things a coach does to it, in order, and the
  * old counters ("수업 1개 · 마무리 필요 1") made them do arithmetic to find out
- * which one was next. Filled means done, tinted means next, and the bar that
- * pulses is happening now.
+ * which one was next.
+ *
+ * One hue, three brightnesses: deep green is done, bright green is the step in
+ * front of the coach (pulsing while the lesson is running), and a pale wash is
+ * still to come. A lesson waiting on its 기록 used to turn gold; it doesn't
+ * need a second colour when the bright bar already sits on 기록.
  */
 export function LessonProgress({
   state,
@@ -341,8 +352,6 @@ export function LessonProgress({
     ['수업', over ? 'done' : state === 'now' ? 'live' : planned ? 'current' : 'todo'],
     ['기록', state === 'done' ? 'done' : state === 'needs_log' ? 'current' : 'todo'],
   ];
-  const warm = state === 'needs_log';
-
   return (
     <ol className={cn('grid grid-cols-3 gap-1.5', className)} aria-label="수업 진행">
       {steps.map(([label, step]) => (
@@ -351,15 +360,16 @@ export function LessonProgress({
             className={cn(
               'block h-[5px] rounded-full',
               step === 'done' && 'bg-primary',
-              step === 'live' && 'animate-pulse bg-primary',
-              step === 'current' && (warm ? 'bg-brand-orange' : 'bg-primary/30'),
-              step === 'todo' && 'bg-ink/10',
+              step === 'live' && 'animate-pulse bg-primary-soft',
+              step === 'current' && 'bg-primary-soft',
+              step === 'todo' && 'bg-primary/15',
             )}
           />
           <span
             className={cn(
               'mt-1.5 block text-[12.5px]',
-              step === 'todo' ? 'text-stone' : 'text-charcoal',
+              step === 'done' && 'text-primary',
+              step === 'todo' && 'text-stone',
               (step === 'current' || step === 'live') && 'font-bold text-ink',
             )}
           >
