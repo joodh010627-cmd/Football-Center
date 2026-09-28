@@ -147,7 +147,7 @@ export function AttendanceScreen({ cls, date, onDone, onBack, backLabel }: Atten
       <DetailHeader
         backLabel={backLabel}
         onBack={onBack}
-        title="수업 마무리"
+        title="수업 기록"
         meta={
           <>
             {cls.title} · {formatDateKo(draft.date)}

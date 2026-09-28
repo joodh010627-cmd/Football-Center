@@ -55,7 +55,7 @@ export function SessionLibraryScreen({
       <DetailHeader
         backLabel={backLabel}
         onBack={onBack}
-        title="세션 라이브러리"
+        title="수업 라이브러리"
         action={
           canPropose && (
             <button

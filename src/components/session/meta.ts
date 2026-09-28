@@ -19,7 +19,7 @@ export const CATEGORY_META: Record<
   TrainingCategory,
   { label: string; tint: string; accent: string; bar: string; defaultMin: number }
 > = {
-  warmup: { label: '준비', tint: 'bg-tint-peach', accent: 'text-brand-orange-deep', bar: 'bg-brand-orange', defaultMin: 10 },
+  warmup: { label: '워밍업', tint: 'bg-tint-peach', accent: 'text-brand-orange-deep', bar: 'bg-brand-orange', defaultMin: 10 },
   skill: { label: '훈련', tint: 'bg-tint-lavender', accent: 'text-brand-purple-800', bar: 'bg-primary', defaultMin: 15 },
   game: { label: '게임', tint: 'bg-tint-mint', accent: 'text-brand-green', bar: 'bg-brand-green', defaultMin: 20 },
 };

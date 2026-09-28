@@ -12,7 +12,7 @@ import { ChevronDown, ChevronLeft } from 'lucide-react';
 import type { Ability, ID, SessionItem, SessionTemplate, TrainingBlock } from '@/types';
 import { useApp } from '@/store/AppContext';
 import { sessionDuration } from '@/data/selectors';
-import { SOURCE_LABEL } from '@/data/sessionLibrary';
+import type { SessionState } from '@/data/today';
 import { cn } from '@/lib/cn';
 import { ABILITY_META, ABILITY_ORDER, CATEGORY_META } from './meta';
 
@@ -300,7 +300,6 @@ export function SessionRow({
         <div className="animate-fade-in space-y-3 px-4 pb-4">
           <p className="text-[14px] leading-[1.6] text-charcoal">{template.goal}</p>
           <BlockList items={templateItems(template)} />
-          <p className="text-[12px] text-stone">{SOURCE_LABEL[template.source]}</p>
           {extra}
           {onAction && actionLabel && (
             <button type="button" onClick={onAction} className="btn-primary w-full py-3">
@@ -310,6 +309,65 @@ export function SessionRow({
         </div>
       )}
     </li>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 진행 — where one lesson is in its day
+// ---------------------------------------------------------------------------
+
+type Step = 'done' | 'current' | 'live' | 'todo';
+
+/**
+ * 준비 → 수업 → 기록, as three bars.
+ *
+ * A lesson's day has exactly three things a coach does to it, in order, and the
+ * old counters ("수업 1개 · 마무리 필요 1") made them do arithmetic to find out
+ * which one was next. Filled means done, tinted means next, and the bar that
+ * pulses is happening now.
+ */
+export function LessonProgress({
+  state,
+  planned,
+  className,
+}: {
+  state: SessionState;
+  planned: boolean;
+  className?: string;
+}) {
+  const over = state === 'needs_log' || state === 'done';
+  const steps: Array<[string, Step]> = [
+    ['준비', planned ? 'done' : over ? 'todo' : 'current'],
+    ['수업', over ? 'done' : state === 'now' ? 'live' : planned ? 'current' : 'todo'],
+    ['기록', state === 'done' ? 'done' : state === 'needs_log' ? 'current' : 'todo'],
+  ];
+  const warm = state === 'needs_log';
+
+  return (
+    <ol className={cn('grid grid-cols-3 gap-1.5', className)} aria-label="수업 진행">
+      {steps.map(([label, step]) => (
+        <li key={label} aria-current={step === 'current' || step === 'live' ? 'step' : undefined}>
+          <span
+            className={cn(
+              'block h-[5px] rounded-full',
+              step === 'done' && 'bg-primary',
+              step === 'live' && 'animate-pulse bg-primary',
+              step === 'current' && (warm ? 'bg-brand-orange' : 'bg-primary/30'),
+              step === 'todo' && 'bg-ink/10',
+            )}
+          />
+          <span
+            className={cn(
+              'mt-1.5 block text-[12.5px]',
+              step === 'todo' ? 'text-stone' : 'text-charcoal',
+              (step === 'current' || step === 'live') && 'font-bold text-ink',
+            )}
+          >
+            {label}
+          </span>
+        </li>
+      ))}
+    </ol>
   );
 }
 

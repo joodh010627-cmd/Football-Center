@@ -34,7 +34,7 @@ export function ApprovalQueuePanel() {
           )}
         </h2>
         <p className="mt-1 text-[13px] leading-[1.5] text-slate">
-          승인하면 세션 고르기에 바로 나옵니다.
+          승인하면 수업 준비에 바로 나옵니다.
         </p>
       </header>
 
@@ -42,7 +42,7 @@ export function ApprovalQueuePanel() {
         <EmptyState
           icon={Inbox}
           title="대기 중인 제안이 없습니다"
-          description="코치가 새 세션이나 블록을 제안하면 여기에 쌓입니다."
+          description="코치가 새 수업이나 훈련 블록을 제안하면 여기에 쌓입니다."
         />
       ) : (
         <ul className="space-y-2.5">
@@ -95,7 +95,7 @@ function ProposalRow({ proposal }: { proposal: Proposal }) {
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-1.5">
             <Badge tone={proposal.kind === 'template' ? 'purple' : 'orange'}>
-              {proposal.kind === 'template' ? '세션' : '훈련 블록'}
+              {proposal.kind === 'template' ? '수업' : '훈련 블록'}
             </Badge>
             <h3 className="text-[15px] font-semibold text-ink">{proposal.title}</h3>
           </div>

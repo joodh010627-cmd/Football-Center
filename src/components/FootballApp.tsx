@@ -54,8 +54,7 @@ import { AlimtalkScreen } from '@/components/club/AlimtalkScreen';
 import { AttendanceScreen } from '@/components/coach/AttendanceScreen';
 import { ClassDetailScreen } from '@/components/session/ClassDetailScreen';
 import { SessionScreen } from '@/components/session/SessionScreen';
-import { SessionPickerScreen } from '@/components/session/SessionPickerScreen';
-import { BlockEditorScreen } from '@/components/session/BlockEditorScreen';
+import { LessonPrepScreen } from '@/components/session/LessonPrepScreen';
 import { SessionLibraryScreen } from '@/components/session/SessionLibraryScreen';
 import { PortfolioScreen } from '@/components/coach/PortfolioScreen';
 import { RosterScreen } from '@/components/club/RosterScreen';
@@ -67,7 +66,6 @@ export type Route =
   | { name: 'class'; classId: ID }
   | { name: 'session'; classId: ID; date: ISODate }
   | { name: 'pick'; classId: ID; date: ISODate }
-  | { name: 'blocks'; classId: ID; date: ISODate }
   | { name: 'attendance'; classId: ID; date: ISODate }
   | { name: 'lead'; leadId: ID }
   | { name: 'student'; studentId: ID }
@@ -87,7 +85,7 @@ const EMPTY_STACKS: Stacks = { club: [], forms: [], class: [], schedule: [], fee
  * How the next screen arrives, by what the user just did.
  *
  * The motion is the answer to "where am I now". Deeper comes in from the right,
- * shallower from the left, a tab tap rises in place, and a replace (고르기 → 수업)
+ * shallower from the left, a tab tap rises in place, and a replace (준비 → 수업)
  * only cross-fades because the user did not move — the thing they were looking
  * at changed form.
  */
@@ -99,7 +97,7 @@ const EMPTY_STACKS: Stacks = { club: [], forms: [], class: [], schedule: [], fee
 const TAB_TITLE: Record<Tab, string> = {
   club: '클럽',
   forms: '문의 목록',
-  class: '오늘의 클래스',
+  class: '오늘의 수업',
   schedule: '일정',
   feed: '피드',
 };
@@ -107,13 +105,12 @@ const TAB_TITLE: Record<Tab, string> = {
 const ROUTE_TITLE: Record<Route['name'], string> = {
   class: '클래스',
   session: '수업',
-  pick: '세션 고르기',
-  blocks: '블록 편집',
-  attendance: '수업 마무리',
+  pick: '수업 준비',
+  attendance: '수업 기록',
   lead: '문의',
   student: '원생 프로필',
   roster: '원생 명단',
-  library: '세션 라이브러리',
+  library: '수업 라이브러리',
   portfolio: '내 기록',
   activity: '활동 기록',
   owner: '세부 관리',
@@ -240,7 +237,7 @@ export function FootballApp() {
     if (summary.needsLog > 0) {
       out.push({
         id: 'needs-log',
-        label: `마무리하지 않은 수업 ${summary.needsLog}개`,
+        label: `기록하지 않은 수업 ${summary.needsLog}개`,
         detail: '출석을 남기지 않으면 이탈 신호를 계산할 수 없습니다',
         tone: 'urgent',
         onOpen: () => resetTo('class'),
@@ -276,7 +273,7 @@ export function FootballApp() {
   const tabs: TabItem[] = [
     { key: 'club', label: '클럽', icon: Users },
     { key: 'forms', label: '폼', icon: FileText, badge: leadCounts.overdue },
-    { key: 'class', label: '클래스', icon: Home, badge: summary.needsLog },
+    { key: 'class', label: '수업', icon: Home, badge: summary.needsLog },
     { key: 'schedule', label: '일정', icon: CalendarDays },
     { key: 'feed', label: '피드', icon: Newspaper },
   ];
@@ -329,7 +326,7 @@ export function FootballApp() {
         return (
           <ClassHomeScreen
             entries={today}
-            summary={summary}
+            showCoach={coachId === null}
             onOpenSession={openSession}
             onPick={pick}
             onRecord={record}
@@ -366,8 +363,7 @@ export function FootballApp() {
             date={route.date}
             backLabel={backLabel}
             onBack={dismiss}
-            onPick={() => pick(cls, route.date)}
-            onEditBlocks={() => push({ name: 'blocks', classId: cls.id, date: route.date })}
+            onPrepare={() => pick(cls, route.date)}
             onRecord={() => record(cls, route.date)}
             onOpenClass={() => push({ name: 'class', classId: cls.id })}
           />
@@ -378,37 +374,14 @@ export function FootballApp() {
         const cls = getClass(route.classId);
         if (!cls) return null;
         return (
-          <SessionPickerScreen
+          <LessonPrepScreen
             cls={cls}
             date={route.date}
             backLabel={backLabel}
             onBack={dismiss}
-            // Came from the session page: go back to it. Came straight from a
-            // list: show the day you just planned.
-            onChosen={() =>
-              below?.name === 'session'
-                ? pop()
-                : replace({
-                    name: 'session',
-                    classId: cls.id,
-                    date: route.date,
-                  })
-            }
-            onBuildOwn={() => replace({ name: 'blocks', classId: cls.id, date: route.date })}
-          />
-        );
-      }
-
-      case 'blocks': {
-        const cls = getClass(route.classId);
-        if (!cls) return null;
-        return (
-          <BlockEditorScreen
-            cls={cls}
-            date={route.date}
-            backLabel={backLabel}
-            onBack={dismiss}
-            onSaved={() =>
+            // Came from the lesson page: go back to it. Came straight from a
+            // list: show the day you just prepared.
+            onDone={() =>
               below?.name === 'session'
                 ? pop()
                 : replace({

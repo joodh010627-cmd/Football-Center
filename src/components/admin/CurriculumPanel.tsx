@@ -36,10 +36,10 @@ export function CurriculumPanel() {
       <header className="mb-4">
         <h2 className="flex items-center gap-2 text-[18px] font-semibold leading-[1.4] text-ink">
           <BookOpenCheck size={17} className="text-primary" />
-          세션 사용 현황
+          라이브러리 활용 현황
         </h2>
         <p className="mt-1 text-[13px] leading-[1.5] text-slate">
-          세션을 골라 진행한 수업의 비율 · 목표 {formatPercent(ADHERENCE_TARGET)}
+          라이브러리 목표로 준비한 수업의 비율 · 목표 {formatPercent(ADHERENCE_TARGET)}
         </p>
       </header>
 

@@ -103,8 +103,8 @@ export function ClubScreen({ owner, onOpen, onOpenStudent }: ClubScreenProps) {
             />
             <HubRow
               icon={BookOpenCheck}
-              label="세션 라이브러리"
-              meta={`${state.sessionTemplates.filter((t) => t.status === 'published').length}개 세션`}
+              label="수업 라이브러리"
+              meta={`${state.sessionTemplates.filter((t) => t.status === 'published').length}개 수업`}
               badge={
                 proposals.length > 0 && owner ? `승인 대기 ${proposals.length}` : undefined
               }

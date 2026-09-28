@@ -114,6 +114,52 @@
     @apply text-[11px] font-semibold uppercase tracking-label text-primary;
   }
 
+  /**
+   * The one lit surface on a screen — today's lesson. A slow-drifting green
+   * mesh under a frosted wash, carried over from the mockup's hero. Like
+   * `.glass` it only works as the exception: one per screen, never on a list.
+   * `.mesh-warm` is the same surface for a lesson still waiting on its 기록.
+   */
+  .mesh {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background: #e5f4ed;
+  }
+  .mesh::before {
+    content: '';
+    position: absolute;
+    inset: -65%;
+    z-index: -2;
+    background:
+      radial-gradient(ellipse at 25% 40%, #f6fff9 0, transparent 43%),
+      radial-gradient(ellipse at 66% 68%, #178a5b 0, transparent 37%),
+      radial-gradient(ellipse at 55% 20%, #b8eee6 0, transparent 52%),
+      #e5f4ed;
+    animation: mesh-drift 13s ease-in-out infinite alternate;
+  }
+  .mesh::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(100deg, #edf9f4ed, #edf9f480 70%, transparent);
+    backdrop-filter: blur(2px);
+  }
+  .mesh-warm {
+    background: #fbf1dc;
+  }
+  .mesh-warm::before {
+    background:
+      radial-gradient(ellipse at 25% 40%, #fffaf0 0, transparent 43%),
+      radial-gradient(ellipse at 66% 68%, #e9a23b 0, transparent 37%),
+      radial-gradient(ellipse at 55% 20%, #f7e3b5 0, transparent 52%),
+      #fbf1dc;
+  }
+  .mesh-warm::after {
+    background: linear-gradient(100deg, #fdf6e8ed, #fdf6e880 70%, transparent);
+  }
+
   /* Section titles run tight and large, like the public site's headings. */
   .h-section {
     @apply font-semibold leading-[1.15] tracking-tightest text-ink;
@@ -185,6 +231,15 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes mesh-drift {
+  from {
+    transform: translate(-5%, -5%) rotate(-8deg);
+  }
+  to {
+    transform: translate(9%, 7%) rotate(16deg);
   }
 }
 

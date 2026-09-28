@@ -15,7 +15,7 @@ import { can } from '@/lib/permissions';
 import { cn } from '@/lib/cn';
 import { Modal } from '@/components/ui/Modal';
 import { ABILITY_META, ABILITY_ORDER } from './meta';
-import { BlockAdder } from './BlockEditorScreen';
+import { BlockAdder } from './BlockAdder';
 
 interface SessionEditorModalProps {
   /** `null` = a new session. */
@@ -65,7 +65,7 @@ export function SessionEditorModal({ template, defaultAbility, onClose }: Sessio
     <Modal
       open
       onClose={onClose}
-      title={template ? '세션 편집' : owner ? '세션 만들기' : '세션 제안'}
+      title={template ? '수업 편집' : owner ? '수업 만들기' : '수업 제안'}
       footer={
         <div className="flex justify-end gap-2">
           <button type="button" onClick={onClose} className="btn-secondary">
@@ -79,7 +79,7 @@ export function SessionEditorModal({ template, defaultAbility, onClose }: Sessio
     >
       <div className="space-y-4">
         <label className="block">
-          <span className="mb-1.5 block text-[12.5px] font-semibold text-charcoal">세션 이름</span>
+          <span className="mb-1.5 block text-[12.5px] font-semibold text-charcoal">목표 이름</span>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}

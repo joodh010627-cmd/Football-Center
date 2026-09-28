@@ -117,7 +117,7 @@ function SessionDayRow({
         <span className="flex min-w-0 flex-1 items-center gap-2">
           {session && <AbilityTag ability={session.ability} />}
           <span className="truncate text-[14.5px] text-ink">
-            {session?.title ?? (planned ? '직접 구성' : '세션 미정')}
+            {session?.title ?? (planned ? '직접 구성' : '목표 미정')}
           </span>
         </span>
         {attendance && (

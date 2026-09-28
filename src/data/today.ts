@@ -59,7 +59,7 @@ export const fromMinutes = (total: number): string => {
 export const minutesNow = (now: Date = new Date()): number =>
   now.getHours() * 60 + now.getMinutes();
 
-function stateOf(
+export function stateOf(
   cls: Class,
   plan: SessionPlan | null,
   logs: AttendanceLog[],
@@ -157,7 +157,7 @@ export function upNext(entries: DayEntry[]): DayEntry | null {
 export function countdown(entry: DayEntry): string {
   if (entry.state === 'now') return '진행 중';
   if (entry.state === 'done') return '완료';
-  if (entry.state === 'needs_log') return '마무리 대기';
+  if (entry.state === 'needs_log') return '기록 대기';
   if (entry.minutesUntil >= 24 * 60) return '';
   if (entry.minutesUntil < 60) return `${Math.max(entry.minutesUntil, 1)}분 후 시작`;
   return `${Math.floor(entry.minutesUntil / 60)}시간 후 시작`;
