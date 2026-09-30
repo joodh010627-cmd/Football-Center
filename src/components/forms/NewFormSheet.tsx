@@ -132,7 +132,7 @@ export function NewFormSheet({
     const link = addFormLink({ title: linkTitle.trim(), kind: linkKind, fields });
     void navigator.clipboard?.writeText(formUrl(link.slug));
     shareFormLink(link.id);
-    onLinkMade?.('링크를 만들고 복사했어요');
+    onLinkMade?.('링크 생성 · 복사됨');
     onClose();
   };
 
@@ -147,7 +147,7 @@ export function NewFormSheet({
 
   const heading =
     step === 'pick' ? (
-      '무엇을 물어볼까요?'
+      '안내 종류'
     ) : step === 'intake' ? (
       '체험 신청 링크'
     ) : (
@@ -207,7 +207,7 @@ export function NewFormSheet({
             <p className="mt-4 flex items-start gap-2 rounded-[14px] bg-[#F6F8F6] px-4 py-3.5 text-[13.5px] leading-[1.6] text-steel">
               <Phone size={14} className="mt-[3px] shrink-0" />
               <span>
-                <strong className="font-semibold text-slate">이런 일은 전화로</strong> — {CALL_INSTEAD}
+                <strong className="font-semibold text-slate">전화로 할 일</strong> · {CALL_INSTEAD}
               </span>
             </p>
           </div>
@@ -267,7 +267,7 @@ export function NewFormSheet({
               )}
               <div className="mt-1">
                 <TextLink onClick={() => setEditing((v) => !v)}>
-                  {editing ? '미리보기로 돌아가기' : '질문 직접 고치기'}
+                  {editing ? '미리보기' : '질문 수정'}
                 </TextLink>
               </div>
             </Field>
@@ -284,7 +284,7 @@ export function NewFormSheet({
               />
             </Field>
 
-            <Field label="받는 것">
+            <Field label="유형">
               <Pills
                 options={[
                   ['trial', '체험 신청'],
@@ -298,7 +298,7 @@ export function NewFormSheet({
               />
             </Field>
 
-            <Field label="물을 항목" hint="보호자 성함·연락처는 항상">
+            <Field label="항목" hint="보호자 성함·연락처는 기본">
               <Pills
                 options={OPTIONAL_FIELDS.map((f) => [f, f] as const)}
                 pressed={fields}
@@ -307,8 +307,7 @@ export function NewFormSheet({
             </Field>
 
             <p className="mt-5 text-[13.5px] leading-[1.6] text-steel">
-              신청은 <strong className="font-semibold text-slate">문의</strong>로 바로 들어오고, 첫 연락은
-              전화로 합니다. 하루를 넘기면 &lsquo;늦은 연락&rsquo;으로 표시됩니다.
+              신청 내용은 <strong className="font-semibold text-slate">문의</strong>로 들어옵니다.
             </p>
           </div>
         )}
@@ -324,7 +323,7 @@ function QuestionPreview({ questions }: { questions: Question[] }) {
   if (questions.length === 0) {
     return (
       <p className="rounded-[14px] bg-[#F6F8F6] px-4 py-5 text-center text-[14px] text-steel">
-        질문이 없어요. 직접 고치기에서 적어 주세요.
+        질문 없음 · 질문 수정에서 입력
       </p>
     );
   }
@@ -361,7 +360,7 @@ function QuestionPreview({ questions }: { questions: Question[] }) {
       {questions.some((q) => q.flagged.length > 0) && (
         <li className="flex items-center gap-1.5 border-t border-hairline-soft pt-3 text-[13px] text-steel">
           <Phone size={11} strokeWidth={2.6} className="text-[#946216]" />
-          이 답을 고른 보호자는 &lsquo;상담 필요&rsquo;로 따로 모아 드려요
+          표시된 답은 &lsquo;상담 필요&rsquo;로 분류
         </li>
       )}
     </ol>
@@ -386,7 +385,7 @@ function QuestionEditor({ text, onChange }: { text: string; onChange: (t: string
         <dt className="font-semibold text-slate">(복수)</dt>
         <dd>여러 개 고르기</dd>
         <dt className="font-semibold text-slate">B!</dt>
-        <dd>이 답이면 &lsquo;상담 필요&rsquo;로 모으기</dd>
+        <dd>&lsquo;상담 필요&rsquo;로 분류</dd>
       </dl>
     </div>
   );

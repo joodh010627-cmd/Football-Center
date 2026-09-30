@@ -37,10 +37,10 @@ import { TODAY, addDays, dayOf, diffDays } from './dates';
 export type Phase = 'inquiry' | 'trial' | 'decision' | 'firstMonth';
 
 export const PHASES: ReadonlyArray<{ key: Phase; label: string; blurb: string }> = [
-  { key: 'inquiry', label: '문의', blurb: '첫 연락과 상담' },
-  { key: 'trial', label: '체험', blurb: '체험 예약과 당일' },
-  { key: 'decision', label: '등록', blurb: '체험 뒤 결정까지' },
-  { key: 'firstMonth', label: '첫 달', blurb: '등록 후 4주, 정착까지' },
+  { key: 'inquiry', label: '문의', blurb: '체험 전' },
+  { key: 'trial', label: '체험', blurb: '체험 예정' },
+  { key: 'decision', label: '등록', blurb: '체험 후 등록 전' },
+  { key: 'firstMonth', label: '첫 달', blurb: '등록 후 4주' },
 ];
 
 export const PHASE_LABEL: Record<Phase, string> = {
@@ -62,16 +62,16 @@ export type TouchOutcome = 'done' | 'no_answer' | 'concern';
 
 export const STEP_LABEL: Record<TouchStep, string> = {
   first_call: '첫 상담 전화',
-  trial_followup: '체험 후 연락',
+  trial_followup: '체험 후 통화',
   welcome: '환영 안내',
-  week1: '첫 주 안부',
-  month1: '첫 달 점검',
+  week1: '1주 차 통화',
+  month1: '4주 차 통화',
 };
 
 export const OUTCOME_LABEL: Record<TouchOutcome, string> = {
   done: '완료',
-  no_answer: '안 받음',
-  concern: '고민 중',
+  no_answer: '부재중',
+  concern: '보류',
 };
 
 export interface Touch {
@@ -144,6 +144,8 @@ export interface Family {
   attendance?: { present: number; held: number };
   /** For the first month: the enrolment date the journey counts from. */
   enrolledAt?: ISODate;
+  /** For the first month: the first class day after enrolling. */
+  firstClass?: ISODate;
 }
 
 // ---------------------------------------------------------------------------
@@ -151,11 +153,11 @@ export interface Family {
 // ---------------------------------------------------------------------------
 
 const SCRIPT: Record<'first_call' | 'trial_followup' | 'form_check' | 'week1' | 'month1', string> = {
-  first_call: '아이 나이와 가능한 요일을 먼저 듣고, 체험 날짜를 그 자리에서 잡아 보세요.',
-  trial_followup: '아이가 어땠는지부터 여쭤보세요. 등록 이야기는 그다음입니다.',
-  form_check: '신청서에 어려운 점은 없었는지, 궁금한 게 남았는지 여쭤보세요.',
-  week1: '잘하는지보다 즐거워하는지를 물어보세요. 무엇도 권하지 않는 통화입니다.',
-  month1: '첫 달 출석과 코치가 본 모습을 짧게 전하고, 다음 달을 여쭤보세요.',
+  first_call: '가능한 요일 확인 → 체험 날짜 잡기',
+  trial_followup: '아이 반응 확인 → 등록 의사 확인',
+  form_check: '신청서 작성 여부 확인',
+  week1: '적응 확인 (권유 없이)',
+  month1: '첫 달 출석 공유 → 다음 달 확인',
 };
 
 // ---------------------------------------------------------------------------
@@ -233,10 +235,10 @@ function leadFamily(
       label: '첫 상담 전화',
       reason:
         first.last?.outcome === 'no_answer'
-          ? `${md(dayOf(first.last.at))}에 안 받음 · 다시 전화`
+          ? `${md(dayOf(first.last.at))} 부재중`
           : waited === 0
-            ? '오늘 들어온 문의'
-            : `문의 ${waited}일째 · 아직 연락 전`,
+            ? '오늘 문의'
+            : `문의 후 ${waited}일 · 미연락`,
       due: first.due,
       late: diffDays(asOf, first.due) >= 1,
       channel: 'call',
@@ -248,7 +250,7 @@ function leadFamily(
     next = {
       kind: 'book_trial',
       label: '체험 날짜 잡기',
-      reason: waited === 0 ? '상담 완료 · 체험 날짜 미정' : `상담 ${waited}일째 · 체험 날짜 미정`,
+      reason: waited === 0 ? '상담 완료 · 체험 미정' : `상담 후 ${waited}일 · 체험 미정`,
       due: moved,
       late: waited > 3,
       channel: 'tap',
@@ -259,7 +261,7 @@ function leadFamily(
     if (day > asOf) {
       next = {
         kind: 'wait',
-        label: '체험',
+        label: '체험 예정',
         reason: `${md(day)} 체험 예정`,
         due: day,
         late: false,
@@ -269,7 +271,7 @@ function leadFamily(
       next = {
         kind: 'mark_trial',
         label: '체험 결과 기록',
-        reason: day === asOf ? '오늘 체험' : `체험일(${md(day)}) 지남 · 결과 미기록`,
+        reason: day === asOf ? '오늘 체험' : `${md(day)} 체험 · 결과 미기록`,
         due: day,
         late: day < asOf,
         channel: 'tap',
@@ -284,12 +286,12 @@ function leadFamily(
       const since = diffDays(asOf, trialDay);
       next = {
         kind: 'trial_followup',
-        label: follow.carry ? '다시 연락' : '체험 후 연락',
+        label: follow.carry ? '재통화' : '체험 후 통화',
         reason: follow.carry
-          ? `지난 통화: ${follow.carry}`
+          ? `보류: ${follow.carry}`
           : follow.last?.outcome === 'no_answer'
-            ? `${md(dayOf(follow.last.at))}에 안 받음 · 다시 전화`
-            : `체험 ${since}일 지남 · 소감 듣기`,
+            ? `${md(dayOf(follow.last.at))} 부재중`
+            : `체험 후 ${since}일`,
         due: follow.due,
         late: diffDays(asOf, follow.due) >= 2,
         channel: 'call',
@@ -301,7 +303,7 @@ function leadFamily(
       next = {
         kind: 'enroll',
         label: '등록 확정',
-        reason: `신청서 도착 (${md(form.answeredAt)}) · 반을 정할 차례`,
+        reason: `${md(form.answeredAt)} 신청서 도착`,
         due: form.answeredAt,
         late: diffDays(asOf, form.answeredAt) >= 2,
         channel: 'tap',
@@ -313,8 +315,8 @@ function leadFamily(
         asOf < due
           ? {
               kind: 'wait',
-              label: '신청서 기다리는 중',
-              reason: `${md(form.sentAt)}에 보냄 · 답을 기다려요`,
+              label: '신청서 응답 대기',
+              reason: `${md(form.sentAt)} 발송`,
               due,
               late: false,
               channel: 'wait',
@@ -322,7 +324,7 @@ function leadFamily(
           : {
               kind: 'form_check',
               label: '신청서 확인 전화',
-              reason: `신청서 보낸 지 ${since}일 · 아직 답 없음`,
+              reason: `신청서 발송 후 ${since}일 · 미응답`,
               due,
               late: diffDays(asOf, due) >= 2,
               channel: 'call',
@@ -333,8 +335,8 @@ function leadFamily(
       const day = dayOf(follow.last!.at);
       next = {
         kind: 'send_form',
-        label: '등록 안내 보내기',
-        reason: '체험 후 통화 완료 · 신청서를 보낼 차례',
+        label: '등록 신청서 보내기',
+        reason: '등록 희망 · 신청서 미발송',
         due: day,
         late: diffDays(asOf, day) >= 2,
         channel: 'message',
@@ -347,7 +349,7 @@ function leadFamily(
     { key: 'first_call', phase: 'inquiry', label: '첫 연락', done: contacted },
     { key: 'book', phase: 'trial', label: '체험 예약', done: !!lead.trialDate, detail: lead.trialDate ? md(lead.trialDate) : undefined },
     { key: 'attend', phase: 'trial', label: '체험 참석', done: lead.stage === 'trial_done' },
-    { key: 'followup', phase: 'decision', label: '체험 후 연락', done: followDone },
+    { key: 'followup', phase: 'decision', label: '체험 후 통화', done: followDone },
     {
       key: 'form',
       phase: 'decision',
@@ -376,8 +378,8 @@ function leadFamily(
 const NEWCOMER_STEPS: Omit<JourneyStep, 'done'>[] = [
   { key: 'welcome', phase: 'firstMonth', label: '환영 안내' },
   { key: 'first_class', phase: 'firstMonth', label: '첫 수업' },
-  { key: 'week1', phase: 'firstMonth', label: '첫 주 안부' },
-  { key: 'month1', phase: 'firstMonth', label: '첫 달 점검' },
+  { key: 'week1', phase: 'firstMonth', label: '1주 차 통화' },
+  { key: 'month1', phase: 'firstMonth', label: '4주 차 통화' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -420,7 +422,7 @@ function newcomerFamily(
     next = {
       kind: 'welcome',
       label: '환영 안내 보내기',
-      reason: since === 0 ? '오늘 등록 · 첫 수업 안내 전' : `등록 ${since}일째 · 환영 안내 전`,
+      reason: since === 0 ? '오늘 등록' : `등록 후 ${since}일`,
       due: welcome.due,
       late: diffDays(asOf, enrolledAt) >= 1,
       channel: 'message',
@@ -428,16 +430,16 @@ function newcomerFamily(
   } else if (!week.done) {
     next = {
       kind: 'week1',
-      label: week.carry ? '다시 연락' : missedFirst ? '첫 수업 확인 전화' : '첫 주 안부 전화',
+      label: week.carry ? '재통화' : missedFirst ? '첫 수업 결석 확인' : '1주 차 통화',
       reason: week.carry
-        ? `지난 통화: ${week.carry}`
+        ? `보류: ${week.carry}`
         : week.last?.outcome === 'no_answer'
-          ? `${md(dayOf(week.last.at))}에 안 받음 · 다시 전화`
+          ? `${md(dayOf(week.last.at))} 부재중`
           : missedFirst
-            ? `첫 수업(${md(firstDay)})에 오지 않았어요`
+            ? `첫 수업(${md(firstDay)}) 결석`
             : asOf < week.due
-              ? `${md(week.due)} 예정 · 첫 수업 ${md(firstDay)}`
-              : `등록 ${since}일째 · 적응이 어떤지`,
+              ? `첫 수업 ${md(firstDay)}`
+              : `등록 후 ${since}일`,
       due: week.due,
       late: diffDays(asOf, week.due) >= 3,
       channel: asOf < week.due ? 'wait' : 'call',
@@ -448,12 +450,10 @@ function newcomerFamily(
   } else {
     next = {
       kind: 'month1',
-      label: month.carry ? '다시 연락' : '첫 달 점검 전화',
+      label: month.carry ? '재통화' : '4주 차 통화',
       reason: month.carry
-        ? `지난 통화: ${month.carry}`
-        : asOf < month.due
-          ? `${md(month.due)} 예정 · 지금까지 출석 ${presentInWindow}/${held}회`
-          : `첫 4주 출석 ${presentInWindow}/${held}회`,
+        ? `보류: ${month.carry}`
+        : `출석 ${presentInWindow}/${held}회`,
       due: month.due,
       late: diffDays(asOf, month.due) >= 3,
       channel: asOf < month.due ? 'wait' : 'call',
@@ -467,7 +467,7 @@ function newcomerFamily(
     { key: 'first_call', phase: 'inquiry', label: '첫 연락', done: true },
     { key: 'book', phase: 'trial', label: '체험 예약', done: true, detail: lead?.trialDate ? md(lead.trialDate) : undefined },
     { key: 'attend', phase: 'trial', label: '체험 참석', done: true },
-    { key: 'followup', phase: 'decision', label: '체험 후 연락', done: true },
+    { key: 'followup', phase: 'decision', label: '체험 후 통화', done: true },
     { key: 'form', phase: 'decision', label: '등록 신청서', done: true },
     { key: 'enroll', phase: 'decision', label: '등록 확정', done: true, detail: md(enrolledAt) },
     { key: 'welcome', phase: 'firstMonth', label: '환영 안내', done: welcome.done },
@@ -478,11 +478,11 @@ function newcomerFamily(
       done: attendedFirst,
       detail: attendedFirst ? md(present[0].date) : missedFirst ? '결석' : md(firstDay),
     },
-    { key: 'week1', phase: 'firstMonth', label: '첫 주 안부', done: week.done },
+    { key: 'week1', phase: 'firstMonth', label: '1주 차 통화', done: week.done },
     {
       key: 'month1',
       phase: 'firstMonth',
-      label: '첫 달 점검',
+      label: '4주 차 통화',
       done: false,
       detail: `출석 ${presentInWindow}/${held}회`,
     },
@@ -501,6 +501,7 @@ function newcomerFamily(
     steps,
     attendance: { present: presentInWindow, held },
     enrolledAt,
+    firstClass: firstDay,
   };
 }
 
@@ -614,23 +615,6 @@ export function phaseList(families: Family[], phase: Phase, asOf: ISODate = TODA
         Number(b.next?.late ?? 0) - Number(a.next?.late ?? 0) ||
         (a.next?.due ?? '9999').localeCompare(b.next?.due ?? '9999'),
     );
-}
-
-const CHANNEL_WORD: Record<NextAction['channel'], string> = {
-  call: '전화',
-  message: '안내 보내기',
-  tap: '기록·예약',
-  wait: '',
-};
-
-/** "전화 6 · 안내 보내기 1" — today's work by how it's done, not by step. */
-export function queueBreakdown(queue: Family[]): string {
-  const counts = new Map<string, number>();
-  for (const f of queue) {
-    const word = CHANNEL_WORD[f.next!.channel];
-    counts.set(word, (counts.get(word) ?? 0) + 1);
-  }
-  return [...counts.entries()].map(([w, n]) => `${w} ${n}`).join(' · ');
 }
 
 // ---------------------------------------------------------------------------

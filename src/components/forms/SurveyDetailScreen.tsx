@@ -80,7 +80,7 @@ export function SurveyDetailScreen({
   if (!survey) {
     return (
       <Page>
-        <Title back={{ label: backLabel, onBack }} eyebrow="Sent" title="안내를 찾을 수 없어요" />
+        <Title back={{ label: backLabel, onBack }} eyebrow="Sent" title="안내 없음" />
       </Page>
     );
   }
@@ -236,11 +236,11 @@ export function SurveyDetailScreen({
                   void remindSurvey(survey.id).then((result) =>
                     result
                       ? setNotice(describeEnqueue(result, '마감 전'))
-                      : flash(surveyMode === 'db' ? '보낼 곳이 없어요' : '예시 데이터라 실제로 보내지 않아요'),
+                      : flash(surveyMode === 'db' ? '보낼 대상 없음' : '예시 데이터: 실제 발송 없음'),
                   )
                 }
               >
-                {unreminded > 0 ? `${unreminded}명에게 한 번 더 알리기` : '다시 알림을 보냈어요'}
+                {unreminded > 0 ? `미응답 ${unreminded}명에게 재알림` : '재알림 발송됨'}
               </SecondaryButton>
             </div>
           )}
@@ -252,7 +252,7 @@ export function SurveyDetailScreen({
         <TextLink
           onClick={() => {
             void navigator.clipboard?.writeText(summaryText(survey, recipients, (r) => who(r).name));
-            flash('결과를 복사했어요');
+            flash('복사됨');
           }}
         >
           결과 복사
@@ -264,7 +264,7 @@ export function SurveyDetailScreen({
         )}
       </div>
 
-      <DemoNote show={surveyMode === 'local'}>예시 데이터로 보는 중 · 새로고침하면 초기화됩니다.</DemoNote>
+      <DemoNote show={surveyMode === 'local'}>예시 데이터 · 새로고침 시 초기화</DemoNote>
       {toast && <Toast>{toast}</Toast>}
     </Page>
   );

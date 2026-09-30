@@ -101,7 +101,7 @@ describe('문의', () => {
     const day = addDays(TODAY, -2);
     const f = one({ leads: [lead({ createdAt: at(day), stageChangedAt: at(day) })] });
     expect(f.next?.late).toBe(true);
-    expect(f.next?.reason).toContain('2일째');
+    expect(f.next?.reason).toContain('2일');
   });
 
   it('an unanswered call comes back tomorrow, not later today', () => {
@@ -111,7 +111,7 @@ describe('문의', () => {
 
     const tomorrow = one({ leads: [l], touches }, addDays(TODAY, 1));
     expect(isDue(tomorrow, addDays(TODAY, 1))).toBe(true);
-    expect(tomorrow.next?.reason).toContain('안 받음');
+    expect(tomorrow.next?.reason).toContain('부재중');
   });
 
   it('after the call, the next thing is a trial date', () => {
@@ -149,7 +149,7 @@ describe('등록', () => {
     const f = one({ leads: [done], touches });
     expect(f.next?.due).toBe(addDays(TODAY, 3));
     expect(f.next?.carry).toBe('비용 고민');
-    expect(f.next?.label).toBe('다시 연락');
+    expect(f.next?.label).toBe('재통화');
   });
 
   it('after a good call: send the form, wait for it, chase it, then enroll', () => {
@@ -198,7 +198,7 @@ describe('첫 달', () => {
     ] as AttendanceLog[];
     const f = one({ students: [student()], touches, attendanceLogs: logs }, addDays(firstDay, 1));
     expect(f.next).toMatchObject({ kind: 'week1', channel: 'call' });
-    expect(f.next?.reason).toContain('오지 않았어요');
+    expect(f.next?.reason).toContain('결석');
   });
 
   it('counts attendance against the classes held so far', () => {

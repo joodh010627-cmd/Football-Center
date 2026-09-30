@@ -31,19 +31,19 @@ export function SyncError() {
 
 /** One line on what became of queued 알림톡, in the owner's words. */
 export function describeEnqueue(result: EnqueueResult, what: string): string {
-  if (result.state === 'unavailable') return `${what} 알림톡은 보내지 못했어요 — ${result.reason}`;
-  if (result.queued === 0) return `${what} 알림톡은 이미 대기열에 있어요.`;
+  if (result.state === 'unavailable') return `${what} 알림톡 발송 실패 · ${result.reason}`;
+  if (result.queued === 0) return `${what} 알림톡 이미 대기 중`;
   const n = result.queued > 1 ? ` ${result.queued}건` : '';
   switch (result.dispatch) {
     case 'sent':
-      return `${what} 알림톡${n}을 보냈어요.`;
+      return `${what} 알림톡${n} 발송됨`;
     case 'dry_run':
-      return `${what} 알림톡${n}을 드라이런으로 처리했어요 — 발송 대행사 키를 넣으면 실제로 나갑니다.`;
+      return `${what} 알림톡${n} 드라이런 처리 (발송 대행사 연결 전)`;
     case 'partial':
-      return `${what} 알림톡 발송에 문제가 있어요 (${result.detail ?? ''}).`;
+      return `${what} 알림톡 일부 실패 (${result.detail ?? ''})`;
     case 'not_connected':
     default:
-      return `${what} 알림톡${n}을 발송 대기열에 넣었어요. 발송 서버가 연결되면 나갑니다.`;
+      return `${what} 알림톡${n} 대기열 등록 (발송 서버 연결 전)`;
   }
 }
 

@@ -46,15 +46,15 @@ export function PhaseScreen({
         back={{ label: backLabel, onBack }}
         eyebrow={EYEBROW[phase]}
         title={meta.label}
-        sub={`${meta.blurb} · ${list.length}가족`}
+        sub={`${meta.blurb} · ${list.length}명`}
       />
 
       {list.length === 0 && (
-        <p className="mt-10 text-center text-[15px] text-steel">지금 이 단계에 있는 가족이 없어요.</p>
+        <p className="mt-10 text-center text-[15px] text-steel">해당 없음</p>
       )}
 
       {due.length > 0 && (
-        <Section title="오늘 연락" aside={`${due.length}`}>
+        <Section title="오늘 할 일" aside={`${due.length}`}>
           <Rows>
             {due.map((f) => (
               <FamilyRow key={f.key} family={f} onOpen={() => onOpenFamily(f.key)} />
@@ -64,7 +64,7 @@ export function PhaseScreen({
       )}
 
       {rest.length > 0 && (
-        <Section title={due.length > 0 ? '이후' : '진행 중'} aside={`${rest.length}`}>
+        <Section title="예정" aside={`${rest.length}`}>
           <Rows>
             {rest.map((f) => (
               <FamilyRow key={f.key} family={f} onOpen={() => onOpenFamily(f.key)} />
@@ -82,7 +82,7 @@ export function PhaseScreen({
           {lost.length > 0 && (
             <div className="mt-6 text-center">
               <TextLink tone="gray" onClick={() => setShowLost((v) => !v)}>
-                {showLost ? '접기' : `함께하지 않기로 한 가족 ${lost.length}`}
+                {showLost ? '접기' : `미등록 ${lost.length}`}
               </TextLink>
             </div>
           )}
@@ -92,9 +92,9 @@ export function PhaseScreen({
                 <Row
                   key={l.id}
                   title={`${l.childName} · ${l.ageLabel}`}
-                  sub={l.lostReason || '이유 없음'}
+                  sub={l.lostReason || '사유 없음'}
                   trailing={
-                    <TextLink onClick={() => advanceLead(l.id, 'inquiry', '다시 연락하기로 함')}>
+                    <TextLink onClick={() => advanceLead(l.id, 'inquiry')}>
                       다시 열기
                     </TextLink>
                   }
@@ -114,7 +114,7 @@ export function PhaseScreen({
         </>
       )}
 
-      <DemoNote show={mode === 'local'}>예시 데이터로 보는 중 · 새로고침하면 초기화됩니다.</DemoNote>
+      <DemoNote show={mode === 'local'}>예시 데이터 · 새로고침 시 초기화</DemoNote>
     </Page>
   );
 }

@@ -61,12 +61,12 @@ export function SentScreen({
         back={{ label: backLabel, onBack }}
         eyebrow="Sent"
         title="보낸 안내"
-        sub="재원생 보호자에게 보낸 참가 신청·동의·의견 듣기."
+        sub="재원생 보호자에게 보낸 안내"
       />
 
       <Section title="진행 중" aside={live.length > 0 ? `${live.length}` : undefined}>
         {live.length === 0 ? (
-          <p className="py-4 text-[15px] text-steel">지금 받고 있는 안내가 없어요.</p>
+          <p className="py-4 text-[15px] text-steel">없음</p>
         ) : (
           <Rows>{live.map(row)}</Rows>
         )}
@@ -82,7 +82,7 @@ export function SentScreen({
       {showPast && <Rows>{past.map(row)}</Rows>}
 
       <DemoNote show={surveyMode === 'local'}>
-        예시 데이터로 보는 중 · 마이그레이션 0008을 적용하면 실제로 보내집니다.
+        예시 데이터 · 실제 발송 없음 (마이그레이션 0008 필요)
       </DemoNote>
     </Page>
   );

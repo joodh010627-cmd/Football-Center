@@ -38,7 +38,7 @@ export function InviteScreen({ backLabel, onBack }: { backLabel: string; onBack:
   const copy = (link: FormLink) => {
     void navigator.clipboard?.writeText(formUrl(link.slug));
     shareFormLink(link.id);
-    flash('링크를 복사했어요');
+    flash('복사됨');
   };
 
   const active = formLinks.filter((l) => l.active);
@@ -50,12 +50,12 @@ export function InviteScreen({ backLabel, onBack }: { backLabel: string; onBack:
         back={{ label: backLabel, onBack }}
         eyebrow="Invite"
         title="체험 초대"
-        sub="링크를 SNS나 단톡방에 올리면, 신청이 문의로 바로 들어와요."
+        sub="신청 링크를 공유하면 신청 내용이 문의로 들어옵니다."
       />
 
-      <Section title="받는 중인 링크" aside={active.length > 0 ? `${active.length}` : undefined}>
+      <Section title="사용 중인 링크" aside={active.length > 0 ? `${active.length}` : undefined}>
         {active.length === 0 ? (
-          <p className="py-4 text-[15px] text-steel">아직 링크가 없어요.</p>
+          <p className="py-4 text-[15px] text-steel">없음</p>
         ) : (
           <Rows>
             {active.map((l) => (
@@ -65,7 +65,7 @@ export function InviteScreen({ backLabel, onBack }: { backLabel: string; onBack:
                 sub={`신청 ${l.submissions}건`}
                 tag={
                   <button type="button" onClick={() => toggleFormLink(l.id)}>
-                    <Tag tone="gray">받기 멈추기</Tag>
+                    <Tag tone="gray">중지</Tag>
                   </button>
                 }
                 trailing={<TextLink onClick={() => copy(l)}>복사</TextLink>}
@@ -81,14 +81,14 @@ export function InviteScreen({ backLabel, onBack }: { backLabel: string; onBack:
       </div>
 
       {stopped.length > 0 && (
-        <Section title="멈춘 링크">
+        <Section title="중지된 링크">
           <Rows>
             {stopped.map((l) => (
               <Row
                 key={l.id}
                 title={l.title}
                 sub={`신청 ${l.submissions}건`}
-                trailing={<TextLink onClick={() => toggleFormLink(l.id)}>다시 받기</TextLink>}
+                trailing={<TextLink onClick={() => toggleFormLink(l.id)}>재개</TextLink>}
               />
             ))}
           </Rows>
@@ -96,7 +96,7 @@ export function InviteScreen({ backLabel, onBack }: { backLabel: string; onBack:
       )}
 
       <DemoNote show={mode === 'local'}>
-        예시 데이터라 링크를 열어도 접수되지 않아요. 마이그레이션 0006을 적용하면 동작합니다.
+        예시 데이터 · 링크 접수 안 됨 (마이그레이션 0006 필요)
       </DemoNote>
 
       <NewFormSheet
@@ -113,7 +113,7 @@ export function InviteScreen({ backLabel, onBack }: { backLabel: string; onBack:
         onSubmit={(fields) => {
           addLead(fields);
           setComposing(false);
-          flash('문의로 등록했어요');
+          flash('문의 등록됨');
         }}
       />
       {toast && <Toast>{toast}</Toast>}

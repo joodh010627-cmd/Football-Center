@@ -54,7 +54,7 @@ export function TrialSheet({
           onChange={(e) => setDate(e.target.value)}
         />
       </Field>
-      <Field label="참여할 반" hint="나중에 정해도 돼요">
+      <Field label="반" hint="선택">
         <Pills
           options={state.classes.map((c) => [c.id, c.title] as const)}
           pressed={classId}
@@ -62,7 +62,7 @@ export function TrialSheet({
         />
       </Field>
       <p className="mt-5 text-[13.5px] leading-[1.6] text-steel">
-        예약하면 보호자에게 체험 안내 알림톡이 가고, 일정 탭의 그날 수업 옆에 표시됩니다.
+        예약 시 보호자에게 체험 안내 알림톡 발송 · 일정 탭에 표시
       </p>
     </Modal>
   );
@@ -122,8 +122,7 @@ export function EnrollSheet({
         />
       </Field>
       <p className="mt-5 text-[13.5px] leading-[1.6] text-steel">
-        확정하면 반 명단에 바로 들어가고, 첫 달 온보딩이 시작됩니다. 수업료는 클럽 → 세부 관리에서
-        정합니다.
+        확정 시 반 명단에 추가됩니다. 수업료는 클럽 → 세부 관리에서 설정합니다.
       </p>
     </Modal>
   );
@@ -132,7 +131,7 @@ export function EnrollSheet({
 // ---------------------------------------------------------------------------
 
 /** Why families don't join — picked, so the reasons can be counted later. */
-const LOST_REASONS = ['거리·시간이 맞지 않음', '비용', '아이가 원하지 않음', '다른 곳으로 결정', '연락이 닿지 않음'];
+const LOST_REASONS = ['거리·시간', '비용', '아이가 원하지 않음', '다른 곳 등록', '연락 두절'];
 
 export function LostSheet({
   open,
@@ -152,27 +151,27 @@ export function LostSheet({
       open={open}
       onClose={onClose}
       variant="sheet"
-      title="이번엔 함께하지 않아요"
+      title="미등록 처리"
       footer={
         <PrimaryButton disabled={!reason} onClick={() => onSubmit(reason)}>
-          정리하기
+          저장
         </PrimaryButton>
       }
     >
       <p className="text-[14px] leading-[1.6] text-steel">
-        기록은 지워지지 않아요. 이유가 쌓여야 다음 가족을 같은 이유로 놓치지 않습니다.
+        기록은 남습니다. 사유는 미등록 통계에 쓰입니다.
       </p>
-      <Field label="이유">
+      <Field label="사유">
         <Pills
           options={LOST_REASONS.map((r) => [r, r] as const)}
           pressed={picked}
           onPick={(r) => setPicked(r === picked ? '' : r)}
         />
       </Field>
-      <Field label="덧붙일 말" hint="선택">
+      <Field label="메모" hint="선택">
         <textarea
           className={cn(inputClass, 'min-h-[76px] resize-none')}
-          placeholder="예: 내년 봄에 다시 연락 주기로 함"
+          placeholder="예: 내년 봄 재연락"
           value={note}
           onChange={(e) => setNote(e.target.value)}
         />
@@ -236,7 +235,7 @@ export function LeadComposer({
         </PrimaryButton>
       }
     >
-      <Field label="연락처" hint="이것만 있으면 저장돼요">
+      <Field label="연락처" hint="필수">
         <input
           className={inputClass}
           type="tel"
@@ -256,7 +255,7 @@ export function LeadComposer({
         value={parent}
         onChange={(e) => setParent(e.target.value)}
       />
-      <Field label="어떻게 알고 왔나요">
+      <Field label="유입 경로">
         <Pills
           options={SOURCES.map((s) => [s, SOURCE_LABEL[s]] as const)}
           pressed={source}
@@ -266,7 +265,7 @@ export function LeadComposer({
       <Field label="메모" hint="선택">
         <textarea
           className={cn(inputClass, 'min-h-[76px] resize-none')}
-          placeholder="통화에서 들은 내용을 그대로"
+          placeholder="통화 내용"
           value={memo}
           onChange={(e) => setMemo(e.target.value)}
         />

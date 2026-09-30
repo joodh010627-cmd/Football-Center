@@ -273,8 +273,8 @@ export function FootballApp() {
       const late = queue.filter((f) => f.next!.late).length;
       out.push({
         id: 'onboarding',
-        label: `연락할 새 가족 ${queue.length}`,
-        detail: `${queue[0].name} · ${queue[0].next!.label}${late > 0 ? ` · 늦은 연락 ${late}` : ''}`,
+        label: `신규 가족 할 일 ${queue.length}`,
+        detail: `${queue[0].name} · ${queue[0].next!.label}${late > 0 ? ` · 기한 지남 ${late}` : ''}`,
         tone: late > 0 ? 'urgent' : 'normal',
         onOpen: () => resetTo('forms'),
       });

@@ -120,7 +120,7 @@ export const SITUATIONS: Record<SurveyKind, Situation> = {
   rsvp: {
     kind: 'rsvp',
     label: '참가 조사',
-    when: '대회·캠프·친선경기, 인원을 세야 할 때',
+    when: '대회·캠프·친선경기 인원 확인',
     title: '대회 참가 조사',
     questions: ['참가하나요? : 참가 / 불참', '코치에게 전할 말'].join('\n'),
     dueDays: 3,
@@ -128,7 +128,7 @@ export const SITUATIONS: Record<SurveyKind, Situation> = {
   schedule: {
     kind: 'schedule',
     label: '일정 조사',
-    when: '보강일이나 새 반 시간을 정할 때',
+    when: '보강일·새 반 시간 정하기',
     title: '보강 일정 조사',
     questions: [
       '가능한 요일 (복수) : 월 / 화 / 수 / 목 / 금 / 토 / 일',
@@ -139,7 +139,7 @@ export const SITUATIONS: Record<SurveyKind, Situation> = {
   consent: {
     kind: 'consent',
     label: '동의서',
-    when: '촬영·원정처럼 기록이 남아야 할 때',
+    when: '촬영·원정 동의',
     title: '수업 사진·영상 촬영 동의',
     questions: '수업 사진·영상을 센터 소식에 싣는 것에 동의하시나요? : 동의 / 동의하지 않음',
     dueDays: 7,
@@ -147,7 +147,7 @@ export const SITUATIONS: Record<SurveyKind, Situation> = {
   renewal: {
     kind: 'renewal',
     label: '재등록 의향',
-    when: '다음 달 인원을 미리 알고, 고민 중인 가족을 먼저 찾을 때',
+    when: '다음 달 등록 여부 확인',
     title: '다음 달 수업 안내',
     questions: [
       '다음 달에도 함께하나요? : 계속할게요 / 고민 중이에요! / 쉬려고 해요!',
@@ -158,7 +158,7 @@ export const SITUATIONS: Record<SurveyKind, Situation> = {
   satisfaction: {
     kind: 'satisfaction',
     label: '만족도',
-    when: '학기 끝에 한 번, 수업을 돌아볼 때',
+    when: '학기 말 수업 평가',
     title: '이번 학기 수업 만족도',
     questions: [
       '이번 학기 수업은 어떠셨나요? : 아주 좋아요 / 좋아요 / 보통이에요 / 아쉬워요!',
@@ -169,7 +169,7 @@ export const SITUATIONS: Record<SurveyKind, Situation> = {
   order: {
     kind: 'order',
     label: '물품 신청',
-    when: '유니폼·용품 사이즈를 모을 때',
+    when: '유니폼·용품 사이즈 수합',
     title: '유니폼 사이즈 조사',
     questions: [
       '유니폼 사이즈 : 110 / 120 / 130 / 140 / 150 / 160',
@@ -180,7 +180,7 @@ export const SITUATIONS: Record<SurveyKind, Situation> = {
   enrollment: {
     kind: 'enrollment',
     label: '등록 신청서',
-    when: '체험을 마친 가정에게, 등록 전에 한 번',
+    when: '체험 후 등록 전',
     title: '등록 신청서',
     questions: [
       '아이 생년월일',
@@ -194,7 +194,7 @@ export const SITUATIONS: Record<SurveyKind, Situation> = {
   custom: {
     kind: 'custom',
     label: '직접 만들기',
-    when: '위에 없는 것을 물을 때',
+    when: '질문 직접 작성',
     title: '',
     questions: '',
     dueDays: 3,
