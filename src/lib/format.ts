@@ -23,6 +23,12 @@ export function formatDateKo(iso: ISODate): string {
   return `${d.getMonth() + 1}월 ${d.getDate()}일 (${WEEKDAY_KO[d.getDay()]})`;
 }
 
+/** "9월 28일 월요일" — a day said in full, for the one place it is the headline. */
+export function formatDateLong(iso: ISODate): string {
+  const d = new Date(`${iso}T00:00:00`);
+  return `${d.getMonth() + 1}월 ${d.getDate()}일 ${WEEKDAY_KO[d.getDay()]}요일`;
+}
+
 /**
  * `null` renders as a dash. A freshly imported roster has no attendance dates
  * yet, so this is a routine state rather than an edge case — and a blank is far

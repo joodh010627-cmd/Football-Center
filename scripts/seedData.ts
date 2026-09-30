@@ -70,9 +70,13 @@ interface Curriculum {
   cycleWeeks: number;
 }
 
+type Ability = 'technical' | 'tactical' | 'physical' | 'mental' | 'attitude';
+
 interface SessionTemplate {
   id: ID;
   curriculumId: ID;
+  /** Which of the five abilities the session is filed under (0007). */
+  ability: Ability;
   title: string;
   week: number;
   goal: string;
@@ -626,7 +630,7 @@ export const trainingBlocks: TrainingBlock[] = [
  * argument for `blockIds` being an ordered list rather than three columns — they
  * are ordinary sessions that the old schema could not hold.
  */
-const templateSeeds: Array<Omit<SessionTemplate, 'status' | 'proposedBy' | 'reviewNote'>> = [
+const templateSeeds: Array<Omit<SessionTemplate, 'ability' | 'status' | 'proposedBy' | 'reviewNote'>> = [
   // --- 킨더 U7 -----------------------------------------------------------
   { id: 't-kinder-1', curriculumId: 'cur-kinder-u7', week: 1, title: '공과 친해지기', goal: '공을 발에 붙이고 있어도 재미있다는 것을 알게 한다', blockIds: ['block-w2', 'block-s9', 'block-g4'], usageCount: 34 },
   { id: 't-kinder-2', curriculumId: 'cur-kinder-u7', week: 2, title: '첫 터치와 멈추기', goal: '굴러오는 공을 한 번에 멈춰 세운다', blockIds: ['block-w1', 'block-s9', 'block-g1'], usageCount: 28 },
@@ -677,9 +681,28 @@ const templateSeeds: Array<Omit<SessionTemplate, 'status' | 'proposedBy' | 'revi
   { id: 't-club11-3', curriculumId: 'cur-club-u11', week: 3, title: '세트피스 리허설', goal: '코너킥 한 가지 패턴을 경기에서 써 본다', blockIds: ['block-w3', 'block-s2', 'block-g1'], usageCount: 13 },
 ];
 
+/**
+ * Each session's ability, chosen by what it actually trains rather than by the
+ * track it used to sit in — a kinder session about scoring lots of goals is
+ * about confidence, not technique.
+ */
+// prettier-ignore
+const TEMPLATE_ABILITY: Record<string, Ability> = {
+  't-kinder-1': 'technical', 't-kinder-2': 'technical', 't-kinder-3': 'technical', 't-kinder-4': 'mental', 't-kinder-5': 'attitude',
+  't-foundation-1': 'technical', 't-foundation-2': 'technical', 't-foundation-3': 'technical', 't-foundation-4': 'mental', 't-foundation-5': 'mental',
+  't-skill-1': 'technical', 't-skill-2': 'tactical', 't-skill-3': 'technical', 't-skill-4': 'tactical', 't-skill-5': 'tactical',
+  't-tactical-1': 'tactical', 't-tactical-2': 'tactical', 't-tactical-3': 'tactical', 't-tactical-4': 'tactical', 't-tactical-5': 'physical',
+  't-elite-1': 'physical', 't-elite-2': 'technical', 't-elite-3': 'tactical', 't-elite-4': 'tactical',
+  't-physical-1': 'technical', 't-physical-2': 'physical', 't-physical-3': 'physical',
+  't-club9-1': 'attitude', 't-club9-2': 'tactical', 't-club9-3': 'attitude',
+  't-club11-1': 'attitude', 't-club11-2': 'tactical', 't-club11-3': 'tactical',
+  't-club9-proposal': 'mental', 't-skill-proposal': 'tactical',
+};
+
 export const sessionTemplates: SessionTemplate[] = [
   ...templateSeeds.map((t) => ({
     ...t,
+    ability: TEMPLATE_ABILITY[t.id],
     status: 'published' as const,
     proposedBy: null,
     reviewNote: '',
@@ -690,6 +713,7 @@ export const sessionTemplates: SessionTemplate[] = [
   // the week a class is half-empty.
   {
     id: 't-club9-proposal',
+    ability: TEMPLATE_ABILITY['t-club9-proposal'],
     curriculumId: 'cur-club-u9',
     week: 4,
     title: '우천 시 실내 세션',
@@ -702,6 +726,7 @@ export const sessionTemplates: SessionTemplate[] = [
   },
   {
     id: 't-skill-proposal',
+    ability: TEMPLATE_ABILITY['t-skill-proposal'],
     curriculumId: 'cur-skill-u11',
     week: 6,
     title: '소인원 대응 세션',

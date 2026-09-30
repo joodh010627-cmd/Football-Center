@@ -42,7 +42,10 @@ const db = createClient(url, serviceKey, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
-const ACADEMY_NAME = 'FC GROWTH 데모 축구교실';
+const ACADEMY_NAME = 'FC GROWTH';
+
+/** What the demo academy used to be called — still cleaned up on reset. */
+const LEGACY_NAME = 'FC GROWTH 데모 축구교실';
 
 /**
  * 시드 계정 비밀번호.
@@ -85,9 +88,24 @@ async function main() {
   console.log(`\n  → ${url}`);
 
   // --- Reset ---------------------------------------------------------------
-  const { data: existing } = await db.from('academies').select('id').eq('name', ACADEMY_NAME);
-  for (const row of existing ?? []) {
-    await db.from('academies').delete().eq('id', row.id);
+  // Found by the seed owner's account, never by name: the demo academy is now
+  // called plain "FC GROWTH", and a reset that deleted by name would take the
+  // real centre with it the day one exists under that name.
+  const stale = new Set<string>();
+  const { data: users } = await db.auth.admin.listUsers();
+  const seedOwner = users?.users.find((u) => u.email === ACCOUNTS[0].email);
+  if (seedOwner) {
+    const { data } = await db
+      .from('academy_members')
+      .select('academy_id')
+      .eq('user_id', seedOwner.id)
+      .eq('role', 'owner');
+    for (const row of data ?? []) stale.add(row.academy_id);
+  }
+  const { data: legacy } = await db.from('academies').select('id').eq('name', LEGACY_NAME);
+  for (const row of legacy ?? []) stale.add(row.id);
+  for (const id of stale) {
+    await db.from('academies').delete().eq('id', id);
     console.log('  · 기존 데모 아카데미 삭제');
   }
 
@@ -224,6 +242,9 @@ async function main() {
         withAcademy({
           id: uuidFor(t.id),
           curriculum_id: uuidFor(t.curriculumId),
+          // 0007 columns — apply that migration before seeding.
+          ability: t.ability,
+          age_groups: [curricula.find((c) => c.id === t.curriculumId)?.ageGroup].filter(Boolean),
           title: t.title,
           week: t.week,
           goal: t.goal,

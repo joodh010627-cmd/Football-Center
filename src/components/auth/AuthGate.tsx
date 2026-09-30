@@ -35,7 +35,7 @@ function SessionLoading() {
     <AuthLayout>
       <div className="flex items-center justify-center gap-2.5 text-[13px] text-white/50">
         <Loader2 size={16} className="animate-spin text-white" />
-        세션을 확인하는 중입니다…
+        로그인 정보를 확인하는 중입니다…
       </div>
     </AuthLayout>
   );

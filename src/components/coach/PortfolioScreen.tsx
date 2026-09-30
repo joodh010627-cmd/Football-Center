@@ -14,7 +14,7 @@ import { StatTile } from '@/components/ui/StatTile';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { BackBar } from '@/components/shell/Shell';
-import { CATEGORY_META } from './TrainingBlockCard';
+import { CATEGORY_META } from '@/components/session/meta';
 
 export function PortfolioScreen({ onBack }: { onBack?: () => void }) {
   const { state, slice, getCoach } = useApp();
@@ -62,11 +62,11 @@ export function PortfolioScreen({ onBack }: { onBack?: () => void }) {
 
       <div className="space-y-7 px-5 py-7 sm:px-8 lg:px-12 lg:py-10">
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <StatTile label="설계한 세션" value={portfolio.sessionCount} unit="회" icon={Layers} tint="lavender" />
+          <StatTile label="진행한 수업" value={portfolio.sessionCount} unit="회" icon={Layers} tint="lavender" />
           <StatTile label="누적 기록" value={totalLogs} unit="건" icon={BarChart3} tint="mint" />
           <StatTile label="담당 원생" value={studentCount} unit="명" icon={Users} tint="sky" />
           <StatTile
-            label="표준 세션 준수율"
+            label="라이브러리 활용률"
             value={formatPercent(portfolio.templateAdherenceRate)}
             icon={Award}
             tint={portfolio.templateAdherenceRate >= 0.7 ? 'canvas' : 'peach'}
@@ -78,7 +78,7 @@ export function PortfolioScreen({ onBack }: { onBack?: () => void }) {
             <div className="flex items-center justify-between gap-2">
               <h2 className="flex items-center gap-1.5 text-[15px] font-semibold text-ink">
                 <Award size={15} className="text-primary" />
-                표준 세션 준수율
+                라이브러리 활용률
               </h2>
               <span className="text-[17px] font-semibold tracking-[-0.3px] text-ink">
                 {formatPercent(portfolio.templateAdherenceRate)}
@@ -93,8 +93,7 @@ export function PortfolioScreen({ onBack }: { onBack?: () => void }) {
               }
             />
             <p className="mt-2 text-[12px] leading-[1.5] text-slate">
-              본원 목표는 70%입니다. 담당 반의 커리큘럼에 등재된 표준 세션으로 설계한 비율이며,
-              블록을 하나라도 바꾸면 그 수업은 직접 구성으로 집계됩니다.
+              라이브러리 목표로 준비한 수업의 비율입니다. 목표는 70%입니다.
             </p>
             <p className="mt-3 flex items-baseline justify-between gap-2 border-t border-hairline-soft pt-3 text-[12px]">
               <span className="text-steel">표준 블록 사용률</span>
@@ -104,7 +103,7 @@ export function PortfolioScreen({ onBack }: { onBack?: () => void }) {
             </p>
 
             <h3 className="mt-5 mb-2.5 eyebrow-ink">
-              카테고리 구성
+              수업 흐름 구성
             </h3>
             <div className="space-y-3">
               {(['warmup', 'skill', 'game'] as const).map((category) => {
@@ -154,7 +153,7 @@ export function PortfolioScreen({ onBack }: { onBack?: () => void }) {
             ) : (
               <EmptyState
                 icon={Dumbbell}
-                title="아직 설계한 세션이 없습니다"
+                title="아직 준비한 수업이 없습니다"
                 description="훈련 블록으로 수업을 설계하면 이곳에 자동으로 쌓입니다."
               />
             )}

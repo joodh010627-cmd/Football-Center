@@ -203,7 +203,7 @@ export function FormsScreen({
       <DemoNote show={demo}>
         예시 데이터로 보는 중 · 새로고침하면 초기화됩니다.
         <br />
-        Supabase에 마이그레이션 0006~0008을 적용하면 실제로 동작합니다.
+        Supabase에 마이그레이션 0006~0009을 적용하면 실제로 동작합니다.
       </DemoNote>
 
       <NewFormSheet

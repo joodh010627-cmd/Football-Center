@@ -59,7 +59,7 @@ export const fromMinutes = (total: number): string => {
 export const minutesNow = (now: Date = new Date()): number =>
   now.getHours() * 60 + now.getMinutes();
 
-function stateOf(
+export function stateOf(
   cls: Class,
   plan: SessionPlan | null,
   logs: AttendanceLog[],

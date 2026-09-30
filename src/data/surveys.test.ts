@@ -190,9 +190,9 @@ describe('tokens', () => {
 
 // The migration spells the same lists in SQL. If they drift, the app offers a
 // kind the table refuses, or queues a template the function rejects.
-describe('0007 agrees with the app', () => {
+describe('0008 agrees with the app', () => {
   const sql = readFileSync(
-    resolve(__dirname, '../../supabase/migrations/0007_surveys.sql'),
+    resolve(__dirname, '../../supabase/migrations/0008_surveys.sql'),
     'utf8',
   );
 
@@ -206,7 +206,7 @@ describe('0007 agrees with the app', () => {
   // The latest migration that redefines enqueue_alimtalk is the one in force.
   it('enqueue_alimtalk accepts every template the app renders', () => {
     const latest = readFileSync(
-      resolve(__dirname, '../../supabase/migrations/0008_onboarding.sql'),
+      resolve(__dirname, '../../supabase/migrations/0009_onboarding.sql'),
       'utf8',
     );
     const m = latest.match(/not in \(('attendance_report'[^)]*)\)/);
@@ -215,15 +215,15 @@ describe('0007 agrees with the app', () => {
     expect(codes).toEqual(Object.keys(TEMPLATES).sort());
   });
 
-  // Migrations are re-runnable. If 0007 listed fewer templates than 0008,
-  // re-running 0007 later would quietly stop welcome messages from queueing.
-  it('0007 and 0008 allow the same templates, so re-running either is safe', () => {
+  // Migrations are re-runnable. If 0008 listed fewer templates than 0009,
+  // re-running 0008 later would quietly stop welcome messages from queueing.
+  it('0008 and 0009 allow the same templates, so re-running either is safe', () => {
     const list = (file: string) => {
       const text = readFileSync(resolve(__dirname, `../../supabase/migrations/${file}`), 'utf8');
       return [...text.match(/not in \(('attendance_report'[^)]*)\)/)![1].matchAll(/'([a-z_]+)'/g)]
         .map((x) => x[1])
         .sort();
     };
-    expect(list('0007_surveys.sql')).toEqual(list('0008_onboarding.sql'));
+    expect(list('0008_surveys.sql')).toEqual(list('0009_onboarding.sql'));
   });
 });

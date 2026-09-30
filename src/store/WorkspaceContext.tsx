@@ -83,6 +83,7 @@ import {
 } from '@/data/surveys';
 import { formatDateKo } from '@/lib/format';
 import { friendlyError, supabase } from '@/lib/supabase';
+import { PREVIEW } from '@/dev/preview';
 import { enqueue, isMissingSchema, type EnqueueResult } from '@/lib/alimtalk/outbox';
 import { render } from '@/lib/alimtalk/templates';
 import { useApp } from '@/store/AppContext';
@@ -133,14 +134,14 @@ interface WorkspaceState {
   recorded: ActivityEvent[];
   seeded: boolean;
   /**
-   * Surveys have their own mode: an academy can have run 0006 and not 0007,
+   * Surveys have their own mode: an academy can have run 0006 and not 0008,
    * and the 문의 pipeline shouldn't drop to demo data because of it.
    */
   surveyMode: WorkspaceMode;
   surveys: Survey[];
   recipients: SurveyRecipient[];
   surveysSeeded: boolean;
-  /** The contact ledger behind the onboarding journey (0008). Own mode, same reason. */
+  /** The contact ledger behind the onboarding journey (0009). Own mode, same reason. */
   touchMode: WorkspaceMode;
   touches: Touch[];
   touchesSeeded: boolean;
@@ -467,7 +468,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     })();
   }, [academyId]);
 
-  // Separate from the leads fetch so a project with 0006 but not 0007 keeps its
+  // Separate from the leads fetch so a project with 0006 but not 0008 keeps its
   // real pipeline and only the surveys fall back.
   const reloadSurveys = useCallback(() => {
     if (!academyId) return;
@@ -496,6 +497,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const reload = useCallback(() => {
     if (!academyId) return;
+    if (PREVIEW) {
+      // Preview has no database: every workspace table runs on its demo seed.
+      dispatch({ type: 'local' });
+      dispatch({ type: 'surveys/local' });
+      dispatch({ type: 'touches/local' });
+      return;
+    }
     reloadSurveys();
     reloadTouches();
     void (async () => {

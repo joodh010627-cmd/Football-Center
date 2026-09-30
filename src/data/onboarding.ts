@@ -638,7 +638,7 @@ export function queueBreakdown(queue: Family[]): string {
 // ---------------------------------------------------------------------------
 
 /**
- * A first month in motion, for an academy without the 0008 table: one family
+ * A first month in motion, for an academy without the 0009 table: one family
  * enrolled today (welcome not sent), one at day eight (week-one call due), one
  * at day three (nothing due yet), one at day twenty-nine (first-month review
  * due). Plus an enquiry whose first call went unanswered yesterday. Those are

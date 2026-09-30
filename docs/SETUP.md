@@ -79,10 +79,11 @@ Supabase 대시보드 → **SQL Editor** 에서 아래 순서대로 붙여넣고
 | 4 | `supabase/migrations/0004_payments.sql` | 수납(대표 전용) + 미납 뷰 |
 | 5 | `supabase/migrations/0005_curriculum.sql` | 커리큘럼·표준 세션 + 세션 설계 자유 구성 |
 | 6 | `supabase/migrations/0006_leads_forms_alimtalk.sql` | 문의·공개 폼 링크 + 알림톡 발송 대기열 |
-| 7 | `supabase/migrations/0007_surveys.sql` | 재원생 보호자 설문 (가정별 개인 링크) |
-| 8 | `supabase/migrations/0008_onboarding.sql` | 온보딩 연락 기록 + 등록 확정(`enroll_lead`) + 환영 안내 |
+| 7 | `supabase/migrations/0007_sessions_by_ability.sql` | 세션을 능력별로 묶기 (`session_key`) |
+| 8 | `supabase/migrations/0008_surveys.sql` | 재원생 보호자 설문 (가정별 개인 링크) |
+| 9 | `supabase/migrations/0009_onboarding.sql` | 온보딩 연락 기록 + 등록 확정(`enroll_lead`) + 환영 안내 |
 
-> **0006까지 적용한 프로젝트라면 0007, 0008을 순서대로 붙여넣고 실행하세요.** 0008은 0007의
+> **0006까지 적용한 프로젝트라면 0007, 0008, 0009를 순서대로 붙여넣고 실행하세요.** 0009는 0008의
 > `can_reach_recipient()`를 씁니다. 몇 번 실행해도
 > 안전합니다. 적용 전에는 폼 탭의 설문이 예시 데이터로 돌고("예시 데이터로 보는 중"),
 > 문의 파이프라인은 0006 그대로 실제 DB를 씁니다 — 두 모드는 따로 판단합니다.

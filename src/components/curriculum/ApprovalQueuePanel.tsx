@@ -15,7 +15,7 @@ import { buildProposalQueue } from '@/data/selectors';
 import { cn } from '@/lib/cn';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { CATEGORY_META } from '@/components/coach/TrainingBlockCard';
+import { ABILITY_META, CATEGORY_META } from '@/components/session/meta';
 
 export function ApprovalQueuePanel() {
   const { slice } = useApp();
@@ -34,7 +34,7 @@ export function ApprovalQueuePanel() {
           )}
         </h2>
         <p className="mt-1 text-[13px] leading-[1.5] text-slate">
-          승인하면 그 즉시 전 코치의 설계 화면에 등재됩니다. 반려하면 제안자에게만 남습니다.
+          승인하면 수업 준비에 바로 나옵니다.
         </p>
       </header>
 
@@ -42,7 +42,7 @@ export function ApprovalQueuePanel() {
         <EmptyState
           icon={Inbox}
           title="대기 중인 제안이 없습니다"
-          description="코치가 새 세션이나 블록을 제안하면 여기에 쌓입니다."
+          description="코치가 새 수업이나 훈련 블록을 제안하면 여기에 쌓입니다."
         />
       ) : (
         <ul className="space-y-2.5">
@@ -56,7 +56,7 @@ export function ApprovalQueuePanel() {
 }
 
 function ProposalRow({ proposal }: { proposal: Proposal }) {
-  const { dispatch, getCoach, getCurriculum, blockMap } = useApp();
+  const { dispatch, getCoach, blockMap } = useApp();
   const [note, setNote] = useState('');
   const [rejecting, setRejecting] = useState(false);
 
@@ -95,14 +95,14 @@ function ProposalRow({ proposal }: { proposal: Proposal }) {
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-1.5">
             <Badge tone={proposal.kind === 'template' ? 'purple' : 'orange'}>
-              {proposal.kind === 'template' ? '표준 세션' : '훈련 블록'}
+              {proposal.kind === 'template' ? '수업' : '훈련 블록'}
             </Badge>
             <h3 className="text-[15px] font-semibold text-ink">{proposal.title}</h3>
           </div>
           <p className="mt-1 text-[12.5px] text-steel">
             {coachName ? `${coachName} 코치 제안` : '제안자 미상'}
             {proposal.template && (
-              <> · {getCurriculum(proposal.template.curriculumId)?.title ?? '삭제된 커리큘럼'}</>
+              <> · {ABILITY_META[proposal.template.ability].label}</>
             )}
           </p>
         </div>

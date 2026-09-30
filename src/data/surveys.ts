@@ -471,7 +471,7 @@ export const dueFromDays = (days: number | null, asOf: ISODate = TODAY): ISODate
 // ---------------------------------------------------------------------------
 
 /**
- * Two surveys mid-flight, for an academy without the 0007 tables: a 재등록
+ * Two surveys mid-flight, for an academy without the 0008 tables: a 재등록
  * 의향 that has already turned up families to call, and a 참가 조사 closing
  * the day after tomorrow with half the class still silent. Those are the two
  * states the screen exists to surface; a seed where everyone has answered

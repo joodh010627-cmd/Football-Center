@@ -82,7 +82,7 @@ export function SentScreen({
       {showPast && <Rows>{past.map(row)}</Rows>}
 
       <DemoNote show={surveyMode === 'local'}>
-        예시 데이터로 보는 중 · 마이그레이션 0007을 적용하면 실제로 보내집니다.
+        예시 데이터로 보는 중 · 마이그레이션 0008을 적용하면 실제로 보내집니다.
       </DemoNote>
     </Page>
   );

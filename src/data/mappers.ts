@@ -7,7 +7,9 @@
  * please JavaScript), it all happens here.
  *
  * Keep this file boring. If a mapper starts making decisions, that decision
- * belongs in a selector.
+ * belongs in a selector. The one exception is `ability` on rows written before
+ * 0007 added the column: it is inferred from the row's own words, because an
+ * unfiled session is one no coach can find.
  */
 
 import type {
@@ -20,8 +22,6 @@ import type {
   ClassFinance,
   Coach,
   CsAction,
-  Curriculum,
-  CurriculumTrack,
   ID,
   Payment,
   SessionItem,
@@ -33,6 +33,7 @@ import type {
   TrainingCategory,
   Weekday,
 } from '@/types';
+import { axisFor, axisForBlock } from '@/lib/axes';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Row = Record<string, any>;
@@ -88,10 +89,19 @@ export const toStudent = (r: Row): Student => ({
 export const toTrainingBlock = (r: Row): TrainingBlock => ({
   id: r.id,
   academyId: r.academy_id,
+  source: 'center',
   title: r.title,
   category: r.category as TrainingCategory,
+  ability:
+    r.ability ??
+    axisForBlock({
+      title: r.title,
+      description: r.description ?? '',
+      category: r.category,
+    }),
   durationMin: r.duration_min,
   description: r.description ?? '',
+  coachingPoints: r.coaching_points ?? [],
   ageGroups: (r.age_groups ?? []) as AgeGroup[],
   equipment: r.equipment ?? [],
   usageCount: r.usage_count ?? 0,
@@ -105,8 +115,10 @@ export const fromTrainingBlock = (b: TrainingBlock): Row => ({
   academy_id: b.academyId,
   title: b.title,
   category: b.category,
+  ability: b.ability,
   duration_min: b.durationMin,
   description: b.description,
+  coaching_points: b.coachingPoints,
   age_groups: b.ageGroups,
   equipment: b.equipment,
   is_core_curriculum: b.isCoreCurriculum,
@@ -116,26 +128,16 @@ export const fromTrainingBlock = (b: TrainingBlock): Row => ({
   // increment_block_usage(), and the coach-propose policy requires it be 0.
 });
 
-export const toCurriculum = (r: Row): Curriculum => ({
-  id: r.id,
-  academyId: r.academy_id,
-  title: r.title,
-  ageGroup: r.age_group as AgeGroup,
-  track: r.track as CurriculumTrack,
-  objective: r.objective ?? '',
-  focusAreas: r.focus_areas ?? [],
-  cycleWeeks: r.cycle_weeks ?? 8,
-  sortOrder: r.sort_order ?? 0,
-});
-
 export const toSessionTemplate = (r: Row): SessionTemplate => ({
   id: r.id,
   academyId: r.academy_id,
-  curriculumId: r.curriculum_id,
+  source: 'center',
+  curriculumId: r.curriculum_id ?? null,
+  ability: r.ability ?? axisFor(`${r.title ?? ''} ${r.goal ?? ''}`) ?? 'technical',
   title: r.title,
-  week: r.week ?? 1,
   goal: r.goal ?? '',
   blockIds: r.block_ids ?? [],
+  ageGroups: (r.age_groups ?? []) as AgeGroup[],
   status: (r.status ?? 'published') as ApprovalStatus,
   proposedBy: r.proposed_by ?? null,
   reviewNote: r.review_note ?? '',
@@ -147,10 +149,11 @@ export const fromSessionTemplate = (t: SessionTemplate): Row => ({
   id: t.id,
   academy_id: t.academyId,
   curriculum_id: t.curriculumId,
+  ability: t.ability,
   title: t.title,
-  week: t.week,
   goal: t.goal,
   block_ids: t.blockIds,
+  age_groups: t.ageGroups,
   status: t.status,
   proposed_by: t.proposedBy,
   review_note: t.reviewNote,
@@ -175,14 +178,15 @@ export const toSessionPlan = (r: Row): SessionPlan => ({
   classId: r.class_id,
   coachId: r.coach_id,
   date: r.date,
-  items: ((r.items ?? []) as Row[]).map(
-    (i): SessionItem => ({
-      category: i.category as TrainingCategory,
-      blockId: i.blockId ?? null,
-      durationMin: i.durationMin ?? null,
-    }),
-  ),
-  templateId: r.template_id ?? null,
+  items: ((r.items ?? []) as Row[]).map((i): SessionItem => ({
+    category: i.category as TrainingCategory,
+    blockId: i.blockId ?? null,
+    durationMin: i.durationMin ?? null,
+    ...(i.edit ? { edit: i.edit as SessionItem['edit'] } : {}),
+  })),
+  // `session_key` (0007) holds either kind of session; `template_id` can only
+  // hold a centre uuid, so it is the fallback for rows written before 0007.
+  templateId: r.session_key ?? r.template_id ?? null,
   createdAt: r.created_at,
   status: r.status,
 });
@@ -194,7 +198,9 @@ export const fromSessionPlan = (p: SessionPlan): Row => ({
   coach_id: p.coachId,
   date: p.date,
   items: p.items,
-  template_id: p.templateId,
+  // A library key is not a uuid and has no row to reference.
+  template_id: p.templateId && !p.templateId.startsWith('std-') ? p.templateId : null,
+  session_key: p.templateId,
   status: p.status,
 });
 
