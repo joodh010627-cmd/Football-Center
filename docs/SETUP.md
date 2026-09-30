@@ -79,6 +79,15 @@ Supabase 대시보드 → **SQL Editor** 에서 아래 순서대로 붙여넣고
 | 4 | `supabase/migrations/0004_payments.sql` | 수납(대표 전용) + 미납 뷰 |
 | 5 | `supabase/migrations/0005_curriculum.sql` | 커리큘럼·표준 세션 + 세션 설계 자유 구성 |
 | 6 | `supabase/migrations/0006_leads_forms_alimtalk.sql` | 문의·공개 폼 링크 + 알림톡 발송 대기열 |
+| 7 | `supabase/migrations/0007_surveys.sql` | 재원생 보호자 설문 (가정별 개인 링크) |
+
+> **0006까지 적용한 프로젝트라면 0007 파일 하나만 붙여넣고 실행하세요.** 몇 번 실행해도
+> 안전합니다. 적용 전에는 폼 탭의 설문이 예시 데이터로 돌고("예시 데이터로 보는 중"),
+> 문의 파이프라인은 0006 그대로 실제 DB를 씁니다 — 두 모드는 따로 판단합니다.
+>
+> 설문 링크는 `https://<배포 주소>/?s=<token>` 형태로 보호자마다 다릅니다. 로그인 없이
+> 열리고, `get_survey()` / `submit_survey()` 두 함수로만 읽고 씁니다. 답(answers)은 앱에서
+> 쓸 수 없도록 컬럼 권한으로 막혀 있습니다.
 
 > **이미 0005까지 적용한 프로젝트라면 0006 파일 하나만 SQL Editor에 붙여넣고 실행하세요.**
 > `APPLY_ALL.generated.sql` 은 0001부터 다시 만들려고 하므로 이미 표가 있는 프로젝트에서는

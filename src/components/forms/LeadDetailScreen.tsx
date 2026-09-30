@@ -17,6 +17,7 @@ import {
   ArrowLeft,
   CalendarPlus,
   Check,
+  FileText,
   MessageSquare,
   Phone,
   UserMinus,
@@ -41,7 +42,8 @@ import { formatDateKo } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { Modal } from '@/components/ui/Modal';
 import { ScreenBody, Section } from '@/components/shell/Shell';
-import type { EnqueueResult } from '@/lib/alimtalk/outbox';
+import { NewFormSheet } from './NewFormSheet';
+import { describeEnqueue, telHref } from './parts';
 
 interface LeadDetailScreenProps {
   leadId: ID;
@@ -58,14 +60,25 @@ export function LeadDetailScreen({
   backLabel = '문의 목록',
 }: LeadDetailScreenProps) {
   const { state } = useApp();
-  const { getLead, activity, advanceLead, bookTrial, updateLead } = useWorkspace();
+  const { getLead, activity, advanceLead, bookTrial, updateLead, surveys, recipients } =
+    useWorkspace();
   const [booking, setBooking] = useState(false);
+  const [sendingForm, setSendingForm] = useState(false);
+  const [showAllActivity, setShowAllActivity] = useState(false);
   const [closing, setClosing] = useState(false);
   const [memo, setMemo] = useState('');
   /** What happened to the 체험 안내 알림톡 after the last booking. */
   const [notice, setNotice] = useState<string | null>(null);
 
   const lead = getLead(leadId);
+
+  // The newest 등록 신청서 sent to this family, if any.
+  const enrollment = useMemo(() => {
+    const ids = new Set(surveys.filter((v) => v.kind === 'enrollment').map((v) => v.id));
+    const mine = recipients.filter((r) => r.leadId === leadId && ids.has(r.surveyId));
+    const r = mine[0] ?? null;
+    return r ? { recipient: r, survey: surveys.find((v) => v.id === r.surveyId)! } : null;
+  }, [surveys, recipients, leadId]);
 
   const timeline = useMemo(
     () => activity.filter((e) => e.subjectId === leadId),
@@ -84,7 +97,11 @@ export function LeadDetailScreen({
   const meta = STAGE_META[lead.stage];
   const next = nextStage(lead.stage);
   const late = isOverdue(lead);
-  const steps = onboardingSteps(lead);
+  const formState = !enrollment ? 'none' : enrollment.recipient.answeredAt ? 'answered' : 'sent';
+  const steps = onboardingSteps(lead, formState);
+  // After the trial, before the decision: the one moment a form beats a call.
+  const canSendForm =
+    !enrollment && (lead.stage === 'trial_booked' || lead.stage === 'trial_done');
   const done = steps.filter((s) => s.done).length;
   const interestClass = lead.interestClassId
     ? (state.classes.find((c) => c.id === lead.interestClassId) ?? null)
@@ -121,7 +138,7 @@ export function LeadDetailScreen({
         {/* --- Contact rail ---------------------------------------------- */}
         <div className="flex gap-2">
           <a
-            href={`tel:${lead.parentPhone.replace(/-/g, '')}`}
+            href={telHref(lead.parentPhone)}
             className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-primary py-3 text-[14.5px] font-semibold text-white transition-colors duration-200 hover:bg-primary-pressed"
           >
             <Phone size={15} strokeWidth={2.4} />
@@ -172,6 +189,17 @@ export function LeadDetailScreen({
               </button>
             )}
 
+            {canSendForm && (
+              <button
+                type="button"
+                onClick={() => setSendingForm(true)}
+                className="flex items-center gap-1.5 rounded-full border border-hairline-strong px-4 py-2.5 text-[13.5px] font-semibold text-slate transition-colors duration-200 hover:border-primary hover:text-primary"
+              >
+                <FileText size={14} strokeWidth={2.2} />
+                등록 신청서 보내기
+              </button>
+            )}
+
             {lead.stage !== 'lost' && lead.stage !== 'enrolled' && (
               <button
                 type="button"
@@ -196,6 +224,42 @@ export function LeadDetailScreen({
             <MessageSquare size={15} className="mt-0.5 shrink-0 text-primary" />
             {notice}
           </p>
+        )}
+
+        {/* --- 등록 신청서 ------------------------------------------------------ */}
+        {enrollment && (
+          <Section
+            title="등록 신청서"
+            meta={
+              enrollment.recipient.answeredAt
+                ? `${formatDateKo(dayOf(enrollment.recipient.answeredAt))} 도착`
+                : '답 기다리는 중'
+            }
+          >
+            {enrollment.recipient.answeredAt ? (
+              <dl className="overflow-hidden rounded-lg border border-hairline bg-canvas">
+                {enrollment.survey.questions.map((q) => (
+                  <div
+                    key={q.label}
+                    className="flex gap-3 border-b border-hairline-soft px-4 py-3 last:border-b-0"
+                  >
+                    <dt className="w-[96px] shrink-0 text-[13px] font-semibold text-steel">
+                      {q.label}
+                    </dt>
+                    <dd className="min-w-0 whitespace-pre-wrap text-[14px] leading-[1.6] text-ink">
+                      {enrollment.recipient.answers[q.label] || (
+                        <span className="text-stone">—</span>
+                      )}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            ) : (
+              <p className="rounded-lg border border-dashed border-hairline-strong bg-canvas px-4 py-4 text-[13px] leading-[1.6] text-steel">
+                알림톡 링크로 보냈습니다. 보호자가 답하면 여기와 폼 탭 할 일에 나타납니다.
+              </p>
+            )}
+          </Section>
         )}
 
         {/* --- What the parent wrote ------------------------------------------
@@ -344,7 +408,7 @@ export function LeadDetailScreen({
             </p>
           ) : (
             <ol className="relative space-y-4 border-l border-hairline-soft pl-4">
-              {timeline.map((event) => (
+              {(showAllActivity ? timeline : timeline.slice(0, 3)).map((event) => (
                 <li key={event.id} className="relative">
                   <span
                     className={cn(
@@ -364,6 +428,15 @@ export function LeadDetailScreen({
               ))}
             </ol>
           )}
+          {timeline.length > 3 && (
+            <button
+              type="button"
+              onClick={() => setShowAllActivity((v) => !v)}
+              className="mt-3 text-[13px] font-semibold text-steel transition-colors hover:text-ink"
+            >
+              {showAllActivity ? '접기' : `${timeline.length - 3}건 더 보기`}
+            </button>
+          )}
         </Section>
       </ScreenBody>
 
@@ -380,9 +453,18 @@ export function LeadDetailScreen({
           setNotice(null);
           void bookTrial(lead.id, date, classId || null).then((result) => {
             if (!result) return;
-            setNotice(describeEnqueue(result));
+            setNotice(describeEnqueue(result, '체험 안내'));
           });
         }}
+      />
+
+      <NewFormSheet
+        open={sendingForm}
+        leadId={lead.id}
+        onClose={() => setSendingForm(false)}
+        onSent={(_, message) =>
+          setNotice(message ?? '등록 신청서를 만들었습니다. 예시 데이터에서는 보내지 않습니다.')
+        }
       />
 
       <Modal
@@ -511,21 +593,4 @@ function BackLink({ onBack, label }: { onBack: () => void; label: string }) {
       {label}
     </button>
   );
-}
-
-/** One line on what became of a queued 알림톡, in the owner's words. */
-function describeEnqueue(result: EnqueueResult): string {
-  if (result.state === 'unavailable') return `체험 안내 알림톡은 보내지 못했습니다 — ${result.reason}`;
-  if (result.queued === 0) return '체험 안내 알림톡은 이미 대기열에 있습니다.';
-  switch (result.dispatch) {
-    case 'sent':
-      return '체험 안내 알림톡을 보냈습니다.';
-    case 'dry_run':
-      return '체험 안내 알림톡을 드라이런으로 처리했습니다 — 발송 대행사 키를 넣으면 실제로 나갑니다.';
-    case 'partial':
-      return `체험 안내 알림톡 발송에 문제가 있습니다 (${result.detail ?? ''}).`;
-    case 'not_connected':
-    default:
-      return '체험 안내 알림톡을 발송 대기열에 넣었습니다. 발송 서버가 연결되면 나갑니다.';
-  }
 }

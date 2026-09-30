@@ -38,12 +38,15 @@ import { EXIT_WINDOW, useSystemBack } from '@/lib/systemBack';
 import { TODAY } from '@/data/dates';
 import { buildDay, summarise } from '@/data/today';
 import { countLeads, triage } from '@/data/crm';
+import { progressOf } from '@/data/surveys';
 import { planFor } from '@/data/selectors';
 import { Shell, Toast, type Alert, type TabItem } from '@/components/shell/Shell';
 import { ClassHomeScreen } from '@/components/home/ClassHomeScreen';
 import { ScheduleScreen } from '@/components/schedule/ScheduleScreen';
 import { FormsScreen } from '@/components/forms/FormsScreen';
 import { LeadDetailScreen } from '@/components/forms/LeadDetailScreen';
+import { LeadsScreen } from '@/components/forms/LeadsScreen';
+import { SurveyDetailScreen } from '@/components/forms/SurveyDetailScreen';
 import { ClubScreen } from '@/components/club/ClubScreen';
 import { OwnerConsole } from '@/components/club/OwnerConsole';
 import { ActivityScreen } from '@/components/club/ActivityScreen';
@@ -68,6 +71,8 @@ export type Route =
   | { name: 'sheet'; classId: ID; date: ISODate }
   | { name: 'attendance'; classId: ID; date: ISODate }
   | { name: 'lead'; leadId: ID }
+  | { name: 'leads' }
+  | { name: 'survey'; surveyId: ID; notice?: string | null }
   | { name: 'student'; studentId: ID }
   | { name: 'roster' }
   | { name: 'curriculum' }
@@ -96,7 +101,7 @@ const EMPTY_STACKS: Stacks = { club: [], forms: [], class: [], schedule: [], fee
  */
 const TAB_TITLE: Record<Tab, string> = {
   club: '클럽',
-  forms: '문의 목록',
+  forms: '폼',
   class: '오늘의 클래스',
   schedule: '일정',
   feed: '피드',
@@ -108,6 +113,8 @@ const ROUTE_TITLE: Record<Route['name'], string> = {
   sheet: '수업 시트',
   attendance: '출결 기록',
   lead: '문의',
+  leads: '새 학부모',
+  survey: '설문',
   student: '원생 프로필',
   roster: '원생 명단',
   curriculum: '커리큘럼',
@@ -129,7 +136,7 @@ const MOTION: Record<Motion, string> = {
 
 export function FootballApp() {
   const { state, slice, dispatch } = useApp();
-  const { leads } = useWorkspace();
+  const { leads, surveys, recipients } = useWorkspace();
   const session = useSession();
   const owner = isOwner(session);
 
@@ -258,6 +265,19 @@ export function FootballApp() {
       });
     }
 
+    // A flagged answer is a family that asked, in effect, to be called. It
+    // waits on nobody but us, so it belongs behind the bell.
+    const toCall = surveys.reduce((n, v) => n + progressOf(v, recipients).toCall.length, 0);
+    if (toCall > 0) {
+      out.push({
+        id: 'survey-calls',
+        label: `설문 답변으로 전화할 집 ${toCall}`,
+        detail: '고민 중이라고 답한 가정부터 연락하세요',
+        tone: 'normal',
+        onOpen: () => resetTo('forms'),
+      });
+    }
+
     if (leadCounts.upcomingTrials > 0) {
       out.push({
         id: 'trials',
@@ -269,7 +289,7 @@ export function FootballApp() {
     }
 
     return out;
-  }, [summary.needsLog, leadCounts, leads]);
+  }, [summary.needsLog, leadCounts, leads, surveys, recipients]);
 
   const tabs: TabItem[] = [
     { key: 'club', label: '클럽', icon: Users },
@@ -306,7 +326,13 @@ export function FootballApp() {
         );
 
       case 'forms':
-        return <FormsScreen onOpenLead={(leadId) => push({ name: 'lead', leadId })} />;
+        return (
+          <FormsScreen
+            onOpenLead={(leadId) => push({ name: 'lead', leadId })}
+            onOpenLeads={() => push({ name: 'leads' })}
+            onOpenSurvey={(surveyId, notice) => push({ name: 'survey', surveyId, notice })}
+          />
+        );
 
       case 'schedule':
         return (
@@ -419,6 +445,25 @@ export function FootballApp() {
             backLabel={backLabel}
             onBack={dismiss}
             onOpenClass={(cls) => push({ name: 'class', classId: cls.id })}
+          />
+        );
+
+      case 'leads':
+        return (
+          <LeadsScreen
+            backLabel={backLabel}
+            onBack={dismiss}
+            onOpenLead={(leadId) => push({ name: 'lead', leadId })}
+          />
+        );
+
+      case 'survey':
+        return (
+          <SurveyDetailScreen
+            surveyId={route.surveyId}
+            notice={route.notice}
+            backLabel={backLabel}
+            onBack={dismiss}
           />
         );
 

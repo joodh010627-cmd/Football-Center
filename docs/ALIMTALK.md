@@ -28,7 +28,8 @@ send-alimtalk  (supabase/functions/send-alimtalk)
 
 | 단계 | 상태 | 위치 |
 |---|---|---|
-| 템플릿 원문 3종 (수업 리포트 · 체험 예약 안내 · 문의 접수 확인) | ✅ | `src/lib/alimtalk/templates.ts` |
+| 템플릿 원문 5종 (수업 리포트 · 체험 예약 안내 · 문의 접수 확인 · 설문 요청 · 설문 마감 전 안내) | ✅ | `src/lib/alimtalk/templates.ts` |
+| 설문 템플릿을 적재 허용 목록에 추가 | ✅ | `supabase/migrations/0007_surveys.sql` |
 | 발송 대기열 테이블 + 적재 함수 + 중복 방지 | ✅ | `supabase/migrations/0006_leads_forms_alimtalk.sql` |
 | 앱에서 적재 (출결 제출·체험 예약), DB에서 적재 (폼 접수) | ✅ | `NotificationPreviewModal`, `WorkspaceContext`, `submit_public_form()` |
 | 발송 서버 + 대행사 어댑터 인터페이스 + 드라이런 | ✅ 코드 | `supabase/functions/send-alimtalk/` |
@@ -64,6 +65,11 @@ npx supabase functions deploy send-alimtalk
 클럽 → 알림톡 → 템플릿 → **심사 제출용 원문 복사**로 복사해 대행사 콘솔에 그대로 붙여넣는다.
 통과하면 템플릿마다 대행사 템플릿 코드가 부여된다.
 
+> **설문 두 템플릿(`survey_request`, `survey_reminder`)은 링크를 본문 `#{링크}`에 두고,
+> 같은 주소를 웹링크 버튼(WL)으로도 등록한다.** 버튼 URL은 `https://<배포 주소>/?s=#{토큰}`
+> 형태의 변수 경로로 심사받아야 하는데, 대행사마다 버튼 변수 규칙이 다르다(미검증). 대행사를
+> 정한 뒤 어댑터에서 본문의 링크를 버튼 변수로 옮겨 담는다.
+>
 > 원문을 고치면 **재심사**가 필요하다. `inquiry_received`는 DB 함수에도 같은 문구가 있으므로
 > 두 곳을 함께 고쳐야 한다 — `templates.test.ts`가 둘이 다르면 실패한다.
 
@@ -73,7 +79,7 @@ npx supabase functions deploy send-alimtalk
 npx supabase secrets set ALIMTALK_PROVIDER=<어댑터 이름>
 npx supabase secrets set ALIMTALK_API_KEY=<대행사 API 키>
 npx supabase secrets set ALIMTALK_SENDER_KEY=<발신 프로필 키>
-npx supabase secrets set ALIMTALK_TEMPLATE_MAP='{"attendance_report":"…","trial_booked":"…","inquiry_received":"…"}'
+npx supabase secrets set ALIMTALK_TEMPLATE_MAP='{"attendance_report":"…","trial_booked":"…","inquiry_received":"…","survey_request":"…","survey_reminder":"…"}'
 ```
 
 키는 Edge Function 비밀에만 둔다. 앱 번들(`VITE_…`)이나 DB에 넣지 않는다.
@@ -85,5 +91,8 @@ npx supabase secrets set ALIMTALK_TEMPLATE_MAP='{"attendance_report":"…","tria
 - **대기열 쓰기 권한은 클라이언트에 없다.** 상태 변경은 발송 서버(service_role)만 한다.
 - **같은 수업 리포트는 한 번만.** `dedupe_key = attendance:<반>:<날짜>:<원생>`.
   출결을 다시 제출해도 새로 쌓이지 않는다. 내용을 고쳐 다시 보내는 기능은 아직 없다.
+- **설문 요청은 가정당 한 번, 마감 전 안내도 가정당 한 번.** `dedupe_key =
+  survey:<수신자>:request` / `survey:<수신자>:remind`. "다시 알림"을 여러 번 눌러도 두 번째
+  안내는 쌓이지 않는다.
 - **보호자 연락처가 없는 원생**은 `failed / 보호자 연락처 없음`으로 남는다. 조용히 빠뜨리지 않는다.
 - 알림톡은 정보성 메시지만 보낼 수 있다. 템플릿에 광고성 문구를 넣지 않는다.

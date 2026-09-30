@@ -316,7 +316,14 @@ export interface OnboardingStep {
   hint: string;
 }
 
-export function onboardingSteps(lead: Lead): OnboardingStep[] {
+/**
+ * `form` is where the 등록 신청서 has got to, if one was sent — it lives in the
+ * survey tables, not on the lead, so the caller looks it up.
+ */
+export function onboardingSteps(
+  lead: Lead,
+  form: 'none' | 'sent' | 'answered' = 'none',
+): OnboardingStep[] {
   const reached = (stage: LeadStage) => PIPELINE.indexOf(lead.stage) >= PIPELINE.indexOf(stage);
 
   return [
@@ -337,6 +344,15 @@ export function onboardingSteps(lead: Lead): OnboardingStep[] {
       label: '체험 참석',
       done: reached('trial_done'),
       hint: '체험 당일 출결에서 기록됩니다',
+    },
+    {
+      key: 'form',
+      label: '등록 신청서',
+      done: form === 'answered' || lead.stage === 'enrolled',
+      hint:
+        form === 'sent'
+          ? '보냈습니다 — 보호자의 답을 기다리는 중'
+          : '생년월일·건강·비상 연락처를 알림톡 링크로 받습니다',
     },
     {
       key: 'class',
@@ -620,7 +636,7 @@ export function formUrl(slug: string): string {
 
 /** Digits only, rendered 010-1234-5678 when it has the shape of a mobile number. */
 export function formatPhone(raw: string): string {
-  const d = raw.replace(/D/g, '');
+  const d = raw.replace(/\D/g, '');
   if (d.length === 11) return `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7)}`;
   if (d.length === 10) return `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
   return raw;

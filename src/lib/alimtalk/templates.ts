@@ -15,7 +15,12 @@
  * 줄 최소화, 전체 1,000자 이내, 수신 사유(왜 이 메시지를 받는지)가 본문에 있음.
  */
 
-export type TemplateCode = 'attendance_report' | 'trial_booked' | 'inquiry_received';
+export type TemplateCode =
+  | 'attendance_report'
+  | 'trial_booked'
+  | 'inquiry_received'
+  | 'survey_request'
+  | 'survey_reminder';
 
 export interface AlimtalkTemplate {
   code: TemplateCode;
@@ -79,6 +84,42 @@ export const TEMPLATES: Record<TemplateCode, AlimtalkTemplate> = {
       '담당 코치가 확인 후 영업일 기준 1일 안에 연락드리겠습니다.',
       '',
       '이 메시지는 문의 접수 시 1회 발송됩니다.',
+    ].join('\n'),
+  },
+
+  // 링크는 본문에도 두고, 대행사 콘솔에서 같은 주소를 웹링크 버튼(WL)으로도
+  // 등록한다 (docs/ALIMTALK.md). 버튼이 없는 구형 카카오톡에서도 답할 수 있게.
+  survey_request: {
+    code: 'survey_request',
+    name: '설문 요청',
+    trigger: '코치·대표가 폼 탭에서 설문을 보낸 직후, 대상 원생(또는 문의)의 보호자에게 1회',
+    body: [
+      '[#{학원명}] #{설문제목}',
+      '',
+      '#{보호자명} 님, #{학생명} 학생과 관련해 여쭤볼 것이 있습니다.',
+      '아래 링크에서 1분이면 답하실 수 있습니다.',
+      '',
+      '▪ 마감: #{마감일}',
+      '▪ 답하기: #{링크}',
+      '',
+      '이 메시지는 #{학원명} 수업과 관련해 보호자님께 발송됩니다.',
+    ].join('\n'),
+  },
+
+  survey_reminder: {
+    code: 'survey_reminder',
+    name: '설문 마감 전 안내',
+    trigger: '설문에 아직 답하지 않은 보호자에게, 코치·대표가 다시 알림을 누른 때 보호자당 1회',
+    body: [
+      '[#{학원명}] #{설문제목} — 마감 전 안내',
+      '',
+      '#{보호자명} 님, 아직 답이 없으셔서 한 번 더 안내드립니다.',
+      '',
+      '▪ 마감: #{마감일}',
+      '▪ 답하기: #{링크}',
+      '',
+      '이미 답하셨다면 이 메시지는 넘기셔도 됩니다.',
+      '이 메시지는 설문에 답하지 않은 보호자님께 한 번만 발송됩니다.',
     ].join('\n'),
   },
 };

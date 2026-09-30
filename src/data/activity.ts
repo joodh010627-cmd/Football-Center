@@ -41,6 +41,8 @@ export type ActivityKind =
   | 'lead.lost'
   | 'form.created'
   | 'form.shared'
+  | 'survey.sent'
+  | 'survey.called'
   // --- 원생 -------------------------------------------------------------
   | 'student.evaluated'
   | 'parent.notified'
@@ -90,6 +92,8 @@ export const ACTIVITY_META: Record<ActivityKind, ActivityMeta> = {
   'lead.lost': { label: '미등록 처리', dot: 'bg-stone', group: 'lead' },
   'form.created': { label: '폼 생성', dot: 'bg-steel', group: 'lead' },
   'form.shared': { label: '폼 공유', dot: 'bg-stone', group: 'lead' },
+  'survey.sent': { label: '설문 발송', dot: 'bg-brand-teal', group: 'student' },
+  'survey.called': { label: '설문 후 통화', dot: 'bg-primary', group: 'student' },
   'student.evaluated': { label: '성장 평가', dot: 'bg-brand-orange', group: 'student' },
   'parent.notified': { label: '학부모 발송', dot: 'bg-brand-teal', group: 'student' },
   'cs.resolved': { label: 'CS 조치', dot: 'bg-error', group: 'student' },

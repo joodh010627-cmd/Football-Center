@@ -1,724 +1,365 @@
 /**
- * 폼 — 문의 → 체험 → 등록.
+ * 폼 — every question the centre asks a parent, and what came back.
  *
- * This is the screen the business runs on. A football centre's roster turns over
- * fast enough that the intake pipeline, not the training, is what decides
- * whether it is bigger or smaller next term — and the thing that loses an
- * enquiry is almost never a bad answer, it is a slow one.
+ * This tab used to be the enquiry pipeline and nothing else, with five boxes,
+ * a hero card, a queue and a link manager on one screen. It now covers more
+ * ground and shows less: three short blocks, each answering one question.
  *
- * So the screen is built around a clock rather than a list. Leads are ordered by
- * how long they have been waiting, overdue ones surface first and in red, and
- * the primary action is the one that moves the oldest one forward. A list sorted
- * newest-first — the obvious design, and the one every CRM ships — would bury
- * the four-day-old enquiry under this morning's three.
+ *   할 일      — what came back that needs a person, today. At most three rows.
+ *                Empty means nothing is waiting, and then the block is gone.
+ *   새 학부모   — one row. The pipeline behind it is a tap away, not spread
+ *                across the root.
+ *   설문       — what's out right now, as progress bars.
+ *
+ * Making anything is one button in the header, and it starts from a list of
+ * real moments in a term (대회 참가, 재등록 의향, 촬영 동의 …), not from a blank
+ * form. The survey that needs no thought takes two taps; the one that does
+ * opens a text box.
  */
 
-import { useMemo, useState, type ReactNode } from 'react';
-import { Check, CloudOff, ExternalLink, Link2, Phone, Plus, RefreshCw, Send } from 'lucide-react';
-import type { ID } from '@/types';
+import { useMemo, useState } from 'react';
+import { ChevronRight, Phone, Plus, UserPlus } from 'lucide-react';
+import type { Class, ID } from '@/types';
 import { useApp } from '@/store/AppContext';
 import { useWorkspace } from '@/store/WorkspaceContext';
-import { TODAY, dayOf } from '@/data/dates';
+import { countLeads, isOverdue, triage, STAGE_META } from '@/data/crm';
 import {
-  countLeads,
-  daysWaiting,
-  defaultFields,
-  formUrl,
-  CORE_FIELDS,
-  OPTIONAL_FIELDS,
-  isOpen,
-  isOverdue,
-  nextStage,
-  triage,
-  FORM_KIND_LABEL,
-  PIPELINE,
-  SOURCE_LABEL,
-  STAGE_META,
-  type FormKind,
-  type Lead,
-  type LeadSource,
-  type LeadStage,
-} from '@/data/crm';
+  dueLabel,
+  isOpenSurvey,
+  progressOf,
+  SITUATIONS,
+  type Survey,
+  type SurveyKind,
+  type SurveyRecipient,
+} from '@/data/surveys';
 import { cn } from '@/lib/cn';
-import { Modal } from '@/components/ui/Modal';
-import { ScreenBody, ScreenHeader, Section } from '@/components/shell/Shell';
-import { Swap } from '@/components/ui/Motion';
+import { ProgressBar } from '@/components/ui/ProgressBar';
+import { ScreenBody, ScreenHeader, Section, Toast } from '@/components/shell/Shell';
+import { NewFormSheet } from './NewFormSheet';
+import { SyncBanner } from './parts';
 
-type Filter = 'open' | LeadStage;
+interface FormsScreenProps {
+  onOpenLead: (leadId: ID) => void;
+  onOpenLeads: () => void;
+  onOpenSurvey: (surveyId: ID, notice?: string | null) => void;
+}
 
-export function FormsScreen({ onOpenLead }: { onOpenLead: (leadId: ID) => void }) {
-  const {
-    mode,
-    syncError,
-    reload,
-    leads,
-    formLinks,
-    addLead,
-    advanceLead,
-    addFormLink,
-    toggleFormLink,
-    shareFormLink,
-  } = useWorkspace();
-  const [filter, setFilter] = useState<Filter>('open');
-  const [composing, setComposing] = useState(false);
-  const [makingForm, setMakingForm] = useState(false);
-  const [copied, setCopied] = useState<ID | null>(null);
+interface Todo {
+  key: string;
+  label: string;
+  detail: string;
+  tone: 'urgent' | 'call' | 'normal';
+  onOpen: () => void;
+}
+
+/** Offered when nothing has been sent yet — the three a centre sends most. */
+const QUICK_START: SurveyKind[] = ['rsvp', 'renewal', 'consent'];
+
+export function FormsScreen({ onOpenLead, onOpenLeads, onOpenSurvey }: FormsScreenProps) {
+  const { state } = useApp();
+  const { leads, surveys, recipients, surveyMode, syncError, reload } = useWorkspace();
+  const [sheet, setSheet] = useState<{ open: boolean; startKind?: SurveyKind; n: number }>({
+    open: false,
+    n: 0,
+  });
+  const [showPast, setShowPast] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
   const counts = useMemo(() => countLeads(leads), [leads]);
-  const queue = useMemo(() => {
-    const pool = filter === 'open' ? leads.filter(isOpen) : leads.filter((l) => l.stage === filter);
-    return triage(pool);
-  }, [leads, filter]);
 
-  // The CTA acts on the oldest thing still waiting, so the button is never a
-  // guess about which lead the user meant.
-  const oldest = queue.find((l) => isOverdue(l)) ?? queue[0] ?? null;
+  // 등록 신청서 belong to a lead and are shown there, not in the class list.
+  const classSurveys = surveys.filter((v) => v.kind !== 'enrollment');
+  const current = classSurveys.filter((v) => isOpenSurvey(v));
+  const past = classSurveys.filter((v) => !isOpenSurvey(v));
 
-  const copy = (link: (typeof formLinks)[number]) => {
-    const url = formUrl(link.slug);
-    void navigator.clipboard?.writeText(url);
-    shareFormLink(link.id);
-    setCopied(link.id);
-    window.setTimeout(() => setCopied(null), 1800);
+  const todos = useMemo<Todo[]>(() => {
+    const out: Todo[] = [];
+
+    if (counts.overdue > 0) {
+      const late = triage(leads).filter((l) => isOverdue(l));
+      out.push({
+        key: 'leads',
+        label: late.length === 1 ? `${late[0].childName} 문의 · 응대 지연` : `응대가 늦은 문의 ${late.length}건`,
+        detail: late.length === 1 ? STAGE_META[late[0].stage].duty : `${late[0].childName} 외 · 오늘 안에 전화하세요`,
+        tone: 'urgent',
+        onOpen: late.length === 1 ? () => onOpenLead(late[0].id) : onOpenLeads,
+      });
+    }
+
+    for (const v of surveys) {
+      const p = progressOf(v, recipients);
+      if (v.kind === 'enrollment') {
+        const r = recipients.find((x) => x.surveyId === v.id && x.answeredAt);
+        const lead = r && leads.find((l) => l.id === r.leadId);
+        if (lead && lead.stage !== 'enrolled' && lead.stage !== 'lost') {
+          out.push({
+            key: `enroll-${v.id}`,
+            label: `${lead.childName} 등록 신청서 도착`,
+            detail: '읽어 보고 등록을 확정하세요',
+            tone: 'normal',
+            onOpen: () => onOpenLead(lead.id),
+          });
+        }
+        continue;
+      }
+      if (p.toCall.length > 0) {
+        out.push({
+          key: `call-${v.id}`,
+          label: `전화할 집 ${p.toCall.length}`,
+          detail: v.title,
+          tone: 'call',
+          onOpen: () => onOpenSurvey(v.id),
+        });
+      }
+      if (p.daysLeft !== null && p.daysLeft <= 1 && p.pending.length > 0) {
+        out.push({
+          key: `due-${v.id}`,
+          label: `답이 없는 집 ${p.pending.length} · ${dueLabel(v)}`,
+          detail: v.title,
+          tone: 'normal',
+          onOpen: () => onOpenSurvey(v.id),
+        });
+      }
+    }
+
+    return out.slice(0, 3);
+  }, [counts.overdue, leads, surveys, recipients, onOpenLead, onOpenLeads, onOpenSurvey]);
+
+  const openSheet = (startKind?: SurveyKind) =>
+    setSheet((s) => ({ open: true, startKind, n: s.n + 1 }));
+
+  const flash = (message: string) => {
+    setToast(message);
+    window.setTimeout(() => setToast(null), 2600);
   };
 
   return (
     <>
       <ScreenHeader
-        eyebrow="Welcome to the team"
-        title="새로운 만남"
-        meta={
-          <span className="tabular-nums">
-            신규 문의 {counts.byStage.inquiry} · 체험 예정 {counts.upcomingTrials}
-            {counts.conversionRate !== null && (
-              <> · 등록 전환 {Math.round(counts.conversionRate * 100)}%</>
-            )}
-          </span>
+        eyebrow="Forms"
+        title="폼"
+        action={
+          <button
+            type="button"
+            onClick={() => openSheet()}
+            className="btn-primary !px-4 !py-2.5 text-[14px]"
+          >
+            <Plus size={16} strokeWidth={2.6} />새 폼
+          </button>
         }
       />
 
       <ScreenBody>
-        <SyncBanner mode={mode} error={syncError} onReload={reload} />
+        <SyncBanner
+          mode={surveyMode}
+          error={syncError}
+          onReload={reload}
+          migration="0007"
+          what="설문 링크"
+        />
 
-        {/* --- Primary action ------------------------------------------- */}
-        {oldest ? (
-          <NextAction lead={oldest} onAdvance={advanceLead} onOpen={() => onOpenLead(oldest.id)} />
-        ) : (
-          <div className="rounded-xl bg-gradient-to-br from-[#DCEEE4] to-[#F1F7F3] px-5 py-7 text-center">
-            <Check size={24} className="mx-auto text-primary" strokeWidth={2.4} />
-            <p className="mt-2.5 text-[16px] font-semibold text-ink">대기 중인 문의가 없습니다</p>
-            <p className="mt-1 text-[13.5px] text-slate">
-              새 문의가 들어오면 여기에 가장 먼저 표시됩니다.
-            </p>
-          </div>
-        )}
-
-        {/* --- Pipeline ---------------------------------------------------
-            Five counts, tappable. Reads left to right as the journey a parent
-            actually walks, so a pile-up is visible as a shape rather than a
-            number you have to compare against another number. */}
-        <div className="mt-5 grid grid-cols-5 gap-1.5">
-          {PIPELINE.map((stage) => {
-            const meta = STAGE_META[stage];
-            const active = filter === stage;
-            const overdueHere = leads.filter((l) => l.stage === stage && isOverdue(l)).length;
-
-            return (
-              <button
-                key={stage}
-                type="button"
-                onClick={() => setFilter(active ? 'open' : stage)}
-                className={cn(
-                  'relative rounded-lg border px-1.5 py-2.5 text-center transition-colors duration-200',
-                  active
-                    ? 'border-primary bg-primary-wash'
-                    : 'border-hairline bg-canvas hover:border-hairline-strong',
-                )}
-              >
-                <span
-                  className={cn(
-                    'block text-[19px] font-bold tabular-nums',
-                    active ? 'text-primary' : 'text-ink',
-                  )}
-                >
-                  {counts.byStage[stage]}
-                </span>
-                <span className="mt-0.5 block text-[10.5px] font-medium leading-tight text-steel">
-                  {meta.label}
-                </span>
-                {overdueHere > 0 && (
-                  <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-error" />
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* --- Queue ------------------------------------------------------ */}
-        <Section
-          title={filter === 'open' ? '최근 문의' : STAGE_META[filter].label}
-          meta={`${queue.length}건`}
-        >
-          <Swap k={filter}>
-            {queue.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-hairline-strong bg-canvas px-4 py-8 text-center text-[13.5px] text-steel">
-                해당하는 문의가 없습니다.
-              </p>
-            ) : (
-              <ul className="overflow-hidden rounded-lg border border-hairline bg-canvas">
-                {queue.map((lead) => (
-                  <LeadRow key={lead.id} lead={lead} onOpen={() => onOpenLead(lead.id)} />
-                ))}
-              </ul>
-            )}
-          </Swap>
-
-          <button
-            type="button"
-            onClick={() => setComposing(true)}
-            className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-full border border-hairline py-3 text-[14px] font-semibold text-slate transition-colors duration-200 hover:border-hairline-strong hover:text-ink"
-          >
-            <Plus size={16} strokeWidth={2.4} />
-            문의 직접 등록
-          </button>
-        </Section>
-
-        {/* --- Form links -------------------------------------------------- */}
-        <Section title="폼 링크" meta={`${formLinks.filter((f) => f.active).length}개 운영 중`}>
-          <ul className="space-y-2">
-            {formLinks.map((link) => (
-              <li
-                key={link.id}
-                className={cn(
-                  'flex items-center gap-3 rounded-lg border bg-canvas px-4 py-3',
-                  link.active ? 'border-hairline' : 'border-hairline-soft opacity-60',
-                )}
-              >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-wash text-primary">
-                  <Link2 size={16} strokeWidth={2.2} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[15px] font-semibold text-ink">
-                    {link.title}
-                  </span>
-                  <span className="mt-0.5 block truncate text-[12.5px] text-steel">
-                    {FORM_KIND_LABEL[link.kind]} · 접수 {link.submissions}건
-                    {!link.active && ' · 중단됨'}
-                  </span>
-                  <span className="mt-2 flex items-center gap-3 text-[12px] font-semibold">
-                    {mode === 'db' && link.active && (
-                      <a
-                        href={formUrl(link.slug)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center gap-1 text-primary"
-                      >
-                        <ExternalLink size={12} strokeWidth={2.4} />
-                        열어 보기
-                      </a>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => toggleFormLink(link.id)}
-                      className="text-steel transition-colors hover:text-ink"
-                    >
-                      {link.active ? '접수 중단' : '다시 열기'}
-                    </button>
-                  </span>
-                </span>
+        {/* --- 할 일 ------------------------------------------------------ */}
+        {todos.length > 0 && (
+          <ul className="stagger space-y-2">
+            {todos.map((t) => (
+              <li key={t.key}>
                 <button
                   type="button"
-                  onClick={() => copy(link)}
-                  disabled={!link.active}
-                  className="pressable shrink-0 self-start rounded-full bg-surface px-3 py-1.5 text-[12px] font-bold text-slate hover:bg-hairline-soft disabled:opacity-50"
+                  onClick={t.onOpen}
+                  className={cn(
+                    'pressable flex w-full items-center gap-3 rounded-lg px-4 py-3.5 text-left',
+                    t.tone === 'urgent'
+                      ? 'bg-gradient-to-br from-[#F8E8E2] to-[#FCF5F2]'
+                      : 'bg-gradient-to-br from-[#DCEEE4] to-[#F1F7F3]',
+                  )}
                 >
-                  {copied === link.id ? '복사됨' : '링크 복사'}
+                  <span
+                    className={cn(
+                      'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
+                      t.tone === 'urgent' ? 'bg-error text-white' : 'bg-primary text-white',
+                    )}
+                  >
+                    {t.tone === 'normal' ? (
+                      <ChevronRight size={16} strokeWidth={2.6} />
+                    ) : (
+                      <Phone size={14} strokeWidth={2.6} />
+                    )}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px] font-semibold text-ink">
+                      {t.label}
+                    </span>
+                    <span className="mt-0.5 block truncate text-[12.5px] text-slate">
+                      {t.detail}
+                    </span>
+                  </span>
                 </button>
               </li>
             ))}
           </ul>
+        )}
 
-          <button
-            type="button"
-            onClick={() => setMakingForm(true)}
-            className="mt-3 flex w-full items-center justify-between rounded-lg border border-dashed border-hairline-strong bg-canvas px-4 py-3.5 text-left transition-colors duration-200 hover:border-primary hover:bg-primary-wash"
-          >
-            <span className="text-[15px] font-semibold text-primary">폼 링크 만들기</span>
-            <Plus size={18} strokeWidth={2.4} className="text-primary" />
-          </button>
+        {/* --- 새 학부모 --------------------------------------------------- */}
+        <button
+          type="button"
+          onClick={onOpenLeads}
+          className={cn(
+            'pressable flex w-full items-center gap-3 rounded-lg border border-hairline bg-canvas px-4 py-4 text-left hover:border-hairline-strong',
+            todos.length > 0 && 'mt-5',
+          )}
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-wash text-primary">
+            <UserPlus size={18} strokeWidth={2.2} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[16px] font-semibold text-ink">새 학부모</span>
+            <span className="mt-0.5 block truncate text-[13px] tabular-nums text-steel">
+              진행 중 {counts.open}
+              {counts.upcomingTrials > 0 && ` · 체험 예정 ${counts.upcomingTrials}`}
+            </span>
+          </span>
+          {counts.overdue > 0 && (
+            <span className="shrink-0 rounded-full bg-tint-alert px-2.5 py-1 text-[11.5px] font-bold text-error">
+              지연 {counts.overdue}
+            </span>
+          )}
+          <ChevronRight size={18} className="shrink-0 text-stone" />
+        </button>
+
+        {/* --- 설문 ----------------------------------------------------------- */}
+        <Section title="설문" meta={current.length > 0 ? `진행 중 ${current.length}` : undefined}>
+          {current.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-hairline-strong bg-canvas px-4 py-5">
+              <p className="text-[14px] font-semibold text-ink">지금 받고 있는 설문이 없습니다</p>
+              <p className="mt-1 text-[12.5px] leading-[1.6] text-steel">
+                반을 고르면 보호자마다 개인 링크가 알림톡으로 갑니다. 아이 이름은 이미 적혀 있어서
+                보호자는 고르기만 하면 됩니다.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {QUICK_START.map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => openSheet(k)}
+                    className="pill-tab !py-1.5 !text-[13px]"
+                  >
+                    {SITUATIONS[k].label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {current.map((v) => (
+                <SurveyCard
+                  key={v.id}
+                  survey={v}
+                  recipients={recipients}
+                  classes={state.classes}
+                  onOpen={() => onOpenSurvey(v.id)}
+                />
+              ))}
+            </ul>
+          )}
+
+          {past.length > 0 && (
+            <>
+              <button
+                type="button"
+                onClick={() => setShowPast((x) => !x)}
+                className="mt-3 w-full py-2 text-center text-[13px] font-semibold text-steel transition-colors hover:text-ink"
+              >
+                {showPast ? '지난 설문 접기' : `지난 설문 ${past.length}`}
+              </button>
+              {showPast && (
+                <ul className="animate-swap-in space-y-2">
+                  {past.map((v) => (
+                    <SurveyCard
+                      key={v.id}
+                      survey={v}
+                      recipients={recipients}
+                      classes={state.classes}
+                      onOpen={() => onOpenSurvey(v.id)}
+                      muted
+                    />
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
         </Section>
       </ScreenBody>
 
-      <LeadComposer
-        open={composing}
-        onClose={() => setComposing(false)}
-        onSubmit={(fields) => {
-          addLead(fields);
-          setComposing(false);
-        }}
+      {/* Keyed so each open starts clean — or on the quick-start it was opened with. */}
+      <NewFormSheet
+        key={sheet.n}
+        open={sheet.open}
+        startKind={sheet.startKind}
+        onClose={() => setSheet((s) => ({ ...s, open: false }))}
+        onSent={(surveyId, notice) => onOpenSurvey(surveyId, notice)}
+        onLinkMade={flash}
       />
 
-      <FormComposer
-        open={makingForm}
-        onClose={() => setMakingForm(false)}
-        onSubmit={(title, kind, fields) => {
-          addFormLink({ title, kind, fields });
-          setMakingForm(false);
-        }}
-      />
+      {toast && <Toast>{toast}</Toast>}
     </>
   );
 }
 
 // ---------------------------------------------------------------------------
-// The one thing to do next
-// ---------------------------------------------------------------------------
 
-function NextAction({
-  lead,
-  onAdvance,
+function SurveyCard({
+  survey,
+  recipients,
+  classes,
   onOpen,
+  muted = false,
 }: {
-  lead: Lead;
-  onAdvance: (id: ID, stage: LeadStage, note?: string) => void;
+  survey: Survey;
+  recipients: SurveyRecipient[];
+  classes: Class[];
   onOpen: () => void;
+  muted?: boolean;
 }) {
-  const meta = STAGE_META[lead.stage];
-  const next = nextStage(lead.stage);
-  const late = isOverdue(lead);
-  const waited = daysWaiting(lead);
+  const p = progressOf(survey, recipients);
+  const classNames = survey.classIds
+    .map((id) => classes.find((c) => c.id === id)?.title)
+    .filter(Boolean)
+    .join(' · ');
 
   return (
-    <article
-      className={cn(
-        'relative overflow-hidden rounded-xl p-5',
-        late
-          ? 'bg-gradient-to-br from-[#F8E8E2] to-[#FCF5F2]'
-          : 'bg-gradient-to-br from-[#DCEEE4] to-[#F1F7F3]',
-      )}
-    >
-      <p className={cn('micro-label', late ? 'text-error' : 'text-primary')}>
-        {late ? `${waited}일째 대기 중` : meta.label}
-      </p>
-
+    <li>
       <button
         type="button"
         onClick={onOpen}
-        className="mt-2.5 block text-left text-[24px] font-bold leading-[1.15] tracking-tightest text-ink"
-      >
-        {lead.childName}
-        <span className="ml-2 text-[16px] font-semibold text-slate">{lead.ageLabel}</span>
-      </button>
-
-      <p className="mt-1.5 text-[14px] leading-[1.55] text-charcoal">{meta.duty}</p>
-
-      {lead.memo && (
-        <p className="mt-2 line-clamp-2 text-[13px] leading-[1.5] text-slate">“{lead.memo}”</p>
-      )}
-
-      <div className="mt-5 flex flex-wrap items-center gap-2">
-        {next && (
-          <button
-            type="button"
-            onClick={() => onAdvance(lead.id, next)}
-            className="rounded-full bg-primary px-5 py-3 text-[14.5px] font-semibold text-white transition-colors duration-200 hover:bg-primary-pressed active:bg-primary-deep"
-          >
-            {meta.action}
-          </button>
+        className={cn(
+          'pressable block w-full rounded-lg border border-hairline bg-canvas px-4 py-3.5 text-left hover:border-hairline-strong',
+          muted && 'opacity-70',
         )}
-        <a
-          href={`tel:${lead.parentPhone.replace(/-/g, '')}`}
-          className="flex items-center gap-1.5 rounded-full border border-primary/25 bg-canvas/70 px-4 py-3 text-[14px] font-semibold text-primary transition-colors duration-200 hover:bg-canvas"
-        >
-          <Phone size={14} strokeWidth={2.4} />
-          전화
-        </a>
-        <button
-          type="button"
-          onClick={onOpen}
-          className="flex items-center gap-1.5 px-2 py-3 text-[14px] font-semibold text-slate"
-        >
-          <Send size={14} strokeWidth={2.2} />
-          체험 절차 보내기
-        </button>
-      </div>
-    </article>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Rows
-// ---------------------------------------------------------------------------
-
-function LeadRow({ lead, onOpen }: { lead: Lead; onOpen: () => void }) {
-  const meta = STAGE_META[lead.stage];
-  const late = isOverdue(lead);
-  const waited = daysWaiting(lead);
-
-  const when = dayOf(lead.createdAt) === TODAY || waited === 0 ? '오늘' : `${waited}일 전`;
-
-  return (
-    <li className="border-b border-hairline-soft last:border-b-0">
-      <button
-        type="button"
-        onClick={onOpen}
-        className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors duration-150 hover:bg-surface-soft"
       >
-        <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', late ? 'bg-error' : meta.dot)} />
-
-        <span className="min-w-0 flex-1">
-          <span className="flex items-baseline gap-1.5">
-            <span className="truncate text-[15.5px] font-semibold text-ink">{lead.childName}</span>
-            <span className="shrink-0 text-[13px] text-steel">· {lead.ageLabel}</span>
+        <span className="flex items-start gap-2">
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[15px] font-semibold text-ink">
+              {survey.title}
+            </span>
+            <span className="mt-0.5 block truncate text-[12.5px] text-steel">
+              {dueLabel(survey)}
+              {classNames && ` · ${classNames}`}
+            </span>
           </span>
-          <span className="mt-0.5 block truncate text-[13px] text-steel">
-            {SOURCE_LABEL[lead.source]} · {when}
-            {lead.trialDate && ` · 체험 ${lead.trialDate.slice(5).replace('-', '/')}`}
-          </span>
-        </span>
-
-        <span
-          className={cn(
-            'shrink-0 rounded-full px-2.5 py-1 text-[11.5px] font-bold',
-            late ? 'bg-tint-alert text-error' : meta.pill,
+          {p.toCall.length > 0 && (
+            <span className="flex shrink-0 items-center gap-1 rounded-full bg-primary-wash px-2 py-1 text-[11.5px] font-bold text-primary">
+              <Phone size={10} strokeWidth={2.8} />
+              {p.toCall.length}
+            </span>
           )}
-        >
-          {late ? '응대 지연' : meta.label}
+        </span>
+        <span className="mt-3 flex items-center gap-2.5">
+          <ProgressBar value={p.total ? p.answered / p.total : 0} className="flex-1" />
+          <span className="shrink-0 text-[12.5px] font-semibold tabular-nums text-slate">
+            {p.answered}/{p.total}
+          </span>
         </span>
       </button>
     </li>
   );
-}
-
-// ---------------------------------------------------------------------------
-// Composers
-// ---------------------------------------------------------------------------
-
-const SOURCES: LeadSource[] = ['phone', 'form', 'walk_in', 'referral', 'social'];
-
-function LeadComposer({
-  open,
-  onClose,
-  onSubmit,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onSubmit: (fields: Partial<Lead>) => void;
-}) {
-  const { state } = useApp();
-  const [childName, setChildName] = useState('');
-  const [ageLabel, setAgeLabel] = useState('');
-  const [parentName, setParentName] = useState('');
-  const [parentPhone, setParentPhone] = useState('');
-  const [source, setSource] = useState<LeadSource>('phone');
-  const [interestClassId, setInterestClassId] = useState('');
-  const [memo, setMemo] = useState('');
-
-  const reset = () => {
-    setChildName('');
-    setAgeLabel('');
-    setParentName('');
-    setParentPhone('');
-    setSource('phone');
-    setInterestClassId('');
-    setMemo('');
-  };
-
-  // Only the phone number is required. A parent who rang off before giving
-  // their child's name is still a lead, and a form that refuses to save them is
-  // a form that turns into a sticky note on the desk.
-  const valid = parentPhone.trim().length >= 9;
-
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      variant="sheet"
-      title="문의 등록"
-      footer={
-        <button
-          type="button"
-          disabled={!valid}
-          onClick={() => {
-            onSubmit({
-              childName: childName.trim() || '이름 미상',
-              ageLabel: ageLabel.trim() || '연령 미상',
-              parentName: parentName.trim(),
-              parentPhone: parentPhone.trim(),
-              source,
-              interestClassId: interestClassId || null,
-              memo: memo.trim(),
-            });
-            reset();
-          }}
-          className="btn-primary w-full py-3 text-[15px]"
-        >
-          등록하기
-        </button>
-      }
-    >
-      <div className="space-y-4">
-        <Field label="연락처" hint="이것만 있으면 저장됩니다">
-          <input
-            className="input-field"
-            type="tel"
-            inputMode="tel"
-            placeholder="010-0000-0000"
-            value={parentPhone}
-            onChange={(e) => setParentPhone(e.target.value)}
-          />
-        </Field>
-
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="아이 이름">
-            <input
-              className="input-field"
-              value={childName}
-              onChange={(e) => setChildName(e.target.value)}
-            />
-          </Field>
-          <Field label="연령">
-            <input
-              className="input-field"
-              placeholder="U10 / 9살"
-              value={ageLabel}
-              onChange={(e) => setAgeLabel(e.target.value)}
-            />
-          </Field>
-        </div>
-
-        <Field label="학부모 성함">
-          <input
-            className="input-field"
-            value={parentName}
-            onChange={(e) => setParentName(e.target.value)}
-          />
-        </Field>
-
-        <Field label="유입 경로">
-          <div className="flex flex-wrap gap-1.5">
-            {SOURCES.map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setSource(s)}
-                className={cn('pill-tab', source === s && 'pill-tab-active')}
-              >
-                {SOURCE_LABEL[s]}
-              </button>
-            ))}
-          </div>
-        </Field>
-
-        <Field label="관심 클래스" hint="나중에 정해도 됩니다">
-          <select
-            className="input-field"
-            value={interestClassId}
-            onChange={(e) => setInterestClassId(e.target.value)}
-          >
-            <option value="">미정</option>
-            {state.classes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.title}
-              </option>
-            ))}
-          </select>
-        </Field>
-
-        <Field label="메모">
-          <textarea
-            className="input-field min-h-[76px] resize-none"
-            placeholder="통화에서 들은 내용을 그대로 적어두세요"
-            value={memo}
-            onChange={(e) => setMemo(e.target.value)}
-          />
-        </Field>
-      </div>
-    </Modal>
-  );
-}
-
-const KINDS: FormKind[] = ['inquiry', 'trial', 'enrollment', 'survey'];
-
-function FormComposer({
-  open,
-  onClose,
-  onSubmit,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onSubmit: (title: string, kind: FormKind, fields: string[]) => void;
-}) {
-  const [title, setTitle] = useState('');
-  const [kind, setKind] = useState<FormKind>('trial');
-  const [fields, setFields] = useState<string[]>(defaultFields('trial'));
-
-  const pickKind = (k: FormKind) => {
-    setKind(k);
-    setFields(defaultFields(k));
-  };
-
-  // Questions stay in the canonical order however they were toggled, so every
-  // form a centre sends reads the same way round.
-  const toggleField = (field: string) =>
-    setFields((current) => {
-      const next = current.includes(field)
-        ? current.filter((f) => f !== field)
-        : [...current, field];
-      const order = [...CORE_FIELDS, ...OPTIONAL_FIELDS] as string[];
-      return next.sort((a, b) => order.indexOf(a) - order.indexOf(b));
-    });
-
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      variant="sheet"
-      title="폼 링크 만들기"
-      footer={
-        <button
-          type="button"
-          disabled={title.trim().length === 0}
-          onClick={() => {
-            onSubmit(title.trim(), kind, fields);
-            setTitle('');
-            pickKind('trial');
-          }}
-          className="btn-primary w-full py-3 text-[15px]"
-        >
-          만들기
-        </button>
-      }
-    >
-      <div className="space-y-4">
-        <Field label="폼 이름" hint="학부모에게 보이는 제목입니다">
-          <input
-            className="input-field"
-            placeholder="가을학기 체험 신청"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-        </Field>
-
-        <Field label="종류">
-          <div className="flex flex-wrap gap-1.5">
-            {KINDS.map((k) => (
-              <button
-                key={k}
-                type="button"
-                onClick={() => pickKind(k)}
-                className={cn('pill-tab', kind === k && 'pill-tab-active')}
-              >
-                {FORM_KIND_LABEL[k]}
-              </button>
-            ))}
-          </div>
-        </Field>
-
-        <Field label="받을 항목" hint="보호자 성함·연락처는 항상 받습니다">
-          <div className="flex flex-wrap gap-1.5">
-            {OPTIONAL_FIELDS.map((f) => (
-              <button
-                key={f}
-                type="button"
-                onClick={() => toggleField(f)}
-                aria-pressed={fields.includes(f)}
-                className={cn('pill-tab !py-1.5 !text-[13px]', fields.includes(f) && 'pill-tab-active')}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
-        </Field>
-
-        <p className="rounded-md bg-surface px-3.5 py-3 text-[12.5px] leading-[1.6] text-steel">
-          링크로 접수된 내용은 <strong className="font-semibold text-slate">신규 문의</strong>로
-          바로 들어오고, 하루 안에 응대하지 않으면 알림에 표시됩니다. 학부모는 로그인 없이
-          접수하며, 접수 전 개인정보 수집·이용 동의를 받습니다.
-        </p>
-      </div>
-    </Modal>
-  );
-}
-
-function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
-  return (
-    <label className="block">
-      <span className="flex items-baseline gap-2">
-        <span className="text-[13px] font-semibold text-charcoal">{label}</span>
-        {hint && <span className="text-[11.5px] text-stone">{hint}</span>}
-      </span>
-      <span className="mt-1.5 block">{children}</span>
-    </label>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Where the pipeline lives
-// ---------------------------------------------------------------------------
-
-/**
- * Says out loud whether this screen is the real pipeline.
- *
- * In local mode a copied link leads nowhere and everything here vanishes on
- * reload; an owner who didn't know that would send the link to parents and
- * wait for enquiries that can never arrive. So local mode gets a banner that
- * names the fix, and db mode gets a quiet line with a refresh.
- */
-function SyncBanner({
-  mode,
-  error,
-  onReload,
-}: {
-  mode: 'loading' | 'db' | 'local';
-  error: string | null;
-  onReload: () => void;
-}) {
-  if (error) {
-    return (
-      <div className="mb-4 flex items-center gap-2.5 rounded-lg bg-tint-alert-soft px-4 py-3 text-[13px] text-error">
-        <CloudOff size={16} className="shrink-0" />
-        <span className="min-w-0 flex-1">{error}</span>
-        <button type="button" onClick={onReload} className="shrink-0 font-semibold">
-          다시 불러오기
-        </button>
-      </div>
-    );
-  }
-
-  if (mode === 'local') {
-    return (
-      <div className="mb-4 rounded-lg border border-hairline-strong bg-canvas px-4 py-3.5">
-        <p className="flex items-center gap-2 text-[13.5px] font-semibold text-ink">
-          <CloudOff size={15} className="text-steel" />
-          예시 데이터로 보는 중
-        </p>
-        <p className="mt-1 text-[12.5px] leading-[1.6] text-steel">
-          문의 DB가 아직 설치되지 않아 폼 링크가 실제로 동작하지 않고, 새로고침하면 변경 사항이
-          사라집니다. Supabase에 마이그레이션 0006을 적용하면 실제 접수가 시작됩니다.
-        </p>
-      </div>
-    );
-  }
-
-  if (mode === 'db') {
-    return (
-      <div className="mb-3 flex items-center justify-between text-[12px] text-steel">
-        <span className="flex items-center gap-1.5">
-          <span className="h-1.5 w-1.5 rounded-full bg-success" />
-          실시간 접수 중 · 1분마다 새 문의를 확인합니다
-        </span>
-        <button
-          type="button"
-          onClick={onReload}
-          className="flex items-center gap-1 font-semibold text-slate transition-colors hover:text-ink"
-        >
-          <RefreshCw size={12} strokeWidth={2.4} />
-          새로고침
-        </button>
-      </div>
-    );
-  }
-
-  return null;
 }
