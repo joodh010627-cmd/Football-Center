@@ -1,0 +1,50 @@
+[
+  {
+    "token": "__FC_EMBEDDED_ASSET_001__",
+    "path": "src/embedded-assets/asset-001.woff2",
+    "mime": "font/woff2",
+    "sha256": "9599f12fd42fc0bce1cd50b47a0c022e108d7aa64dd0d1bb0ed44f3282d900b4"
+  },
+  {
+    "token": "__FC_EMBEDDED_ASSET_002__",
+    "path": "src/embedded-assets/asset-002.webp",
+    "mime": "image/webp",
+    "sha256": "064765c9d0989aa3132629fe3b35d597089b09721401b3a899fdcc985e993aec"
+  },
+  {
+    "token": "__FC_EMBEDDED_ASSET_003__",
+    "path": "src/embedded-assets/asset-003.webp",
+    "mime": "image/webp",
+    "sha256": "872b0778d4223bd519f1091f14c2e218a6373dd34df2fd4331caa2e66f3b7bb6"
+  },
+  {
+    "token": "__FC_EMBEDDED_ASSET_004__",
+    "path": "src/embedded-assets/asset-004.webp",
+    "mime": "image/webp",
+    "sha256": "ec78e26072bf0faa92c36a235421d42d81d86aa3620e14f2d506caa29abdbaef"
+  },
+  {
+    "token": "__FC_EMBEDDED_ASSET_005__",
+    "path": "src/embedded-assets/asset-005.webp",
+    "mime": "image/webp",
+    "sha256": "1d6de635bdce2c4e192a49620b67ac7b3a81a7e019d1d45d51500ed50a31a26b"
+  },
+  {
+    "token": "__FC_EMBEDDED_ASSET_006__",
+    "path": "src/embedded-assets/asset-006.webp",
+    "mime": "image/webp",
+    "sha256": "9c71f4dcdf22bd8ab2ca027710eab8c571bc05a3c9da1e075098454187d61a2d"
+  },
+  {
+    "token": "__FC_EMBEDDED_ASSET_007__",
+    "path": "src/embedded-assets/asset-007.webp",
+    "mime": "image/webp",
+    "sha256": "0fbfc98ab8c4e3e284fc8fe355e576cc412e965e1d49dace74a7d570801e0e97"
+  },
+  {
+    "token": "__FC_EMBEDDED_ASSET_008__",
+    "path": "src/embedded-assets/asset-008.webp",
+    "mime": "image/webp",
+    "sha256": "e026661d936d93914f1bf3b8df93264d233f04bb43022f162aa3331a0aa3313f"
+  }
+]

@@ -1,0 +1,1850 @@
+<!doctype html>
+<html lang="ko" data-visualize-standalone>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>FC Growth</title>
+<style>:root {
+  color-scheme: light dark;
+  background-color: var(
+    --background,
+    var(--color-background-primary, light-dark(rgb(255 255 255), rgb(24 24 24)))
+  ) !important;
+
+  /* Agent-facing contract; keep in sync with SKILL.md. */
+  --background: var(
+    --color-background-primary,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --card: color-mix(in oklab, var(--foreground) 5%, var(--background));
+  --card-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --popover: var(
+    --color-background-secondary,
+    light-dark(rgb(255 255 255), rgb(45 45 45))
+  );
+  --popover-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --primary: var(
+    --color-text-info,
+    light-dark(rgb(51 156 255), rgb(131 195 255))
+  );
+  --primary-foreground: var(
+    --color-text-inverse,
+    light-dark(rgb(255 255 255), rgb(13 13 13))
+  );
+  --secondary: var(
+    --color-background-secondary,
+    light-dark(rgb(255 255 255 / 96%), rgb(54 54 54 / 96%))
+  );
+  --secondary-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --muted: color-mix(in srgb, var(--foreground) 10%, transparent);
+  --muted-foreground: var(
+    --color-text-secondary,
+    light-dark(rgb(26 28 31 / 49.4%), rgb(255 255 255 / 49.8%))
+  );
+  --accent: var(
+    --color-background-info,
+    light-dark(rgb(229 242 255), rgb(13 39 63))
+  );
+  --accent-foreground: var(
+    --color-text-info,
+    light-dark(rgb(51 156 255), rgb(131 195 255))
+  );
+  --destructive: var(
+    --color-text-warning,
+    light-dark(rgb(226 85 7), rgb(255 133 73))
+  );
+  --border: var(
+    --color-border-secondary,
+    light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%))
+  );
+  --input: var(
+    --color-border-primary,
+    light-dark(
+      rgb(26 28 31 / 11.8%),
+      color-mix(in oklab, rgb(0 0 0) 10%, transparent)
+    )
+  );
+  --ring: var(
+    --color-ring-primary,
+    light-dark(rgb(51 156 255), rgb(131 195 255 / 76%))
+  );
+  --font-size-base: var(--font-text-md-size, 14px);
+  --blue: light-dark(rgb(51 156 255), rgb(51 156 255));
+  --orange: light-dark(rgb(226 85 7), rgb(251 106 34));
+  --green: light-dark(rgb(0 162 64), rgb(64 201 119));
+  --red: light-dark(rgb(224 46 42), rgb(255 103 100));
+  --purple: light-dark(rgb(146 79 247), rgb(173 123 249));
+  --yellow: light-dark(rgb(255 195 0), rgb(255 210 64));
+  --viz-series-1: var(--primary);
+  --viz-series-2: light-dark(rgb(243 136 59), rgb(245 154 86));
+  --viz-series-3: light-dark(rgb(93 201 119), rgb(116 213 139));
+  --viz-series-4: light-dark(rgb(235 119 177), rgb(240 143 192));
+  --viz-series-5: light-dark(rgb(155 121 236), rgb(170 145 239));
+  --viz-series-6: light-dark(rgb(58 185 177), rgb(90 203 194));
+
+  /* Internal implementation variables; not part of the agent contract. */
+  --font-sans: -apple-system, system-ui, "Segoe UI", sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
+    monospace;
+  --font-size-normal: max(11px, var(--font-size-base));
+  --font-size-tooltip: calc(var(--font-size-base) - 1px);
+  --font-size-small: max(11px, calc(var(--font-size-base) - 2px));
+  --font-size-h1: calc(var(--font-size-normal) * 1.7142857143);
+  --font-size-h2: calc(var(--font-size-normal) * 1.4285714286);
+  --font-size-h3: calc(var(--font-size-normal) * 1.2857142857);
+  --font-weight-normal: 430;
+  --font-weight-medium: 500;
+  --icon-size: 16px;
+  --line-height-normal: calc(var(--font-size-normal) * 1.5);
+  --line-height-tooltip: calc(var(--font-size-tooltip) * 1.4285714286);
+  --line-height-small: calc(var(--font-size-small) + 4px);
+  --corner-shape: round;
+  --radius: var(--border-radius-lg, 10px);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-2xl: calc(var(--radius) * 1.6);
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px -1px rgb(0 0 0 / 8%);
+  --checkmark-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 17 17'%3E%3Cpath d='M12.8961 3.64101C13.1297 3.41418 13.4984 3.37523 13.7779 3.56581C14.0571 3.75635 14.1554 4.11331 14.0299 4.41347L13.9615 4.53847L7.71151 13.7045C7.59411 13.8767 7.4063 13.9877 7.19881 14.0072C6.99136 14.0267 6.78564 13.9533 6.63826 13.806L2.88826 10.056L2.79842 9.9457C2.6192 9.67407 2.64927 9.30496 2.88826 9.06581C3.12738 8.82669 3.49647 8.79676 3.76815 8.97597L3.8785 9.06581L7.03084 12.2182L12.8053 3.74941L12.8961 3.64101Z'/%3E%3C/svg%3E");
+
+  /* Legacy aliases; not part of the current agent contract. */
+  --viz-bg: transparent;
+  --viz-panel: var(--card);
+  --viz-border: var(--border);
+  --viz-text: var(--foreground);
+  --viz-muted: var(--muted-foreground);
+  --viz-accent: var(--primary);
+  --viz-accent-text: var(--primary-foreground);
+  --viz-accent-bg: var(--accent);
+  --viz-font-size: var(--font-size-base);
+  --viz-warning: var(--destructive);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html > body {
+  /* Preserve MCP aliases for older inline renderers without creating :root cycles. */
+  --color-background-primary: var(
+    --background,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --color-text-primary: var(
+    --foreground,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --color-border-secondary: var(
+    --border,
+    light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%))
+  );
+
+  margin: 0;
+  padding: var(--visualize-paint-gutter, 0px);
+  color: var(--foreground);
+  background: transparent !important;
+  font-family: var(--font-sans) !important;
+  font-size: var(--font-size-normal);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+}
+
+:root:not([data-app-block-surface], [data-visualize-standalone]) > body {
+  padding: 12px;
+}
+
+.cursor-interaction {
+  cursor: var(--cursor-interaction, pointer);
+}
+
+a {
+  color: color-mix(in srgb, var(--viz-accent) 80%, var(--viz-text) 20%);
+  cursor: var(--cursor-interaction, pointer);
+  font-weight: var(--font-weight-medium, 500);
+  text-decoration: none;
+  text-underline-offset: 2px;
+}
+
+a:is(:hover, :focus-visible) {
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-decoration-thickness: 0.5px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin-block: 0;
+}
+
+h1 {
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h2 {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h3,
+h4,
+h5,
+h6 {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.3;
+}
+
+b,
+strong,
+th {
+  font-weight: var(--font-weight-medium);
+}
+
+code:not(pre code) {
+  display: inline;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  corner-shape: var(--corner-shape);
+  background: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  overflow-wrap: anywhere;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  word-break: break-word;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--foreground);
+  font: inherit;
+  text-align: start;
+}
+
+.table :is(th, td) {
+  padding-block: 10px;
+  padding-inline: 0 24px;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid var(--border);
+  text-align: start;
+  vertical-align: top;
+}
+
+.table-responsive > .table :is(th, td) {
+  overflow-wrap: break-word;
+}
+
+.table :is(th, td):last-child {
+  padding-inline-end: 0;
+}
+
+.table :is(caption, thead th) {
+  font-weight: 600;
+}
+
+.table thead th {
+  padding-block: 8px;
+  border-bottom-color: color-mix(in srgb, var(--foreground) 16%, transparent);
+}
+
+.table tbody tr:last-child :is(th, td) {
+  border-bottom: 0;
+}
+
+.table.table-sm :is(th, td) {
+  padding-block: 6px;
+}
+
+.table.table-sm :is(th, td):not(:last-child) {
+  padding-inline-end: 16px;
+}
+
+.table :is(.text-end, [align="right"]) {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.table :is(.text-center, [align="center"]) {
+  text-align: center;
+}
+
+.table .text-nowrap {
+  white-space: nowrap;
+}
+
+#widget {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  background: transparent !important;
+}
+
+.card {
+  min-width: 0;
+  padding: 12px;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  border-radius: var(--radius-2xl);
+  corner-shape: var(--corner-shape);
+  color: var(--card-foreground);
+  background: var(--card);
+}
+
+#widget > :not(.card, .progress) {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 50;
+  top: 0;
+  left: 0;
+  width: max-content;
+  max-width: min(
+    20rem,
+    var(--tooltip-available-width, calc(100vw - 10px)),
+    calc(100vw - 10px)
+  );
+  max-height: min(
+    var(--tooltip-available-height, calc(100vh - 10px)),
+    calc(100vh - 10px)
+  );
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  color: var(--popover-foreground);
+  background: var(--popover);
+  box-shadow: none;
+  font-size: var(--font-size-tooltip);
+  line-height: var(--line-height-tooltip);
+  overflow-wrap: break-word;
+  white-space: normal;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* The shared runtime owns data-tooltip; suppress AppBlock's pseudo-tooltip. */
+main [data-tooltip]::after {
+  content: none;
+}
+
+.viz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(180px, 24%), 1fr));
+  gap: 10px;
+}
+
+.viz-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.viz-stat-value {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+.viz-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+hr {
+  width: 100%;
+  height: 1px;
+  margin-block: 6px;
+  border: 0;
+  background: var(--border);
+}
+
+.nav {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+.progress {
+  display: flex;
+  height: 8px;
+  margin-block: calc((var(--line-height-normal, 1.5em) - 8px) / 2);
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+}
+
+.progress-bar:only-child {
+  border-radius: var(--radius-full);
+}
+
+.progress-bar {
+  height: 100%;
+  flex-shrink: 0;
+  border: 0;
+  background: var(--viz-series-1);
+}
+
+.viz-badge {
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  color: var(--accent-foreground);
+  background: var(--accent);
+  font-weight: var(--font-weight-medium);
+}
+
+small,
+.text-small,
+.viz-badge {
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
+}
+
+.text-muted {
+  color: var(--muted-foreground);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.viz-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.viz-controls > .form-label {
+  display: grid;
+  min-width: min(100%, 260px);
+  flex: 1 1 280px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin-bottom: 0;
+}
+
+.viz-controls > .form-label > :is(.form-control, .form-range, .form-select) {
+  grid-column: 1 / -1;
+}
+
+.btn,
+.nav-link,
+.form-check-input,
+.form-control,
+.form-range,
+.form-select {
+  font: inherit;
+}
+
+.btn,
+.nav-link {
+  appearance: button;
+  display: inline-flex;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0 8px;
+  -webkit-app-region: no-drag;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: var(--cursor-interaction, pointer);
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+.btn:is(.btn-block, .viz-tile) {
+  inline-size: 100%;
+}
+
+.btn.viz-tile {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+a.btn {
+  cursor: var(--cursor-interaction, pointer);
+  text-decoration: none;
+}
+
+.btn:not(:disabled):hover,
+.nav-link:not(:disabled):not([aria-disabled="true"]):hover {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.btn-primary {
+  border-color: transparent;
+  color: var(--primary-foreground);
+  background: var(--foreground);
+  background-clip: padding-box;
+}
+
+.btn-primary .text-muted {
+  color: color-mix(in srgb, var(--primary-foreground) 50%, transparent);
+}
+
+.btn-primary:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 80%, transparent);
+  background-clip: padding-box;
+}
+
+.btn-ghost {
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.btn-ghost:not(:disabled):hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.nav-pills .nav-link {
+  min-width: 0;
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.nav-justified .nav-link {
+  flex: 1 1 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.nav-pills .nav-link.active {
+  color: var(--foreground);
+  background: var(--muted);
+}
+
+.btn:disabled,
+.nav-link:disabled,
+.nav-link[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+[data-lucide] {
+  stroke-width: 1.6;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--foreground);
+}
+
+.form-control {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  color: var(--foreground);
+  background: var(--secondary);
+}
+
+.form-control::placeholder {
+  color: var(--muted-foreground);
+}
+
+.form-control[type="file"] {
+  padding: 0;
+  overflow: hidden;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control[type="file"]::file-selector-button {
+  min-height: 26px;
+  margin-right: 8px;
+  padding: 0 8px;
+  border: 0;
+  border-right: 1px solid var(--input);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: inherit;
+  font: inherit;
+}
+
+.form-control[type="file"]:not(:disabled):hover::file-selector-button {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-control-color[type="color"] {
+  width: 40px;
+  height: 28px;
+  padding: 3px;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control-color[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.form-control-color[type="color"]::-webkit-color-swatch {
+  border: 0;
+  border-radius: calc(var(--radius-lg) - 4px);
+  corner-shape: var(--corner-shape);
+}
+
+textarea.form-control {
+  height: auto;
+  min-height: 72px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.form-control:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-control:disabled,
+.form-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.form-select {
+  appearance: none;
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  margin: 0;
+  padding: 0 32px 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  color: var(--foreground);
+  background-color: var(--secondary);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted-foreground) 50%),
+    linear-gradient(135deg, var(--muted-foreground) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) 50%,
+    calc(100% - 10px) 50%;
+  background-repeat: no-repeat;
+  background-size: 4px 4px;
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-select:not(:disabled):hover {
+  background-color: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-select:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-check {
+  display: flex;
+  min-height: 20px;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-check-input {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin: 0;
+  border: 1px solid var(--input);
+  color: var(--primary-foreground);
+  background-color: transparent;
+  cursor: var(--cursor-interaction, default);
+  transition:
+    background-color 150ms,
+    border-color 150ms,
+    box-shadow 150ms;
+}
+
+.form-check:not(.form-switch) .form-check-input[type="checkbox"] {
+  border-color: var(--input);
+  border-radius: var(--radius-sm);
+  corner-shape: var(--corner-shape);
+  background-color: var(--secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input:not(:disabled):not(:checked):hover {
+  background-color: var(--card);
+}
+
+.form-check:not(.form-switch) .form-check-input[type="checkbox"]:checked {
+  border-color: var(--primary);
+  background-color: var(--primary);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input[type="checkbox"]:checked::before {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--primary-foreground);
+  content: "";
+  mask: var(--checkmark-image) center / 12px 12px no-repeat;
+}
+
+.form-check-input[type="radio"] {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+}
+
+.form-check-input[type="radio"]:checked {
+  border: 2px solid var(--primary);
+  background:
+    radial-gradient(circle, var(--primary-foreground) 0 2.5px, transparent 3px),
+    var(--primary);
+}
+
+.form-check:not(.form-switch) .form-check-input:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+}
+
+.form-switch .form-check-input:disabled,
+.form-switch .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.form-check-label {
+  color: var(--foreground);
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-switch .form-check-input {
+  position: relative;
+  width: 32px;
+  height: 20px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+  box-shadow: none;
+  transition: background-color 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1px solid light-dark(var(--primary-foreground), var(--foreground));
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+  box-shadow: var(--shadow-sm);
+  content: "";
+  transform: translate(2px, -50%);
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input:checked {
+  background: var(--primary);
+}
+
+.form-switch .form-check-input:checked::before {
+  transform: translate(14px, -50%);
+}
+
+.form-switch .form-check-input:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.form-range {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 28px;
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  outline: none;
+  border: 0;
+  accent-color: var(--primary);
+  background: linear-gradient(
+      color-mix(in srgb, var(--foreground) 7%, transparent),
+      color-mix(in srgb, var(--foreground) 7%, transparent)
+    )
+    center / 100% 2px no-repeat;
+}
+
+.form-range::-webkit-slider-runnable-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-webkit-slider-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range::-moz-range-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-moz-range-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.btn:not(.btn-primary, .viz-tile):is(
+  [aria-pressed="true"],
+  [aria-selected="true"],
+  .is-selected
+) {
+  border-color: var(--primary);
+  color: var(--primary-foreground);
+  background: var(--primary);
+}
+
+.btn.viz-tile:is([aria-pressed="true"], [aria-selected="true"], .is-selected) {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.btn:focus-visible,
+.nav-link:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@media (pointer: coarse) {
+  .btn,
+  .nav-link,
+  .form-control,
+  .form-select {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Keep small-screen WebKit from zooming when a text field receives focus. */
+  .form-control,
+  .form-select {
+    font-size: max(16px, var(--font-size-normal));
+  }
+
+  .form-control[type="file"]::file-selector-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .form-control-color[type="color"] {
+    width: 44px;
+    height: 44px;
+  }
+
+  .form-control:is(
+    [type="date"],
+    [type="datetime-local"],
+    [type="month"],
+    [type="time"],
+    [type="week"]
+  ) {
+    min-width: 0;
+    max-width: 100%;
+    padding-block: 8px;
+  }
+
+  .form-check {
+    min-height: 44px;
+    padding-inline: 15px;
+  }
+
+  .form-check-input {
+    position: relative;
+  }
+
+  .form-check-input::after {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    content: "";
+    transform: translate(-50%, -50%);
+  }
+
+  .form-check-label {
+    display: inline-flex;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+  }
+
+  .form-range {
+    height: 44px;
+    touch-action: pan-y;
+  }
+
+  .form-range::-webkit-slider-runnable-track {
+    height: 44px;
+  }
+
+  .form-range::-moz-range-track {
+    height: 44px;
+  }
+
+  .form-range::-webkit-slider-thumb {
+    margin-top: 12px;
+  }
+}
+
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+#widget > svg {
+  width: 100%;
+}
+
+/* Model-authored chart rules can otherwise stretch icons after these styles load. */
+svg.lucide {
+  display: block;
+  width: var(--icon-size) !important;
+  height: var(--icon-size) !important;
+  flex: none;
+  margin: 0 !important;
+  stroke-width: 1.6;
+}
+
+.text-warning,
+.text-destructive {
+  color: var(--destructive);
+}
+
+html>body{padding:0}</style>
+<style id="fc-viewport-layout">
+/* The navigation is outside the only scrolling region. */
+html, body { height:100%; overflow:hidden; overscroll-behavior:none; }
+#fc-live { height:100vh; height:100dvh; }
+#fc-live .app { height:100%; display:flex; flex-direction:column; overflow:hidden; }
+#fc-live .app-scroll { flex:1 1 0%; min-height:0; overflow-x:hidden; overflow-y:auto; overscroll-behavior-y:contain; -webkit-overflow-scrolling:touch; scroll-padding-block:16px; }
+#fc-live .nav { position:relative; bottom:auto; flex:0 0 auto; background:#fff; padding-bottom:calc(15px + env(safe-area-inset-bottom, 0px)); }
+#fc-live .overlay { overflow-y:auto; overscroll-behavior:contain; padding-top:max(24px, env(safe-area-inset-top, 0px)); padding-bottom:calc(24px + env(safe-area-inset-bottom, 0px)); }
+#fc-live .sheet { position:relative; top:auto; margin-block:auto; }
+@media (max-width:420px) { #fc-live .app { border:0; border-radius:0; } }
+</style>
+</head>
+<body>
+<script type="application/json" id="codex-visualization-widget-state">__CODEX_VISUALIZATION_WIDGET_STATE__</script>
+<script>(() => {
+  const root = document.documentElement;
+  const mediaQuery = globalThis.matchMedia("(prefers-color-scheme: dark)");
+  const apply = Reflect.apply;
+  const isArray = Array.isArray;
+  const hasOwn = Object.hasOwn;
+  const parentWindow = globalThis.parent;
+  const stringify = JSON.stringify;
+  const parse = JSON.parse;
+  const encode = TextEncoder.prototype.encode.bind(new TextEncoder());
+  const initialStateElement = document.getElementById(
+    "codex-visualization-widget-state",
+  );
+  const initialGlobals = parse(initialStateElement?.textContent ?? "{}");
+  initialStateElement?.remove();
+  /** @type {Record<string, unknown> | null} */
+  let state = initialGlobals.widgetState ?? null;
+  const statePersistence = initialGlobals.statePersistence ?? "none";
+  let nextStateRequestId = 0;
+  /** @type {Map<number, { resolve: () => void; reject: (error: Error) => void; timeout: ReturnType<typeof globalThis.setTimeout>; serializedState: string }>} */
+  const pendingStateWrites = new Map();
+  const persistenceError = () =>
+    Object.assign(
+      new Error("The host could not persist the widget state update"),
+      {
+        code: -32000,
+        data: { code: "widget_state_persistence_failed", retryable: false },
+      },
+    );
+  /**
+   * @param {object} prototype
+   * @param {string} property
+   */
+  const getPrototypeGetter = (prototype, property) => {
+    // oxlint-disable-next-line typescript/unbound-method -- invoked through captured Reflect.apply
+    const getter = Object.getOwnPropertyDescriptor(prototype, property)?.get;
+    if (getter == null) {
+      throw new Error(`Missing ${property} getter`);
+    }
+    return getter;
+  };
+  const getMessageData = getPrototypeGetter(MessageEvent.prototype, "data");
+  const getMessagePorts = getPrototypeGetter(MessageEvent.prototype, "ports");
+  const getMessageSource = getPrototypeGetter(MessageEvent.prototype, "source");
+  // oxlint-disable-next-line typescript/unbound-method -- captured before the untrusted fragment runs
+  const addHostMessageListener = MessagePort.prototype.addEventListener;
+  // oxlint-disable-next-line typescript/unbound-method -- captured before the untrusted fragment runs
+  const postHostMessage = MessagePort.prototype.postMessage;
+  // oxlint-disable-next-line typescript/unbound-method -- captured before the untrusted fragment runs
+  const startHostPort = MessagePort.prototype.start;
+  // oxlint-disable-next-line typescript/unbound-method -- captured before the untrusted fragment runs
+  const stopMessagePropagation = Event.prototype.stopImmediatePropagation;
+  /** @type {MessagePort | null} */
+  let hostPort = null;
+  const postToHost = (type, payload) => {
+    if (hostPort != null) {
+      apply(postHostMessage, hostPort, [{ type, ...payload }]);
+    }
+  };
+  const openExternal = ({ href }) => {
+    if (globalThis.navigator.userActivation?.isActive === true) {
+      postToHost("open-external", { href });
+    }
+  };
+  const sendFollowUpMessage = ({ context, prompt, title }) => {
+    if (globalThis.navigator.userActivation?.isActive === true) {
+      postToHost("follow-up", { context, prompt, title });
+    }
+    return Promise.resolve();
+  };
+  /**
+   * @param {Record<string, unknown> | ((previous: Record<string, unknown> | null) => Record<string, unknown>)} next
+   * @returns {Promise<void>}
+   */
+  const setWidgetState = async (next) => {
+    const nextState = typeof next === "function" ? next(state) : next;
+    if (
+      nextState == null ||
+      typeof nextState !== "object" ||
+      isArray(nextState)
+    ) {
+      throw new TypeError("Widget state must be a JSON object");
+    }
+    const inputState = stringify(
+      nextState,
+      (_key, /** @type {unknown} */ value) => {
+        if (
+          typeof value === "undefined" ||
+          typeof value === "function" ||
+          typeof value === "symbol" ||
+          (typeof value === "number" && !Number.isFinite(value))
+        ) {
+          throw new TypeError("Widget state must be a JSON object");
+        }
+        return value;
+      },
+    );
+    const parsedState = parse(inputState);
+    if (
+      parsedState == null ||
+      typeof parsedState !== "object" ||
+      isArray(parsedState)
+    ) {
+      throw new TypeError("Widget state must be a JSON object");
+    }
+    const storedState = {
+      modelContent: null,
+      privateContent: null,
+      ...parsedState,
+    };
+    const serializedState = stringify(storedState);
+    if (encode(serializedState).length > 16 * 1024) {
+      throw new TypeError(
+        "Widget state must be a JSON object of at most 16 KiB",
+      );
+    }
+    if (
+      hasOwn(storedState, "imageIds") &&
+      (!isArray(storedState.imageIds) ||
+        storedState.imageIds.some(
+          (/** @type {unknown} */ id) => typeof id !== "string",
+        ))
+    ) {
+      throw new TypeError("Widget state imageIds must be an array of strings");
+    }
+    if (storedState.imageIds?.length > 0) {
+      throw Object.assign(
+        new TypeError("Visualization state does not support image attachments"),
+        { code: -32602, data: { code: "images_unsupported" } },
+      );
+    }
+    state = storedState;
+    globalThis.openai.widgetState = state;
+    globalThis.dispatchEvent(
+      new CustomEvent("openai:set_globals", {
+        detail: { globals: { widgetState: state } },
+      }),
+    );
+    if (statePersistence === "none") {
+      throw persistenceError();
+    }
+    const id = ++nextStateRequestId;
+    return new Promise((resolve, reject) => {
+      const timeout = globalThis.setTimeout(() => {
+        pendingStateWrites.delete(id);
+        reject(persistenceError());
+      }, 30_000);
+      pendingStateWrites.set(id, { resolve, reject, timeout, serializedState });
+      postToHost("widget-state-write", { id, state: serializedState });
+    });
+  };
+  const syncTheme = () => {
+    const theme = mediaQuery.matches ? "dark" : "light";
+    root.dataset.theme = theme;
+    globalThis.openai = {
+      ...globalThis.openai,
+      openExternal,
+      sendFollowUpMessage,
+      setWidgetState,
+      theme,
+      visualizationStyleVariables: {},
+      visualizationTheme: theme,
+      widgetState: state,
+      statePersistence,
+      stateModelContext: "none",
+    };
+    globalThis.dispatchEvent(
+      new CustomEvent("openai:set_globals", {
+        detail: { globals: globalThis.openai },
+      }),
+    );
+  };
+  const sendHeight = () => {
+    postToHost("height", {
+      height: Math.ceil(
+        Math.max(
+          document.body.scrollHeight,
+          document.body.getBoundingClientRect().height,
+        ),
+      ),
+    });
+  };
+
+  globalThis.addEventListener(
+    "message",
+    (event) => {
+      const data = apply(getMessageData, event, []);
+      const ports = apply(getMessagePorts, event, []);
+      const source = apply(getMessageSource, event, []);
+      if (
+        hostPort != null ||
+        source !== parentWindow ||
+        typeof data !== "object" ||
+        data?.type !== "codex-visualization-initialize" ||
+        !isArray(ports) ||
+        ports.length !== 1
+      ) {
+        return;
+      }
+      apply(stopMessagePropagation, event, []);
+      const nextHostPort = ports[0];
+      try {
+        apply(addHostMessageListener, nextHostPort, [
+          "message",
+          (event) => {
+            const data = apply(getMessageData, event, []);
+            if (typeof data === "object" && data?.type === "measure") {
+              sendHeight();
+            } else if (
+              typeof data === "object" &&
+              data?.type === "widget-state-result"
+            ) {
+              /** @type {unknown} */
+              const id = data.id;
+              if (typeof id !== "number") {
+                return;
+              }
+              const pending = pendingStateWrites.get(id);
+              if (pending != null) {
+                pendingStateWrites.delete(id);
+                globalThis.clearTimeout(pending.timeout);
+                if (data.ok === true) {
+                  pending.resolve();
+                } else {
+                  pending.reject(persistenceError());
+                }
+              }
+            }
+          },
+        ]);
+        apply(startHostPort, nextHostPort, []);
+      } catch {
+        return;
+      }
+      hostPort = nextHostPort;
+      for (const [id, { serializedState }] of pendingStateWrites) {
+        postToHost("widget-state-write", { id, state: serializedState });
+      }
+      sendHeight();
+    },
+    { capture: true },
+  );
+  document.currentScript?.remove();
+  mediaQuery.addEventListener("change", syncTheme);
+  globalThis.addEventListener("click", (event) => {
+    if (event.defaultPrevented) {
+      return;
+    }
+    let element = null;
+    if (event.target instanceof globalThis.Element) {
+      element = event.target;
+    } else if (event.target instanceof globalThis.Node) {
+      element = event.target.parentElement;
+    }
+    const link = element?.closest("a[href]");
+    const href = link?.getAttribute("href");
+    if (href == null) {
+      return;
+    }
+    if (href.startsWith("#")) {
+      let id;
+      try {
+        id = decodeURIComponent(href.slice(1));
+      } catch {
+        return;
+      }
+      const target = id.length === 0 ? root : document.getElementById(id);
+      if (
+        target == null ||
+        globalThis.navigator.userActivation?.isActive !== true
+      ) {
+        return;
+      }
+      event.preventDefault();
+      postToHost("scroll-to", {
+        top: target.getBoundingClientRect().top + globalThis.scrollY,
+      });
+      return;
+    }
+    event.preventDefault();
+    openExternal({ href });
+  });
+  new ResizeObserver(sendHeight).observe(document.body);
+  syncTheme();
+})();
+</script>
+<div id="fc-live">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=DM+Serif+Display&display=swap">
+<style>
+@font-face{font-family:FC;src:url('__FC_EMBEDDED_ASSET_001__') format('woff2');font-weight:100 900;font-display:swap}
+#fc-live{max-width:420px;margin:auto;background:transparent;font:16px/1.5 FC,-apple-system,BlinkMacSystemFont,sans-serif;color:#101512}#fc-live *{box-sizing:border-box}#fc-live .app{background:#fff;border:1px solid #e7ebe8;border-radius:26px;overflow:clip;position:relative}#fc-live button,#fc-live input,#fc-live textarea{font:inherit}#fc-live button{border:0;background:transparent;color:inherit;padding:8px;min-height:44px}#fc-live button:focus-visible{outline:2px solid #178a5b;outline-offset:2px}#fc-live button:active{transform:scale(.98)}#fc-live .top{padding:20px 22px 10px;display:flex;align-items:center;justify-content:space-between}#fc-live .wordmark{font-size:20px;letter-spacing:-.6px;font-weight:600;display:flex;gap:10px;align-items:center}#fc-live .monogram{font-style:italic;font-weight:750;font-size:25px;letter-spacing:-5px;color:#156b46;padding-right:5px}#fc-live .pad{padding:12px 22px 0}#fc-live h1{font-size:28px;line-height:1.2;letter-spacing:-1px;font-weight:750;margin:7px 0 16px}#fc-live h2{font-size:21px;line-height:1.3;letter-spacing:-.5px;font-weight:700;margin:0}#fc-live h3{font-size:17px;font-weight:700;margin:0}#fc-live p{margin:6px 0 0}#fc-live .small{font-size:13px;color:#6e7772}#fc-live .line{display:flex;align-items:center;justify-content:space-between;gap:8px}#fc-live .green{color:#156b46;font-size:15px}#fc-live .amber{color:#966516}#fc-live .kicker{font-size:11px;letter-spacing:1.8px;font-weight:600}#fc-live .hero{position:relative;isolation:isolate;overflow:hidden;border-radius:20px;background:#e9f3ed;padding:22px;margin:20px 0 12px}#fc-live .hero:before{content:'';position:absolute;inset:-65%;z-index:-2;background:radial-gradient(ellipse at 25% 40%,#f6fff9 0,transparent 43%),radial-gradient(ellipse at 66% 68%,#178a5b 0,transparent 37%),radial-gradient(ellipse at 55% 20%,#b8eee6 0,transparent 52%),#e5f4ed;animation:fc-drift 13s ease-in-out infinite alternate}#fc-live .hero:after{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(100deg,#edf9f4ed,#edf9f480 70%,transparent)}#fc-live .hero h2{font-size:25px;font-weight:750;margin-top:25px}#fc-live .hero .goal{font-size:18px;margin-top:3px}#fc-live .pill{background:#156b46;color:#fff;border-radius:24px;padding:10px 20px;font-size:15px;min-height:44px}#fc-live .hero .bottom{margin-top:22px}#fc-live .alertline{font-size:14px;padding:8px 0;display:flex;align-items:center;justify-content:space-between;gap:8px}#fc-live .alertline span:before{content:'•';color:#b87b18;margin-right:6px}#fc-live .section{margin-top:25px;margin-bottom:10px}#fc-live .session{width:100%;display:grid;grid-template-columns:48px 1fr auto;gap:10px;align-items:center;padding:15px 0;text-align:left;border-bottom:1px solid #edf0ed}#fc-live .session .time{font-size:14px;font-variant-numeric:tabular-nums;align-self:start;padding-top:2px}#fc-live .session .status{font-size:12px;white-space:nowrap}#fc-live .session .small{margin-top:2px}#fc-live .all{width:100%;display:flex;justify-content:space-between;align-items:center;font-size:15px;color:#156b46;padding:17px 0}#fc-live .break{height:8px;background:#f6f8f6;margin:15px -22px 25px}#fc-live .clubs{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:21px 0 17px;text-align:center}#fc-live .club{display:flex;align-items:center;flex-direction:column;gap:8px;padding:0;font-size:13px}#fc-live .badge{width:52px;height:58px;display:grid;place-content:center;font-size:19px;line-height:1.05;font-weight:700;letter-spacing:-1px;background:#164d3e;color:#fff;clip-path:polygon(0 0,100% 0,100% 75%,50% 100%,0 75%)}#fc-live .badge small{font-size:8px;letter-spacing:2px;margin-top:4px}#fc-live .badge.bluebadge{background:#233e65;border-radius:50%;clip-path:none;width:56px;height:56px}#fc-live .badge.goldbadge{background:#eee5d2;color:#624f2b;clip-path:polygon(25% 0,75% 0,100% 25%,100% 75%,75% 100%,25% 100%,0 75%,0 25%)}#fc-live .news{padding:17px 0;border-top:1px solid #e7ebe8;text-align:left;width:100%}#fc-live .news h3{margin:7px 0 5px;font-weight:700;font-size:17px}#fc-live .news p{font-size:14px;color:#6e7772}#fc-live .tinybrand{font-size:12px;font-weight:600;color:#156b46}#fc-live .feature{background:#142b25;color:#fff;border-radius:16px;padding:23px;position:relative;overflow:hidden;margin:18px 0}#fc-live .feature:after{content:'↗';position:absolute;right:15px;top:8px;font-size:110px;color:#ffffff0c;line-height:1}#fc-live .feature h2{font-size:24px;font-weight:500;margin:22px 0 15px;line-height:1.35}#fc-live .feature .small{color:#bccfc5}#fc-live .feature button{color:#d3eddf;font-size:14px;padding-left:0}#fc-live .sponsor{border-radius:18px;overflow:hidden;background:#edf2f4;margin-top:15px}#fc-live .adcover{min-height:260px;position:relative;padding:23px;display:flex;flex-direction:column;justify-content:space-between;background:radial-gradient(ellipse at 95% 90%,#b0cfd8,transparent 65%),#edf3f4}#fc-live .sponsor[data-kind="food"] .adcover{background:radial-gradient(ellipse at 100% 80%,#ead1a5,transparent 65%),#faf3e7}#fc-live .sponsor[data-kind="gear"] .adcover{background:radial-gradient(ellipse at 100% 100%,#5d7b68,transparent 65%),#152b24;color:white}#fc-live .sponsor[data-kind="travel"] .adcover{background:radial-gradient(ellipse at 85% 90%,#a7c8e5,transparent 60%),#eef4fb}#fc-live .adcover h2{font-size:29px;font-weight:500;letter-spacing:-1px;line-height:1.23;max-width:270px;margin:24px 0 8px}#fc-live .adcover p{font-size:14px;max-width:270px}#fc-live .adbrand{font-size:15px;font-weight:600;letter-spacing:1px;margin-top:25px}#fc-live .sponlabel{font-size:11px;border:1px solid currentColor;border-radius:4px;padding:2px 5px;opacity:.75}#fc-live .adfooter{padding:13px 17px;background:#f7f9f8;display:flex;align-items:center;justify-content:space-between;gap:8px}#fc-live .adfooter button{font-size:14px;color:#156b46}#fc-live .controls{display:flex;align-items:center;justify-content:space-between;margin:7px 0 12px}#fc-live .dots{display:flex;gap:2px}#fc-live .dots button{width:30px;min-height:44px;padding:10px}#fc-live .dots button:before{content:'';display:block;width:6px;height:6px;background:#cbd3cd;border-radius:9px}#fc-live .dots button.on:before{background:#156b46;width:14px}#fc-live .controls button{font-size:13px;color:#6e7772}#fc-live .categories{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:7px 0 20px}#fc-live .categories button{border-radius:8px;background:#f6f8f6;font-size:13px}#fc-live .categories button.on{color:#156b46;background:#e9f3ed}#fc-live .footnote{font-size:12px;color:#7a827d;text-align:center;padding:22px 5px 28px}#fc-live .nav{position:sticky;bottom:0;background:#fffffff5;border-top:1px solid #e7ebe8;padding:8px 8px 15px;display:grid;grid-template-columns:repeat(5,1fr);z-index:5}#fc-live .nav button{font-size:11px;color:#727a76;display:flex;flex-direction:column;align-items:center;gap:5px;padding:5px 0}#fc-live .nav button.active{color:#156b46}#fc-live svg{width:20px;height:20px;stroke-width:1.6}#fc-live .nav svg{width:22px;height:22px}#fc-live [hidden]{display:none!important}#fc-live .subpage{padding:15px 22px 35px;min-height:540px}#fc-live .subpage .plainrow{padding:17px 0;border-bottom:1px solid #e7ebe8}#fc-live .week{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;margin:25px 0;font-size:14px}#fc-live .week span{padding:10px 0}#fc-live .week .today{background:#e9f3ed;color:#156b46;border-radius:10px}#fc-live .overlay{position:absolute;inset:0;background:#10151255;z-index:10;display:flex;align-items:flex-start;padding:90px 14px 20px}#fc-live .sheet{background:white;border-radius:23px;padding:23px;width:100%;box-shadow:0 15px 70px #0002;position:sticky;top:20px}#fc-live .sheet h2{margin:14px 0}#fc-live .sheet p{font-size:15px;color:#536258;line-height:1.7}#fc-live .sheet .line{gap:14px}#fc-live .sheet .pill{width:100%;margin-top:23px}#fc-live .sheet textarea{width:100%;border:1px solid #dce5df;border-radius:10px;padding:12px;font-size:16px;margin-top:15px;resize:vertical}#fc-live .choices{display:flex;flex-wrap:wrap;gap:8px;margin-top:15px}#fc-live .choices button{font-size:14px;background:#f3f6f4;border-radius:9px}#fc-live .choices button[aria-pressed="true"]{background:#e0efe5;color:#156b46}#fc-live .feedback{padding:12px;border-radius:9px;background:#e9f3ed;color:#156b46;margin-top:15px;font-size:14px}#fc-live.paused .hero:before{animation-play-state:paused}@keyframes fc-drift{0%{transform:translate(-5%,-5%) rotate(-8deg)}100%{transform:translate(9%,7%) rotate(16deg)}}@media(prefers-reduced-motion:reduce){#fc-live .hero:before{animation:none}}@media(max-width:360px){#fc-live .pad,#fc-live .subpage{padding-left:17px;padding-right:17px}#fc-live .hero{padding:18px}#fc-live .alertline{font-size:13px}#fc-live .adcover h2{font-size:26px}}
+#fc-live .realclubs{gap:8px;margin:22px 0}#fc-live .realclubs .club{font-size:12px;gap:12px}#fc-live .realclubs img{width:55px;height:62px;object-fit:contain}
+#fc-live .stadium-story{display:block;position:relative;isolation:isolate;overflow:hidden;border-radius:17px;width:100%;height:275px;text-align:left;padding:22px;color:#fff;background:#10241b}#fc-live .stadium-story>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2}#fc-live .story-shade{position:absolute;inset:0;background:linear-gradient(180deg,#071c1820 0%,#071c1888 40%,#071c18ed 100%);z-index:-1}#fc-live .story-copy{display:flex;height:100%;flex-direction:column;justify-content:flex-end;gap:10px}#fc-live .story-copy strong{font-size:28px;line-height:1.25;letter-spacing:-1px;font-weight:550}#fc-live .story-copy>span:last-child{font-size:13px;color:#f0f8f4}#fc-live .image-credit{font-size:11px;color:#6e7772;margin:7px 0 20px}
+#fc-live .photo-feature{isolation:isolate;min-height:285px;display:flex;align-items:flex-end;background:#0c2012}#fc-live .photo-feature>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:68% center;z-index:-2}#fc-live .photo-feature:after{content:'';position:absolute;inset:0;font-size:initial;background:linear-gradient(180deg,transparent,#062110c7 45%,#061b13f0);z-index:-1}#fc-live .photo-feature .small{color:#e1ede5}
+#fc-live .adcover{isolation:isolate;min-height:330px;overflow:hidden}#fc-live .ad-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-3}#fc-live .adcover:after{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,#07100bbd 0%,#07100b15 35%,#07100bed 100%)}#fc-live .sponsor[data-kind="gear"] .adcover{background:#121514;color:#fff}#fc-live .sponsor[data-kind="gear"] .ad-photo{object-position:57% center}#fc-live .sponsor[data-kind="gear"] .adcover h2{margin-top:90px;font-size:29px}#fc-live .sponsor[data-kind="travel"] .adcover{color:#fff;background:#12291e}#fc-live .sponsor[data-kind="food"] .adcover{background:#fff9f4;color:#17120f;min-height:420px}#fc-live .sponsor[data-kind="food"] .ad-photo{top:145px;height:265px;object-fit:contain;background:#fff9f4}#fc-live .sponsor[data-kind="food"] .adcover:after{background:linear-gradient(180deg,#fff9f4 0,#fff9f4 27%,transparent 48%)}#fc-live .sponsor[data-kind="food"] .adcover h2{font-size:28px;line-height:1.15;margin:12px 0 4px;color:#a90a27}#fc-live .sponsor[data-kind="food"] .adcover>div:nth-child(3){align-self:start}#fc-live .sponsor[data-kind="food"] .adbrand{margin-top:225px;background:#fff9f4d9;padding:4px 8px;border-radius:4px;color:#b5092b;width:max-content}#fc-live .sponsor[data-kind="food"] .adcover p{font-size:13px}#fc-live .sponsor[data-kind="care"] .adcover:after{display:none}#fc-live .adcover h2{max-width:300px}#fc-live .adfooter a{font-size:11px;color:#536258}#fc-live .nav .home-tab{color:#156b46}#fc-live .nav .home-tab svg{width:23px;height:23px}#fc-live .nav .home-tab.active{font-weight:600}#fc-live .nav .home-tab.active svg{fill:#e9f3ed}#fc-live .source-links{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:12px 0}#fc-live .source-links a{font-size:11px;color:#52675a;text-decoration:underline}#fc-live .sponlabel{background:#ffffff14;font-size:10px;white-space:nowrap}
+#fc-live .sponsor[data-kind="gear"] .adbrand{font-family:'Barlow Condensed',FC,sans-serif;font-size:31px;font-weight:700;font-style:italic;letter-spacing:-.7px}#fc-live .sponsor[data-kind="gear"] .kicker{font-family:'Barlow Condensed',FC,sans-serif;font-size:14px;letter-spacing:2px}#fc-live .sponsor[data-kind="food"] .adbrand{font-family:Georgia,serif;font-size:24px;font-weight:700;font-style:italic}#fc-live .sponsor[data-kind="travel"] .adbrand{font-family:'DM Serif Display',Georgia,serif;font-weight:400;letter-spacing:.6px;font-size:18px}#fc-live .adcover h2{font-weight:550}#fc-live .realclubs .club{font-weight:500}#fc-live .wordmark{letter-spacing:-.7px}#fc-live .sponsor[data-kind="food"] .adcover>div:nth-child(3){flex:1}#fc-live .sponsor[data-kind="food"] .adbrand{margin-top:220px}#fc-live .nav{background:#fff}#fc-live .nav .home-tab{position:relative}#fc-live .nav .home-tab:before{content:'';position:absolute;top:0;left:50%;width:39px;height:34px;transform:translateX(-50%);background:#e9f3ed;border-radius:11px;z-index:-1}#fc-live .nav .home-tab:not(.active):before{background:transparent}
+
+/* Explicit foregrounds on each advertising surface. */
+#fc-live .sponsor .adcover h2,
+#fc-live .sponsor .adcover .adbrand,
+#fc-live .sponsor .adcover .kicker,
+#fc-live .photo-feature h2,
+#fc-live .stadium-story .story-copy strong {
+  font-weight: 750;
+}
+#fc-live .sponsor[data-kind="gear"] .adcover h2,
+#fc-live .sponsor[data-kind="gear"] .adcover p,
+#fc-live .sponsor[data-kind="gear"] .adcover .adbrand,
+#fc-live .sponsor[data-kind="gear"] .adcover .kicker,
+#fc-live .sponsor[data-kind="gear"] .adcover .sponlabel,
+#fc-live .sponsor[data-kind="travel"] .adcover h2,
+#fc-live .sponsor[data-kind="travel"] .adcover p,
+#fc-live .sponsor[data-kind="travel"] .adcover .adbrand,
+#fc-live .sponsor[data-kind="travel"] .adcover .kicker,
+#fc-live .sponsor[data-kind="travel"] .adcover .sponlabel,
+#fc-live .photo-feature h2,
+#fc-live .photo-feature p,
+#fc-live .photo-feature .kicker,
+#fc-live .photo-feature button,
+#fc-live .stadium-story .story-copy,
+#fc-live .stadium-story .story-copy strong,
+#fc-live .stadium-story .story-copy span {
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+  opacity: 1;
+}
+#fc-live .sponsor[data-kind="food"] .adcover h2,
+#fc-live .sponsor[data-kind="food"] .adcover p,
+#fc-live .sponsor[data-kind="food"] .adcover .adbrand,
+#fc-live .sponsor[data-kind="food"] .adcover .kicker,
+#fc-live .sponsor[data-kind="food"] .adcover .sponlabel,
+#fc-live .sponsor[data-kind="care"] .adcover h2,
+#fc-live .sponsor[data-kind="care"] .adcover p,
+#fc-live .sponsor[data-kind="care"] .adcover .adbrand,
+#fc-live .sponsor[data-kind="care"] .adcover .kicker,
+#fc-live .sponsor[data-kind="care"] .adcover .sponlabel,
+#fc-live .sponsor .adfooter .small,
+#fc-live .sponsor .adfooter button {
+  color: #111111;
+  -webkit-text-fill-color: #111111;
+  opacity: 1;
+}
+#fc-live .sponsor .adcover p { font-weight: 550; }
+#fc-live .sponsor .adfooter button { font-weight: 700; }
+#fc-live .sponsor[data-kind="gear"] .adcover:after,
+#fc-live .sponsor[data-kind="travel"] .adcover:after {
+  background: linear-gradient(180deg, #060b09d9 0%, #060b091c 28%, #060b09b8 60%, #060b09f5 100%);
+}
+#fc-live .sponsor[data-kind="food"] .adbrand { background: #fff9f4; }
+#fc-live .sponsor[data-kind="gear"] .sponlabel,
+#fc-live .sponsor[data-kind="travel"] .sponlabel { background: #0a100dcc; }
+#fc-live .sponsor[data-kind="care"] .sponlabel,
+#fc-live .sponsor[data-kind="food"] .sponlabel { background: #ffffff; }
+
+</style>
+<div class="app">
+<div class="app-scroll">
+<header class="top"><div class="wordmark"><span class="monogram">FC</span>FC Growth</div><button class="cursor-interaction" data-open="notifications" aria-label="알림"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg></button></header>
+<main>
+<div data-view="class" class="pad">
+<div class="line"><span class="small">9월 18일 금요일</span><button class="green cursor-interaction" data-open="create">+ 만들기</button></div><h1>오늘의 클래스</h1><div class="small" id="fc-summary">전체 4 · 완료 1 · 예정 2 · <span class="amber">기록 필요 1</span></div>
+<section class="hero"><div class="line"><span class="kicker">UP NEXT</span><span style="font-size:15px">18:00–19:00</span></div><h2>U10 베이직</h2><p class="goal">패스 후 공간 이동</p><p class="small">이도현 코치 · 12명</p><div class="line bottom"><button class="pill cursor-interaction" data-open="session">수업 보기</button><span class="small">30분 후 시작</span></div></section>
+<div class="alertline" id="fc-reminder"><span>기록이 필요한 수업 1개</span><button class="green cursor-interaction" data-open="complete">기록하기</button></div>
+<div class="section line"><h2>오늘 일정</h2><span class="small">4개</span></div>
+<button class="session cursor-interaction" data-open="past"><span class="time">14:00</span><span><h3>U8 플레이</h3><div class="small">박지훈 코치 · 8명</div></span><span class="status small">완료</span></button>
+<button class="session cursor-interaction" data-open="complete"><span class="time">16:00</span><span><h3>U10 베이직</h3><div class="small">김민준 코치 · 12명</div></span><span class="status amber" id="fc-record-status">기록 필요</span></button>
+<button class="session cursor-interaction" data-open="session"><span class="time green">18:00</span><span><h3>U10 베이직</h3><div class="small">이도현 코치 · 12명</div></span><span class="status small">예정</span></button>
+<button class="session cursor-interaction" data-open="u12"><span class="time">19:00</span><span><h3>U12 어드밴스</h3><div class="small">김민준 코치 · 14명</div></span><span class="status small">예정</span></button>
+<button class="all cursor-interaction" data-tab="schedule">클럽 클래스 보기<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button>
+<div class="break"></div>
+<div class="line"><div><div class="kicker green">GLOBAL FOOTBALL</div><h2 style="margin-top:7px">좋아하는 클럽의 세계</h2></div><span class="small">클럽 탐색</span></div>
+<div class="clubs realclubs">
+<button class="club cursor-interaction" data-open="club1"><img src="__FC_EMBEDDED_ASSET_002__" alt="FC 바르셀로나 로고">바르셀로나</button>
+<button class="club cursor-interaction" data-open="club2"><img src="__FC_EMBEDDED_ASSET_003__" alt="레알 마드리드 로고">레알 마드리드</button>
+<button class="club cursor-interaction" data-open="club3"><img src="__FC_EMBEDDED_ASSET_004__" alt="리버풀 FC 로고">리버풀</button>
+</div>
+<button class="stadium-story cursor-interaction" data-open="stadium"><img src="__FC_EMBEDDED_ASSET_005__" alt="관중이 가득 찬 축구장 전경"><span class="story-shade"></span><span class="story-copy"><span class="kicker">THE BEAUTIFUL GAME</span><strong>꿈은, 이곳에서<br>더 커진다.</strong><span>아이와 함께 상상하는 첫 축구 여행 →</span></span></button>
+<p class="image-credit">사진: Unsplash · 구단 로고: ESPN 이미지 자료</p>
+<button class="news cursor-interaction" data-open="news"><div class="line"><span class="tinybrand">서초 그린 유나이티드</span><span class="small">2시간 전</span></div><h3>승패보다 빛났던, 첫 번째 패스.</h3><p>U10 친선 경기에서 발견한 우리 팀의 작은 변화.</p></button>
+<button class="news cursor-interaction" data-open="camp"><div class="line"><span class="tinybrand">리버웨이 FC</span><span class="small">어제</span></div><h3>토요일엔 부모님도 함께 뜁니다.</h3><p>9월 패밀리 풋볼 데이 · 참가 안내</p></button>
+<div class="break"></div>
+<div id="fc-media-home"></div>
+</div>
+<section class="subpage" data-view="club" hidden><div id="fc-club-screen" class="club-screen"></div></section>
+<section class="subpage" data-view="forms" hidden><span class="kicker green">WELCOME TO THE TEAM</span><h1 style="margin-top:12px">새로운 만남</h1><p class="small">신규 문의 5 · 체험 예정 3</p><button class="pill cursor-interaction" style="margin:25px 0" data-open="form">체험 절차 보내기</button><h2>최근 문의</h2><div class="plainrow">김지우 · U10<p class="small">체험 신청 · 오늘</p></div><div class="plainrow">이도윤 · U8<p class="small">일정 확인 대기 · 오늘</p></div><button class="all cursor-interaction" data-open="form">폼 링크 만들기<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></section>
+<section class="subpage" data-view="schedule" hidden><span class="kicker green">THIS WEEK</span><h1 style="margin-top:12px">9월 클래스 일정</h1><div class="week"><span>월<br>14</span><span>화<br>15</span><span>수<br>16</span><span>목<br>17</span><span class="today">금<br>18</span><span>토<br>19</span><span>일<br>20</span></div><div class="plainrow">18:00 · U10 베이직<p class="small">이도현 코치 · A구장</p></div><div class="plainrow">19:00 · U12 어드밴스<p class="small">김민준 코치 · B구장</p></div><div class="plainrow">토요일 · 패밀리 풋볼 데이<p class="small">클럽 일정 · 10:00–12:00</p></div><button class="all cursor-interaction" data-open="create">+ 일정 만들기</button></section>
+<section class="subpage" data-view="feed" hidden><span class="kicker green">FC GROWTH JOURNAL</span><h1 style="margin-top:12px">축구 밖의 성장까지.</h1><div id="fc-media-feed"></div></section>
+<section id="fc-media"><div class="line"><div><span class="kicker green">FC GROWTH JOURNAL</span><h2 style="margin-top:7px">이번 주, 함께 읽어요</h2></div><span class="small">SEPTEMBER</span></div>
+<article class="feature photo-feature"><img src="__FC_EMBEDDED_ASSET_006__" alt="축구공을 다루는 실제 선수의 발과 잔디"><div class="feature-content"><span class="kicker">COACHING NOTES / 01</span><h2>좋은 터치의 시작은,<br>공을 보기 전.</h2><p class="small">첫 터치와 주변 보기 · FC Growth 편집 예시</p><button class="cursor-interaction" data-open="article">3분 읽기 →</button></div></article>
+
+<div class="line section"><h2>브랜드 스토리</h2><span class="small">광고 디자인 예시</span></div>
+<div class="categories" aria-label="파트너 분야"><button class="on cursor-interaction" data-ad="0">선수 케어</button><button class="cursor-interaction" data-ad="1">팀 식사</button><button class="cursor-interaction" data-ad="2">스포츠</button><button class="cursor-interaction" data-ad="3">팀 여행</button></div>
+<article class="sponsor" data-kind="care" aria-label="스폰서 콘텐츠"><div class="adcover"><div class="line"><span class="kicker" id="fc-ad-kicker">PLAYER CARE</span><span class="sponlabel">광고 목업 · 제휴 아님</span></div><div><h2 id="fc-ad-title">뛰는 날만큼,<br>돌보는 날도.</h2><p id="fc-ad-copy">우리 아이의 컨디션을 묻는 시간.<br>보호자와 함께하는 스포츠 상담 안내.</p></div><div class="adbrand" id="fc-ad-brand">온필드 정형외과</div></div><div class="adfooter"><span class="small" id="fc-ad-benefit">보호자 동반 · 사전 예약 안내</span><button class="cursor-interaction" data-open="partner">자세히 보기</button></div></article>
+<div class="controls"><div class="dots" aria-label="스폰서 콘텐츠 선택"><button class="on cursor-interaction" data-ad="0" aria-label="병원" aria-pressed="true"></button><button class="cursor-interaction" data-ad="1" aria-label="식당" aria-pressed="false"></button><button class="cursor-interaction" data-ad="2" aria-label="스포츠 브랜드" aria-pressed="false"></button><button class="cursor-interaction" data-ad="3" aria-label="여행" aria-pressed="false"></button></div><button class="cursor-interaction" id="fc-motion" aria-pressed="false">움직임 일시정지</button></div>
+<button class="news cursor-interaction" data-open="picks"><span class="tinybrand">FC GROWTH PICKS</span><h3>이번 주말, 축구 가방에 담을 것들</h3><p>물병부터 여벌 양말까지. 부모님과 함께 보는 준비 목록.</p></button><div class="source-links" aria-label="이미지 출처"><a href="https://unsplash.com" target="_blank" rel="noopener noreferrer">Unsplash 사진</a><a href="https://www.nike.com/soccer" target="_blank" rel="noopener noreferrer">Nike 공식 이미지</a><a href="https://www.dealnews.com/KFC-Wings-10-Piece-Bucket-for-10-on-Wednesdays/21837492.html" target="_blank" rel="noopener noreferrer">KFC 제품 이미지</a><a href="https://www.espn.com/soccer/" target="_blank" rel="noopener noreferrer">ESPN 구단 로고</a></div>
+<p class="footnote">실제 사진·브랜드를 사용한 디자인 목업입니다.<br>광고 문구는 가상이며 실제 제휴·혜택이 아닙니다.<br>© FC Growth · Coach clicks. Growth connects.</p>
+</section>
+<section class="beyond" data-view="beyond" id="fc-beyond" hidden></section></main>
+</div>
+<nav class="nav" aria-label="메인 메뉴"><button class="cursor-interaction" data-tab="club"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/><circle cx="9" cy="7" r="4"/></svg>클럽</button><button class="cursor-interaction" data-tab="forms"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 12h8M8 16h6"/></svg>폼</button><button class="active home-tab cursor-interaction" data-tab="class" aria-current="page"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>클래스</button><button class="cursor-interaction" data-tab="schedule"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M16 3v4M8 3v4M3 11h18M8 15h1M15 15h1M8 18h1"/></svg>일정</button><button class="cursor-interaction" data-tab="feed"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 7h5v5H7zM16 7h1M16 11h1M7 16h10"/></svg>피드</button></nav>
+<div class="overlay" hidden><section class="sheet" role="dialog" aria-modal="true" aria-labelledby="fc-sheet-title"><div class="line"><span class="kicker green" id="fc-sheet-kicker">FC GROWTH</span><button class="cursor-interaction" id="fc-close" aria-label="닫기"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><h2 id="fc-sheet-title"></h2><div id="fc-sheet-body"></div><div id="fc-feedback" class="feedback" role="status" hidden></div><button class="pill cursor-interaction" id="fc-sheet-action">확인</button></section></div>
+</div>
+<script>
+(()=>{const r=document.getElementById('fc-live');const media=r.querySelector('#fc-media');r.querySelector('#fc-media-home').append(media);const q=s=>r.querySelector(s);const ads=[{"kind": "care", "kicker": "PLAYER CARE", "title": "뛰는 날만큼,<br>돌보는 날도.", "copy": "우리 아이의 컨디션을 묻는 시간.<br>보호자와 함께하는 스포츠 상담 안내.", "brand": "온필드 정형외과 · 가상 브랜드", "benefit": "선수 케어 콘텐츠 예시", "detail": "목업용 가상 의료 파트너입니다. 실제 진료·예약은 제공하지 않습니다.", "image": "", "alt": ""}, {"kind": "food", "kicker": "AFTER THE MATCH", "title": "같이 뛰고,<br>같이 즐기고.", "copy": "경기 후 모임을 상상한 브랜드 콘텐츠.", "brand": "KFC", "benefit": "광고 목업 · 실제 메뉴·혜택 안내 아님", "detail": "KFC의 실제 제품 이미지를 활용한 광고 디자인 예시입니다. 카피는 FC Growth 목업용으로 작성했으며 KFC와 실제 제휴 관계나 할인 혜택은 없습니다.", "image": "__FC_EMBEDDED_ASSET_007__", "alt": "KFC의 붉은색과 흰색 버킷 제품 사진"}, {"kind": "gear", "kicker": "NIKE FOOTBALL", "title": "다음 플레이를<br>준비하는 방식.", "copy": "풋볼 기어와 트레이닝 웨어를 만나는 시간.", "brand": "NIKE", "benefit": "광고 목업 · Nike 공식 캠페인 이미지 활용", "detail": "Nike 공식 축구 페이지의 킬리안 음바페와 Mercurial 캠페인 이미지를 활용한 목업입니다. FC Growth와의 제휴나 선수의 추천을 의미하지 않습니다. 광고 문구는 디자인 예시입니다.", "image": "__FC_EMBEDDED_ASSET_008__", "alt": "나이키 공식 캠페인의 킬리안 음바페와 축구화"}, {"kind": "travel", "kicker": "AWAY DAYS", "title": "화면 너머의 축구,<br>직접 만나는 주말.", "copy": "경기장과 도시를 함께 둘러보는 여행 이야기.", "brand": "TOUCHLINE TRAVEL · 가상 브랜드", "benefit": "축구 여행 콘텐츠 · 실제 판매 상품 아님", "detail": "Unsplash 축구장 사진으로 구성한 가상의 팀 여행 광고입니다. 항공·숙박·경기 티켓을 판매하거나 예약하지 않습니다.", "image": "__FC_EMBEDDED_ASSET_005__", "alt": "관중이 가득한 축구장 전체 전경"}];window.FCBrandMedia=ads;let ad=0,paused=matchMedia('(prefers-reduced-motion: reduce)').matches,active='class',saved=false,lastFocus=null;const adPhoto=document.createElement('img');adPhoto.className='ad-photo';q('.adcover').prepend(adPhoto);function showAd(i){ad=(i+4)%4;const a=ads[ad];adPhoto.hidden=!a.image;if(a.image){adPhoto.src=a.image;adPhoto.alt=a.alt}q('.sponsor').dataset.kind=a.kind;q('#fc-ad-kicker').textContent=a.kicker;q('#fc-ad-title').innerHTML=a.title;q('#fc-ad-copy').innerHTML=a.copy;q('#fc-ad-brand').textContent=a.brand;q('#fc-ad-benefit').textContent=a.benefit;r.querySelectorAll('[data-ad]').forEach(b=>{const on=+b.dataset.ad===ad;b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on))})}function motion(){r.classList.toggle('paused',paused);q('#fc-motion').textContent=paused?'움직임 재생':'움직임 일시정지';q('#fc-motion').setAttribute('aria-pressed',String(paused))}motion();showAd(2);const timer=setInterval(()=>{if(!r.isConnected){clearInterval(timer);return}if(!paused&&!document.hidden&&!r.contains(document.activeElement)&&q('.overlay').hidden&&(active==='class'||active==='feed'))showAd(ad+1)},6500);
+const info={stadium:['꿈은, 이곳에서 더 커진다.','실제 경기장 사진을 바탕으로 구성한 축구 여행 편집 콘텐츠입니다. 아이와 좋아하는 팀을 이야기하고, 언젠가 방문하고 싶은 경기장을 찾아보는 흐름을 담았습니다. 여행 상품이나 예약 서비스는 아닙니다.'],notifications:['알림','오늘 기록이 필요한 수업이 1개 있습니다. 토요일 패밀리 풋볼 데이 안내도 확인해 주세요.'],session:['U10 베이직 · 18:00','오늘의 목표: 패스 후 공간 이동. 준비 10분 → 2인 패스 15분 → 패스 후 이동 20분 → 미니게임 15분. 코칭 포인트는 “패스한 뒤 빈 공간 찾기”입니다.'],past:['U8 플레이 · 수업 완료','박지훈 코치 · 14:00–15:00. 공과 친해지기 수업을 진행했습니다. 참여 선수 8명의 수업 이력이 저장된 예시입니다.'],u12:['U12 어드밴스 · 19:00','김민준 코치 · B구장 · 14명. 오늘 목표는 압박 상황에서 빠른 패스 선택입니다.'],club1:['FC 바르셀로나','공식 엠블럼을 사용한 글로벌 클럽 탐색 목업입니다. 클럽의 교육 철학과 관련 콘텐츠를 소개할 공간이며 FC Growth와의 제휴를 의미하지 않습니다.'],club2:['레알 마드리드','레알 마드리드의 실제 로고로 구성한 클럽 탐색 목업입니다. 관련 경기장·축구 문화 콘텐츠를 모아보는 공간입니다.'],club3:['리버풀 FC','리버풀의 실제 로고로 구성한 클럽 탐색 목업입니다. 구단 소식·축구 문화·스토어 콘텐츠를 탐색하는 예시입니다.'],news:['승패보다 빛났던, 첫 번째 패스.','지난 토요일, 서초 그린 U10의 친선 경기. 공을 받은 민수가 주변을 살핀 뒤 동료에게 패스했습니다. 골로 이어지지는 않았지만, 수업에서 연습한 선택이 경기 속에 나타난 순간이었습니다. 이번 주에는 패스 후 빈 공간으로 움직이는 연습을 이어갑니다.'],camp:['토요일엔 부모님도 함께 뜁니다.','9월 19일 토요일 10:00–12:00, 가상의 리버웨이 풋볼 파크에서 함께하는 패밀리 데이. 부모님과 패스 미션, 팀 이름 만들기, 미니게임이 준비되어 있습니다.'],article:['공을 받기 전, 한 번 더 바라보기.','이번 주 코칭 노트의 주제는 주변 보기입니다. 패스를 받기 전, 옆에 있는 동료와 빈 공간을 확인하는 짧은 미션을 넣어보세요. 코치는 모든 선수를 평가하는 대신 눈에 띄는 장면을 남깁니다. 이 글은 목업을 위한 편집 예시입니다.'],picks:['축구 가방 준비 목록','이름을 적은 물병, 여벌 양말과 티셔츠, 수건, 날씨에 맞는 겉옷. 수업 전 아이와 함께 가방을 챙기는 짧은 습관을 제안합니다.'],player:['김민수 · 최근 4주','참여 수업 8회. 퍼스트터치 관련 긍정 관찰 2건이 있습니다. 그 외 영역은 관찰 데이터가 부족해 성장을 단정하지 않습니다. 다음 관찰 초점은 공을 받기 전 주변 확인입니다.'],create:['클래스 만들기','템플릿 선택 → 날짜·시간 → 담당 코치·참여 선수 순서로 실제 수업을 만듭니다. 이 목업에서는 예시 흐름만 확인할 수 있습니다.'],form:['체험 절차 보내기','체험 신청 → 일정 확인 → 준비물 안내 → 첫 수업. 학부모에게 전달할 체험 흐름의 미리보기입니다. 실제 메시지는 발송되지 않습니다.']};let openKey='';function open(key){openKey=key;lastFocus=document.activeElement;q('#fc-feedback').hidden=true;q('#fc-sheet-kicker').textContent=key==='partner'?'SPONSORED · 가상 파트너':'FC GROWTH';const a=key==='partner'?[ads[ad].brand,ads[ad].detail]:info[key];q('#fc-sheet-title').textContent=key==='complete'?'수업 마무리':a[0];q('#fc-sheet-body').replaceChildren();if(key==='complete'){q('#fc-sheet-body').innerHTML='<p>U10 베이직 · 16:00–17:00<br>오늘 목표: 패스 후 공간 이동</p><p>진행한 드릴</p><div class="choices"><button class="cursor-interaction" aria-pressed="true">2인 패스</button><button class="cursor-interaction" aria-pressed="true">패스 후 이동</button></div><p style="margin-top:19px">눈에 띈 선수만 선택하세요.</p><div class="choices"><button class="cursor-interaction" aria-pressed="false">민수 · 기술 ↗</button><button class="cursor-interaction" aria-pressed="false">준호 · 멘탈 ✓</button><button class="cursor-interaction" aria-pressed="false">현우 · 전술 !</button></div><label><textarea aria-label="선택 메모" placeholder="메모는 선택이에요" rows="2"></textarea></label>';q('#fc-sheet-action').textContent=saved?'기록 업데이트':'수업 완료'}else{const p=document.createElement('p');p.textContent=a[1];q('#fc-sheet-body').append(p);q('#fc-sheet-action').textContent=key==='partner'?'관심 콘텐츠 저장':'확인'}q('.overlay').hidden=false;q('#fc-close').focus()}function close(){q('.overlay').hidden=true;if(lastFocus)lastFocus.focus()}function tab(name){active=name;r.querySelectorAll('[data-view]').forEach(v=>v.hidden=v.dataset.view!==name);r.querySelectorAll('.nav [data-tab]').forEach(b=>{b.classList.toggle('active',b.dataset.tab===name);if(b.dataset.tab===name)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});if(name==='feed')q('#fc-media-feed').append(media);else q('#fc-media-home').append(media);q('.app-scroll').scrollTo({top:0,left:0,behavior:'instant'})}r.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.tab)tab(b.dataset.tab);if(b.dataset.open)open(b.dataset.open);if(b.dataset.ad!==undefined)showAd(+b.dataset.ad);if(b.id==='fc-motion'){paused=!paused;motion()}if(b.id==='fc-close')close();if(b.closest('.choices'))b.setAttribute('aria-pressed',String(b.getAttribute('aria-pressed')!=='true'));if(b.id==='fc-sheet-action'){if(openKey==='complete'){saved=true;q('#fc-summary').textContent='전체 4 · 완료 2 · 예정 2 · 기록 필요 0';q('#fc-record-status').textContent='완료';q('#fc-record-status').classList.remove('amber');q('#fc-reminder').hidden=true;q('#fc-feedback').textContent='목업에 기록을 저장했어요. 새로고침하면 초기화됩니다.';q('#fc-feedback').hidden=false;b.textContent='저장 완료';openKey='done'}else if(openKey==='partner'){q('#fc-feedback').textContent='관심 콘텐츠에 저장했습니다. 실제 예약·구매는 진행되지 않습니다.';q('#fc-feedback').hidden=false;b.textContent='저장됨'}else close()}});q('.overlay').addEventListener('click',e=>{if(e.target===q('.overlay'))close()});r.addEventListener('keydown',e=>{if(q('.overlay').hidden)return;if(e.key==='Escape')close();if(e.key==='Tab'){const els=[...q('.sheet').querySelectorAll('button,textarea')].filter(x=>!x.disabled);const first=els[0],last=els[els.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}});})();
+</script>
+</div>
+
+<script src="https://unpkg.com/@floating-ui/core@1.7.3/dist/floating-ui.core.umd.min.js"></script>
+<script src="https://unpkg.com/@floating-ui/dom@1.7.4/dist/floating-ui.dom.umd.min.js"></script>
+<script>
+(() => {
+  if (window.FloatingUIDOM == null) {
+    return;
+  }
+  const { autoUpdate, computePosition, flip, offset, shift, size } =
+    window.FloatingUIDOM;
+  const tooltipPlacements = new Set(["top", "right", "bottom", "left"]);
+  const tooltipId = `codex-visualization-tooltip-${
+    window.crypto?.randomUUID?.() ?? Date.now().toString(36)
+  }`;
+  const tooltipGap = 5;
+  const hoverDelay = 700;
+  const skipDelay = 300;
+  let activeTrigger = null;
+  let pendingTrigger = null;
+  let tooltip = null;
+  let openTimeout = null;
+  let autoUpdateCleanup = null;
+  let positionRequest = 0;
+  let skipDelayUntil = 0;
+  let lastPointerWasTouch = false;
+  let pinnedByTouch = false;
+
+  const getTrigger = (event) => {
+    for (const target of event.composedPath()) {
+      if (target?.nodeType === Node.ELEMENT_NODE) {
+        const trigger = target.closest("[data-tooltip]");
+        if (trigger) return trigger;
+      }
+    }
+    return null;
+  };
+  const containsTarget = (trigger, target) =>
+    target?.nodeType != null && trigger.contains(target);
+  const getContent = (trigger) =>
+    trigger.getAttribute("data-tooltip")?.trim() ?? "";
+  const getPlacement = (trigger) => {
+    const placement = trigger.getAttribute("data-tooltip-placement");
+    return tooltipPlacements.has(placement) ? placement : "top";
+  };
+  const getTooltip = () => {
+    if (tooltip == null) {
+      tooltip = document.createElement("div");
+      tooltip.id = tooltipId;
+      tooltip.className = "tooltip";
+      tooltip.setAttribute("role", "tooltip");
+    }
+    return tooltip;
+  };
+  const setDescribedBy = (trigger, described) => {
+    const ids = new Set(
+      (trigger.getAttribute("aria-describedby") ?? "")
+        .split(/\s+/)
+        .filter(Boolean),
+    );
+    if (described) {
+      ids.add(tooltipId);
+    } else {
+      ids.delete(tooltipId);
+    }
+    if (ids.size === 0) {
+      trigger.removeAttribute("aria-describedby");
+    } else {
+      trigger.setAttribute("aria-describedby", [...ids].join(" "));
+    }
+  };
+  const clearOpenTimeout = () => {
+    if (openTimeout != null) {
+      window.clearTimeout(openTimeout);
+      openTimeout = null;
+    }
+    pendingTrigger = null;
+  };
+  const closeTooltip = (activateSkipDelay = true) => {
+    clearOpenTimeout();
+    pinnedByTouch = false;
+    positionRequest += 1;
+    autoUpdateCleanup?.();
+    autoUpdateCleanup = null;
+    if (activeTrigger == null) {
+      return;
+    }
+    setDescribedBy(activeTrigger, false);
+    activeTrigger = null;
+    tooltip?.remove();
+    if (activateSkipDelay) {
+      skipDelayUntil = Date.now() + skipDelay;
+    }
+  };
+  const updatePosition = (trigger, floating) => {
+    const request = ++positionRequest;
+    void computePosition(trigger, floating, {
+      middleware: [
+        offset(tooltipGap),
+        flip({ padding: tooltipGap }),
+        shift({ padding: tooltipGap }),
+        size({
+          padding: tooltipGap,
+          apply({ availableHeight, availableWidth, elements }) {
+            elements.floating.style.setProperty(
+              "--tooltip-available-width",
+              `${Math.max(0, availableWidth)}px`,
+            );
+            elements.floating.style.setProperty(
+              "--tooltip-available-height",
+              `${Math.max(0, availableHeight)}px`,
+            );
+          },
+        }),
+      ],
+      placement: getPlacement(trigger),
+      strategy: "fixed",
+    })
+      .then(({ x, y }) => {
+        if (activeTrigger !== trigger || request !== positionRequest) {
+          return;
+        }
+        const scale = window.devicePixelRatio || 1;
+        floating.style.transform = `translate(${Math.round(x * scale) / scale}px, ${Math.round(y * scale) / scale}px)`;
+        floating.style.visibility = "visible";
+      })
+      .catch(() => {
+        if (activeTrigger === trigger && request === positionRequest) {
+          closeTooltip(false);
+        }
+      });
+  };
+  const openTooltip = (trigger) => {
+    const content = getContent(trigger);
+    if (!trigger.isConnected || content.length === 0) {
+      return;
+    }
+    clearOpenTimeout();
+    if (activeTrigger === trigger) {
+      return;
+    }
+    closeTooltip();
+    const floating = getTooltip();
+    floating.textContent = content;
+    floating.style.visibility = "hidden";
+    floating.style.transform = "translate(0, 0)";
+    document.body.appendChild(floating);
+    activeTrigger = trigger;
+    setDescribedBy(trigger, true);
+    autoUpdateCleanup = autoUpdate(trigger, floating, () => {
+      updatePosition(trigger, floating);
+    });
+  };
+  const requestOpen = (trigger, immediate = false) => {
+    if (
+      getContent(trigger).length === 0 ||
+      activeTrigger === trigger ||
+      pendingTrigger === trigger
+    ) {
+      return;
+    }
+    clearOpenTimeout();
+    pendingTrigger = trigger;
+    const delay =
+      immediate || activeTrigger != null || Date.now() < skipDelayUntil
+        ? 0
+        : hoverDelay;
+    if (delay === 0) {
+      openTooltip(trigger);
+      return;
+    }
+    openTimeout = window.setTimeout(() => {
+      openTimeout = null;
+      pendingTrigger = null;
+      openTooltip(trigger);
+    }, delay);
+  };
+  const handlePointerOpen = (event) => {
+    if (event.pointerType === "touch") {
+      return;
+    }
+    const trigger = getTrigger(event);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    requestOpen(trigger);
+  };
+  const handlePointer = (event) => {
+    lastPointerWasTouch =
+      event.type === "pointerdown" && event.pointerType === "touch";
+  };
+  const handleTouchClick = (event) => {
+    const isTouch = event.pointerType === "touch" || lastPointerWasTouch;
+    lastPointerWasTouch = false;
+    if (!isTouch || event.detail === 0) {
+      return;
+    }
+    const trigger = getTrigger(event);
+    if (
+      trigger == null ||
+      !trigger.isConnected ||
+      getContent(trigger).length === 0 ||
+      (pinnedByTouch && activeTrigger === trigger)
+    ) {
+      if (pinnedByTouch) {
+        closeTooltip();
+      }
+      return;
+    }
+    openTooltip(trigger);
+    pinnedByTouch = activeTrigger === trigger;
+    window.setTimeout(() => {
+      if (activeTrigger === trigger && !trigger.isConnected) {
+        closeTooltip(false);
+      }
+    }, 0);
+  };
+  const handleLeave = (event) => {
+    if (pinnedByTouch) {
+      return;
+    }
+    const trigger = getTrigger(event);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const handleFocusIn = (event) => {
+    const trigger = getTrigger(event);
+    if (trigger?.matches(":focus-visible")) {
+      requestOpen(trigger, true);
+    }
+  };
+  const handleKeyDown = (event) => {
+    if (event.key === "Escape") {
+      closeTooltip();
+    }
+  };
+  const handleContextMenu = (event) => {
+    lastPointerWasTouch = false;
+    const trigger = getTrigger(event);
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const handlers = {
+    pointerover: handlePointerOpen,
+    pointerdown: handlePointer,
+    pointercancel: handlePointer,
+    click: handleTouchClick,
+    pointerout: handleLeave,
+    focusin: handleFocusIn,
+    focusout: handleLeave,
+    keydown: handleKeyDown,
+    contextmenu: handleContextMenu,
+  };
+  const roots = new Map();
+  const handledEvents = new WeakSet();
+  const handleEvent = (event) => {
+    if (handledEvents.has(event)) return;
+    handledEvents.add(event);
+    handlers[event.type](event);
+  };
+  const discoverRoots = (node) => {
+    if (node.shadowRoot) listen(node.shadowRoot);
+    for (const element of node.querySelectorAll("*")) {
+      if (element.shadowRoot) listen(element.shadowRoot);
+    }
+  };
+  const listen = (root) => {
+    if (roots.has(root)) return;
+    for (const type of Object.keys(handlers)) root.addEventListener(type, handleEvent);
+    const observer = new window.MutationObserver((records) => {
+      for (const { addedNodes } of records) {
+        for (const node of addedNodes) {
+          if (node.nodeType === Node.ELEMENT_NODE) discoverRoots(node);
+        }
+      }
+      for (const [root, cleanup] of roots) {
+        if (root.host && !root.host.isConnected) {
+          cleanup();
+          roots.delete(root);
+        }
+      }
+      if (activeTrigger && !activeTrigger.isConnected) closeTooltip(false);
+    });
+    observer.observe(root, { childList: true, subtree: true });
+    roots.set(root, () => {
+      observer.disconnect();
+      for (const type of Object.keys(handlers)) root.removeEventListener(type, handleEvent);
+    });
+    discoverRoots(root);
+  };
+  const destroy = () => {
+    closeTooltip(false);
+    lastPointerWasTouch = false;
+    for (const cleanup of roots.values()) cleanup();
+    roots.clear();
+    tooltip = null;
+  };
+
+  // Events between children of one shadow root never reach the document.
+  listen(document);
+  window.addEventListener("pagehide", destroy, { once: true });
+})();
+</script>
+<script id="codex-visualization-tabs">
+(() => {
+  const selector = '.nav[role="tablist"] [role="tab"]';
+  const disabled = ':disabled,[aria-disabled="true"]';
+  const selectTab = (selected) => {
+    const panelId = selected.getAttribute("aria-controls");
+    for (const tab of selected.closest('[role="tablist"]').querySelectorAll('[role="tab"]')) {
+      const active = tab === selected;
+      tab.classList.toggle("active", active);
+      tab.setAttribute("aria-selected", String(active));
+      const id = tab.getAttribute("aria-controls");
+      const panel = id && document.getElementById(id);
+      if (panel != null) {
+        panel.hidden = id !== panelId;
+        if (!panel.hidden && selected.id) {
+          panel.setAttribute("aria-labelledby", selected.id);
+        }
+      }
+    }
+  };
+  const interact = (event) => {
+    const tab = event.target?.closest?.(selector);
+    if (event.defaultPrevented || tab == null || tab.matches(disabled)) {
+      return;
+    }
+    if (event.type === "click") {
+      selectTab(tab);
+      return;
+    }
+    const tabs = Array.from(
+      tab.closest('[role="tablist"]').querySelectorAll('[role="tab"]'),
+    ).filter((candidate) => !candidate.matches(disabled));
+    const current = tabs.indexOf(tab);
+    let next;
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      next = (current + 1) % tabs.length;
+    } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      next = (current + tabs.length - 1) % tabs.length;
+    } else if (event.key === "Home") {
+      next = 0;
+    } else if (event.key === "End") {
+      next = tabs.length - 1;
+    } else {
+      return;
+    }
+    event.preventDefault();
+    tabs[next].focus();
+    selectTab(tabs[next]);
+  };
+
+  for (const list of document.querySelectorAll('.nav[role="tablist"]')) {
+    const selected =
+      list.querySelector('[role="tab"][aria-selected="true"]') ??
+      list.querySelector('[role="tab"].active') ??
+      list.querySelector('[role="tab"]');
+    if (selected != null) {
+      selectTab(selected);
+    }
+  }
+  document.addEventListener("click", interact);
+  document.addEventListener("keydown", interact);
+  window.addEventListener("pagehide", () => {
+    document.removeEventListener("click", interact);
+    document.removeEventListener("keydown", interact);
+  }, { once: true });
+})();
+</script>
+<script id="codex-visualization-lucide" async src="https://unpkg.com/lucide@1.17.0/dist/umd/lucide.js"></script>
+<script>
+(() => {
+  const initialize = () => {
+    globalThis.lucide?.createIcons({ attrs: { width: 16, height: 16 } });
+  };
+  if (globalThis.lucide != null) {
+    initialize();
+    return;
+  }
+  document
+    .getElementById("codex-visualization-lucide")
+    ?.addEventListener("load", initialize, { once: true });
+})();
+</script>
+
+</body>
+</html>

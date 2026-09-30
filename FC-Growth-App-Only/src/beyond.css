@@ -1,0 +1,233 @@
+#fc-live .beyond { padding:12px 22px 35px; }
+#fc-live .beyond h1 { font-size:29px; margin:8px 0; line-height:1.25; }
+#fc-live .beyond h2 { font-size:21px; margin:0 0 8px; }
+#fc-live .beyond h3 { font-size:17px; margin:0; }
+#fc-live .beyond p { font-size:15px; line-height:1.65; margin:6px 0 0; }
+#fc-live .beyond .muted, #fc-live .edu-muted { color:#6e7772; font-size:14px; }
+#fc-live .beyond .eyebrow { color:#156b46; font-size:11px; font-weight:700; letter-spacing:1.5px; }
+#fc-live .beyond section { margin-top:28px; }
+#fc-live .beyond .back { display:flex; gap:7px; align-items:center; font-size:15px; color:#536258; padding-left:0; }
+#fc-live .beyond .headerline { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+#fc-live .beyond .primary { background:#156b46; color:#fff; border-radius:14px; padding:14px 18px; font-weight:650; font-size:16px; min-height:50px; }
+#fc-live .beyond .wide { width:100%; margin-top:24px; }
+#fc-live .beyond .secondary { background:#eef4ef; color:#156b46; border-radius:12px; padding:11px 15px; font-size:15px; }
+#fc-live .beyond button { cursor:pointer; }
+#fc-live .beyond button:disabled { opacity:.4; cursor:default; }
+#fc-live .beyond .pillset { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+#fc-live .beyond .pillset button { background:#f3f6f3; color:#5b6a60; border-radius:24px; padding:9px 14px; font-size:14px; }
+#fc-live .beyond .pillset button[aria-pressed="true"] { background:#156b46; color:#fff; }
+#fc-live .beyond .steps { display:flex; gap:8px; margin:18px 0 24px; }
+#fc-live .beyond .steps span { flex:1; border-top:3px solid #e7ebe8; padding-top:9px; color:#78817c; font-size:13px; }
+#fc-live .beyond .steps span.on { border-color:#156b46; color:#156b46; font-weight:700; }
+#fc-live .beyond .field { display:block; margin-top:18px; font-size:15px; font-weight:600; }
+#fc-live .beyond .field input, #fc-live .beyond .field textarea, #fc-live .beyond .field select { display:block; width:100%; margin-top:8px; background:#f6f8f6; border:1px solid #e2e8e2; border-radius:12px; padding:13px; font:400 16px/1.5 FC,-apple-system,sans-serif; color:#101512; }
+#fc-live .beyond .field textarea { resize:vertical; min-height:85px; }
+#fc-live .beyond input[type="checkbox"] { accent-color:#156b46; width:19px; height:19px; flex:none; }
+#fc-live .beyond .checkline { display:flex; align-items:center; gap:12px; min-height:48px; font-size:15px; font-weight:400; }
+#fc-live .beyond .edu-surface { border-radius:18px; padding:21px; background:#edf5ef; margin-top:20px; }
+#fc-live .beyond .edu-surface h2 { font-size:23px; line-height:1.4; margin-top:8px; }
+#fc-live .beyond .step-title { display:flex; align-items:center; gap:9px; }
+#fc-live .beyond .step-title span { width:25px; height:25px; border-radius:50%; display:grid; place-items:center; background:#e9f3ed; color:#156b46; font-size:13px; }
+#fc-live .beyond .data-row { width:100%; text-align:left; display:flex; align-items:center; gap:12px; padding:18px 0; border-bottom:1px solid #e7ebe8; }
+#fc-live .beyond .data-row .copy { flex:1; min-width:0; }
+#fc-live .beyond .data-row strong { display:block; font-size:17px; font-weight:700; line-height:1.4; }
+#fc-live .beyond .data-row small { display:block; margin-top:5px; color:#6e7772; font-size:14px; line-height:1.5; }
+#fc-live .beyond .data-row .number { width:40px; font-size:26px; font-weight:700; color:#156b46; }
+#fc-live .beyond .tag { display:inline-block; background:#edf4ef; color:#156b46; padding:4px 8px; font-size:12px; border-radius:6px; margin-top:8px; }
+#fc-live .beyond .tag.amber { color:#946216; background:#faf3e5; }
+#fc-live .beyond .empty { padding:28px 0; color:#6e7772; text-align:center; }
+#fc-live .beyond .demo-note { font-size:12px; color:#738078; margin-top:22px; }
+#fc-live .beyond .error { color:#a34628; font-size:14px; margin:12px 0; }
+#fc-live .beyond .success { background:#edf5ef; padding:17px; border-radius:14px; margin-top:18px; font-size:15px; color:#156b46; }
+#fc-live .beyond .week-nav { display:flex; align-items:center; justify-content:space-between; margin-top:20px; }
+#fc-live .beyond .week-days { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:4px; margin:7px 0 18px; }
+#fc-live .beyond .week-days button { padding:9px 0; border-radius:12px; font-size:13px; color:#6e7772; }
+#fc-live .beyond .week-days button strong { font-size:18px; display:block; color:#101512; margin-top:6px; }
+#fc-live .beyond .week-days button[aria-pressed="true"] { background:#156b46; color:#fff; }
+#fc-live .beyond .week-days button[aria-pressed="true"] strong { color:#fff; }
+#fc-live .beyond .week-days .dot { display:block; width:4px; height:4px; border-radius:50%; margin:6px auto 0; background:currentColor; }
+#fc-live .beyond details { margin-top:18px; border-bottom:1px solid #e7ebe8; padding-bottom:15px; }
+#fc-live .beyond summary { font-size:15px; cursor:pointer; }
+#fc-live .beyond .form-cover { padding:28px 22px; border-radius:18px; background:linear-gradient(140deg,#0c5034,#178a5b); color:#fff; margin:14px 0 24px; }
+#fc-live .beyond .form-cover.blue { background:linear-gradient(140deg,#14304e,#386594); }
+#fc-live .beyond .form-cover.cream { background:linear-gradient(140deg,#f4eee2,#e9dfc9); color:#201e18; }
+#fc-live .beyond .form-cover h1 { color:inherit; font-size:28px; margin:16px 0 9px; }
+#fc-live .beyond .form-cover p { color:inherit; opacity:.9; }
+#fc-live .beyond .form-cover .eyebrow { color:inherit; }
+#fc-live .beyond .form-link { overflow-wrap:anywhere; display:block; width:100%; background:#f6f8f6; border:1px solid #e7ebe8; border-radius:12px; padding:12px; font-size:14px; margin-top:15px; }
+#fc-live .beyond .rating { display:flex; gap:8px; margin-top:8px; }
+#fc-live .beyond .rating button { flex:1; padding:10px 0; border-radius:9px; background:#f1f5f2; }
+#fc-live .beyond .rating button[aria-pressed="true"] { color:#fff; background:#156b46; }
+#fc-live .beyond .facts { margin-top:18px; }
+#fc-live .beyond .facts div { display:flex; justify-content:space-between; gap:16px; border-bottom:1px solid #e7ebe8; padding:12px 0; font-size:15px; }
+#fc-live .beyond .facts span { color:#6e7772; }
+#fc-live .beyond .facts strong { font-weight:500; text-align:right; }
+#fc-live .beyond .record-player { display:flex; align-items:center; justify-content:space-between; padding:11px 0; border-bottom:1px solid #edf0ed; }
+#fc-live .beyond .record-player strong { font-size:16px; }
+#fc-live .beyond .record-player button { font-size:14px; color:#156b46; }
+#fc-live .beyond .player-picker { max-height:260px; overflow:auto; margin-top:10px; border:1px solid #e7ebe8; padding:0 12px; border-radius:12px; }
+#fc-live .edu-mini { display:flex; gap:8px; align-items:center; color:#156b46; font-size:13px; margin-top:11px; flex-wrap:wrap; }
+#fc-live .edu-mini button { font-size:13px; min-height:32px; padding:0; color:#156b46; }
+#fc-live .edu-domain-row { display:flex; align-items:center; justify-content:space-between; gap:15px; border-bottom:1px solid #e7ebe8; padding:15px 0; font-size:15px; }
+#fc-live .edu-domain-row strong { font-size:16px; font-weight:600; }
+#fc-live .edu-domain-row span { color:#6e7772; text-align:right; font-size:14px; }
+#fc-live .edu-domain-row span.positive { color:#156b46; }
+#fc-live .edu-domain-row span.needs { color:#946216; }
+#fc-live .edu-bridge { margin-top:25px; padding:20px; border-radius:18px; background:#edf5ef; }
+#fc-live .edu-bridge h2 { margin:5px 0 10px; font-size:22px; }
+#fc-live .edu-bridge button { padding-left:0; font-size:15px; color:#156b46; font-weight:600; }
+#fc-live .edu-bridge p { font-size:15px; line-height:1.65; }
+#fc-live .beyond [tabindex="-1"]:focus { outline:none; }
+@media(prefers-reduced-motion:no-preference) { #fc-live .beyond { animation:fc-page-in 140ms ease-out; } @keyframes fc-page-in { from { opacity:.55; } to { opacity:1; } } }
+@media(max-width:360px) { #fc-live .beyond { padding-inline:17px; } #fc-live .beyond h1 { font-size:27px; } }
+
+/* Essential first. Details open only when needed. */
+#fc-live .beyond h1 { font-weight:750; letter-spacing:-1px; }
+#fc-live .beyond .eyebrow, #fc-live .club-extra .eyebrow { font-size:12px; font-weight:700; letter-spacing:1.4px; color:#156b46; }
+#fc-live .beyond .demo-note, #fc-live .club-extra .demo-note { font-size:13px; line-height:1.6; color:#738078; margin-top:22px; }
+#fc-live .beyond .muted { font-size:15px; }
+#fc-live .beyond .tag { font-size:13px; }
+#fc-live .beyond summary { list-style:none; min-height:36px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+#fc-live .beyond summary::-webkit-details-marker { display:none; }
+#fc-live .beyond summary::after { content:'+'; color:#6e7772; font-size:21px; font-weight:400; }
+#fc-live .beyond details[open]>summary::after { content:'−'; }
+#fc-live .text-link { color:#156b46; padding:6px 0; min-height:38px; font-size:14px; font-weight:600; }
+#fc-live .section-heading { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:30px 0 14px; }
+#fc-live .section-heading h2 { margin:0; font-size:21px; line-height:1.4; }
+#fc-live .section-heading .tag { margin:0; white-space:nowrap; }
+#fc-live .section-heading .text-link { white-space:nowrap; }
+#fc-live .beyond .response-overview { background:linear-gradient(120deg,#f0f7f2,#f7f9ed); padding:25px 23px 19px; border-radius:22px; margin:25px 0 30px; }
+#fc-live .beyond .countline { display:flex; gap:10px; align-items:baseline; margin:12px 0 3px; }
+#fc-live .beyond .countline strong { font-size:48px; line-height:1; letter-spacing:-2px; font-weight:750; }
+#fc-live .beyond .countline span { font-size:18px; font-weight:600; }
+#fc-live .beyond .response-overview .text-link { margin-top:10px; }
+#fc-live .beyond .form-purpose-grid { display:grid; grid-template-columns:1fr 1fr; gap:1px; background:#e7ebe8; border-radius:16px; overflow:hidden; margin-top:18px; border:1px solid #e7ebe8; }
+#fc-live .beyond .form-purpose-grid button { background:#fff; padding:19px 14px; text-align:left; display:flex; flex-direction:column; align-items:flex-start; min-height:133px; }
+#fc-live .beyond .purpose-icon { font-size:23px; font-weight:500; color:#156b46; display:block; margin-bottom:14px; line-height:1; }
+#fc-live .beyond .form-purpose-grid strong { font-size:16px; font-weight:650; }
+#fc-live .beyond .form-purpose-grid small { font-size:13px; color:#6e7772; margin-top:6px; line-height:1.45; }
+#fc-live .beyond .form-summary { margin:22px 0 6px; padding:16px 0; }
+#fc-live .beyond .form-summary .tag { margin:0; }
+#fc-live .beyond .month-toolbar { display:flex; align-items:center; justify-content:space-between; margin:27px 0 12px; }
+#fc-live .beyond .month-toolbar h2 { margin:0; font-size:27px; font-weight:750; }
+#fc-live .beyond .month-toolbar small { color:#79827d; font-weight:400; font-size:17px; margin-left:4px; }
+#fc-live .beyond .month-controls { display:flex; align-items:center; gap:6px; }
+#fc-live .beyond .month-arrow { width:40px; height:42px; padding:0; font-size:28px; color:#3e5146; }
+#fc-live .beyond .calendar-weekdays, #fc-live .beyond .month-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); }
+#fc-live .beyond .calendar-weekdays { font-size:13px; color:#879089; text-align:center; margin-bottom:7px; }
+#fc-live .beyond .calendar-weekdays span { padding:8px 0; }
+#fc-live .beyond .calendar-weekdays span:first-child { color:#b26555; }
+#fc-live .beyond .month-grid { row-gap:3px; }
+#fc-live .beyond .month-grid button { padding:7px 0 4px; min-height:48px; border-radius:14px; color:#26352d; font-size:17px; font-weight:500; display:flex; flex-direction:column; align-items:center; gap:5px; }
+#fc-live .beyond .month-grid button.sunday { color:#b26555; }
+#fc-live .beyond .month-grid button.is-today { background:#edf5ef; color:#156b46; font-weight:750; }
+#fc-live .beyond .month-grid button[aria-pressed="true"] { background:#156b46; color:#fff; }
+#fc-live .calendar-dots { display:flex; justify-content:center; gap:3px; height:5px; }
+#fc-live .class-dot, #fc-live .club-dot { display:inline-block; width:4px; height:4px; border-radius:100%; background:#bcc6c0; flex:none; }
+#fc-live .club-dot { background:#178a5b; }
+#fc-live .month-grid button[aria-pressed="true"] i { background:#fff; }
+#fc-live .beyond .calendar-legend { display:flex; align-items:center; gap:12px; font-size:12px; color:#6e7772; margin-top:14px; padding-bottom:10px; }
+#fc-live .beyond .calendar-legend>span { display:flex; align-items:center; gap:5px; }
+#fc-live .beyond .calendar-legend button { margin-left:auto; }
+#fc-live .beyond .calendar-filters { margin:0; padding:0 0 7px; }
+#fc-live .beyond .calendar-filters summary { font-size:13px; color:#6e7772; }
+#fc-live .beyond .calendar-filters summary::after { font-size:17px; }
+#fc-live .beyond .day-preview .data-row:first-child { padding-top:2px; }
+#fc-live .beyond .day-preview .data-row { padding:16px 0; }
+#fc-live .beyond .data-row .number { font-size:15px; width:46px; letter-spacing:-.4px; color:#526458; font-weight:600; align-self:flex-start; padding-top:3px; }
+#fc-live .support-entry { display:flex; align-items:center; text-align:left; justify-content:space-between; gap:15px; width:100%; padding:21px 22px; margin-top:27px; border-radius:18px; background:linear-gradient(125deg,#103f30,#1b694c); color:#fff; }
+#fc-live .support-entry .copy { flex:1; }
+#fc-live .support-entry .eyebrow { color:#bbdccb; font-size:11px; letter-spacing:1.2px; display:block; }
+#fc-live .support-entry strong { display:block; color:#fff; font-size:21px; font-weight:750; margin:9px 0 7px; }
+#fc-live .support-entry small { color:#e0ede6; font-size:14px; font-weight:400; }
+#fc-live .support-entry>span { font-size:23px; }
+#fc-live .beyond .support-intro { padding:24px 0 6px; }
+#fc-live .beyond .support-intro strong { font-size:24px; }
+#fc-live .beyond .library-meta { display:flex; justify-content:space-between; align-items:center; font-size:14px; color:#6e7772; margin-top:20px; }
+#fc-live .beyond .library-meta button { padding:8px 0; font-size:14px; color:#156b46; font-weight:600; }
+#fc-live .beyond .scroll-chips { overflow:auto; margin:0 -22px; padding:0 22px 8px; scrollbar-width:none; }
+#fc-live .beyond .scroll-chips .pillset { flex-wrap:nowrap; width:max-content; }
+#fc-live .beyond .block-tile { display:flex; align-items:center; gap:14px; border-bottom:1px solid #e7ebe8; padding:20px 0; }
+#fc-live .beyond .block-open { flex:1; min-width:0; text-align:left; padding:0; }
+#fc-live .beyond .block-open h3 { font-size:19px; font-weight:750; margin:10px 0 5px; }
+#fc-live .beyond .block-open p { font-size:14px; line-height:1.6; }
+#fc-live .block-meta { display:flex; gap:10px; align-items:center; color:#6e7772; font-size:13px; }
+#fc-live .block-meta .tag { margin:0; }
+#fc-live .beyond .block-select { display:grid; place-items:center; border:1px solid #dce5de; border-radius:50%; width:44px; height:44px; font-size:23px; color:#156b46; padding:0; flex:none; }
+#fc-live .beyond .block-select.selected { border-color:#156b46; background:#156b46; color:#fff; font-size:17px; }
+#fc-live .beyond .sr-only { position:absolute; height:1px; width:1px; overflow:hidden; clip-path:inset(50%); }
+#fc-live .beyond .sticky-action { position:sticky; bottom:0; background:#fff; padding:16px 0 8px; margin-top:20px; border-top:1px solid #e7ebe8; z-index:2; }
+#fc-live .beyond .sticky-action .wide { margin-top:12px; }
+#fc-live .beyond .coach-cue { font-size:19px; font-weight:600; color:#156b46; }
+#fc-live .beyond .block-setup { margin:0 0 8px; font-size:14px; }
+#fc-live .beyond .plan-block { display:flex; gap:13px; margin:0; padding:18px 0; border-bottom:1px solid #e7ebe8; }
+#fc-live .beyond .sequence-number { font-size:14px; font-variant-numeric:tabular-nums; color:#8a948d; padding-top:3px; flex:none; }
+#fc-live .beyond .sequence-body { flex:1; min-width:0; }
+#fc-live .beyond .sequence-open { padding:0; width:100%; text-align:left; }
+#fc-live .beyond .sequence-open strong { font-size:18px; font-weight:750; }
+#fc-live .beyond .sequence-open p { font-size:14px; margin:7px 0 10px; }
+#fc-live .beyond .plan-block .block-controls { border:0; margin:5px 0 0; padding:0; }
+#fc-live .beyond .block-controls summary { font-size:13px; min-height:28px; color:#6e7772; }
+#fc-live .beyond .block-controls summary::after { font-size:17px; }
+#fc-live .beyond .sequence-actions { display:flex; gap:14px; margin-top:8px; }
+#fc-live .beyond .sequence-actions button { font-size:14px; padding:10px 0; color:#536258; }
+#fc-live .beyond .sequence-actions button:last-child { margin-left:auto; color:#a35a46; }
+#fc-live .beyond .duration-note { color:#946216; font-size:14px; margin-top:18px; }
+#fc-live .beyond .quick-player { padding:18px 16px; }
+#fc-live .beyond .quick-player .pillset { gap:6px; }
+#fc-live .beyond .quick-player .pillset button { padding:8px 10px; }
+#fc-live .beyond .quick-player p { font-size:14px; }
+#fc-live .club-disclosure { margin-top:18px; border-bottom:1px solid #e7ebe8; padding-bottom:14px; }
+#fc-live .club-disclosure>summary { display:flex; align-items:center; justify-content:space-between; list-style:none; padding:10px 0; min-height:45px; font-size:16px; font-weight:500; cursor:pointer; }
+#fc-live .club-disclosure>summary::-webkit-details-marker { display:none; }
+#fc-live .club-disclosure>summary::after { content:'+'; color:#6e7772; font-size:22px; font-weight:400; }
+#fc-live .club-disclosure[open]>summary::after { content:'−'; }
+#fc-live .club-record-cta { width:100%; padding:14px 18px; min-height:50px; border-radius:14px; font-size:16px; font-weight:650; background:#156b46; color:#fff; margin-top:22px; }
+#fc-live .edu-bridge { background:#eff5f0; padding:23px; }
+#fc-live .edu-bridge h2 { font-size:24px; line-height:1.4; font-weight:700; }
+#fc-live .edu-bridge .headerline { display:flex; gap:15px; justify-content:space-between; margin-top:13px; }
+#fc-live .edu-bridge .headerline button { font-size:14px; }
+#fc-live .club-extra { margin-top:5px; }
+#fc-live .library-entry { display:flex; gap:13px; align-items:center; padding:19px 0; margin:7px 0 2px; width:100%; border-bottom:1px solid #e7ebe8; text-align:left; }
+#fc-live .library-entry .copy { flex:1; }
+#fc-live .library-entry strong { font-size:17px; display:block; font-weight:650; }
+#fc-live .library-entry small { font-size:14px; display:block; margin-top:6px; color:#6e7772; }
+#fc-live .library-icon { border-radius:13px; background:#edf5ef; color:#156b46; font-size:26px; display:grid; place-items:center; width:44px; height:48px; }
+#fc-live .club-news-card { display:block; text-align:left; width:100%; padding:0; background:#fff; border-bottom:1px solid #e7ebe8; color:#101512; }
+#fc-live .club-news-card.featured { background:#f5f7f5; border:0; border-radius:18px; overflow:hidden; }
+#fc-live .club-news-card img { width:100%; height:160px; object-fit:cover; display:block; }
+#fc-live .club-news-card .news-caption { padding:20px 0; }
+#fc-live .club-news-card.featured .news-caption { padding:19px 20px; }
+#fc-live .club-news-card .news-meta { color:#66796c; font-size:12px; }
+#fc-live .club-news-card strong { display:block; margin:10px 0 6px; font-size:23px; font-weight:750; line-height:1.3; letter-spacing:-.6px; }
+#fc-live .club-news-card p { color:#6e7772; font-size:14px; line-height:1.5; margin:0 0 13px; }
+#fc-live .club-news-card .text-link { font-size:14px; min-height:0; }
+#fc-live .club-brand-rail { display:flex; gap:13px; overflow-x:auto; scroll-snap-type:x mandatory; padding:0 22px 10px; margin:0 -22px; scrollbar-width:none; }
+#fc-live .club-brand-tile { flex:0 0 88%; border-radius:19px; overflow:hidden; scroll-snap-align:start; padding:0; text-align:left; }
+#fc-live .club-brand-tile.dark { background:#121614; color:#fff; }
+#fc-live .club-brand-tile.light { background:#f4f0e9; color:#171912; }
+#fc-live .club-brand-tile .brand-visual { height:195px; overflow:hidden; }
+#fc-live .club-brand-tile .brand-visual img { width:100%; height:100%; object-fit:cover; display:block; }
+#fc-live .club-brand-tile.light .brand-visual { background:#fff; }
+#fc-live .club-brand-tile.light .brand-visual img { object-fit:contain; }
+#fc-live .club-brand-tile .brand-copy { padding:19px 21px 22px; }
+#fc-live .club-brand-tile .brand-label { font-size:11px; display:block; opacity:.75; }
+#fc-live .club-brand-tile strong { display:block; font-size:27px; font-weight:800; line-height:1.25; letter-spacing:-.8px; margin:12px 0 19px; }
+#fc-live .club-brand-tile .brand-copy>span:last-child { font-size:12px; font-weight:650; letter-spacing:.4px; }
+#fc-live .beyond .story-image { display:block; width:100%; max-height:300px; object-fit:cover; border-radius:18px; margin:23px 0; }
+#fc-live .beyond button:focus-visible, #fc-live .club-extra button:focus-visible, #fc-live summary:focus-visible { outline:3px solid #77ae8a; outline-offset:4px; }
+@media(max-width:360px) { #fc-live .beyond .scroll-chips { margin-inline:-17px; padding-inline:17px; } #fc-live .beyond .quick-player .pillset button { font-size:13px; padding:8px; } #fc-live .club-extra .section-heading h2 { font-size:19px; } }
+#fc-live .beyond .form-purpose-grid button { min-height:104px; padding:16px 14px; }
+#fc-live .beyond .purpose-icon { font-size:20px; margin-bottom:10px; }
+#fc-live .beyond .response-overview { padding:21px 23px 17px; margin-top:24px; }
+#fc-live .beyond .countline strong { font-size:44px; }
+#fc-live .beyond .month-toolbar { margin-top:12px; }
+#fc-live .beyond .month-toolbar h1 { margin:0; font-size:31px; font-weight:750; line-height:1.4; letter-spacing:-1px; }
+#fc-live .calendar-support { padding:17px 20px; margin-top:18px; border-radius:16px; }
+#fc-live .calendar-support strong { font-size:18px; margin:0 0 6px; }
+#fc-live .calendar-support small { font-size:13px; }
+#fc-live .beyond .response-overview { padding-top:18px; padding-bottom:14px; margin-bottom:26px; }
+#fc-live .beyond .countline { margin-top:8px; }
+#fc-live .beyond .form-purpose-grid button { padding-block:13px; }
+#fc-live .beyond .purpose-icon { margin-bottom:8px; }
+#fc-live .club-brand-tile strong { word-break:keep-all; overflow-wrap:normal; }

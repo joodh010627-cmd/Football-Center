@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 5173
+    },
+    {
+      "name": "mockup",
+      "runtimeExecutable": "py",
+      "runtimeArgs": ["FC-Growth-App-Only/scripts/serve.py", "--port", "8000"],
+      "port": 8000
     }
   ]
 }
