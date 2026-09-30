@@ -426,6 +426,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }
 
   if (
+    // Demo rows are built from the roster, so only in preview: on a real
+    // academy they would dress up real children as surveyed or newly enrolled.
+    PREVIEW &&
     ws.surveyMode === 'local' &&
     !ws.surveysSeeded &&
     !loading &&
@@ -441,6 +444,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   // Waits for the leads too, so the seeded unanswered call can point at one.
   if (
+    PREVIEW &&
     ws.touchMode === 'local' &&
     !ws.touchesSeeded &&
     ws.mode !== 'loading' &&
