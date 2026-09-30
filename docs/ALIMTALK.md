@@ -28,8 +28,8 @@ send-alimtalk  (supabase/functions/send-alimtalk)
 
 | 단계 | 상태 | 위치 |
 |---|---|---|
-| 템플릿 원문 5종 (수업 리포트 · 체험 예약 안내 · 문의 접수 확인 · 설문 요청 · 설문 마감 전 안내) | ✅ | `src/lib/alimtalk/templates.ts` |
-| 설문 템플릿을 적재 허용 목록에 추가 | ✅ | `supabase/migrations/0007_surveys.sql` |
+| 템플릿 원문 6종 (수업 리포트 · 체험 예약 안내 · 문의 접수 확인 · 설문 요청 · 설문 마감 전 안내 · 입단 환영 안내) | ✅ | `src/lib/alimtalk/templates.ts` |
+| 설문·환영 템플릿을 적재 허용 목록에 추가 | ✅ | `0007_surveys.sql`, `0008_onboarding.sql` (두 목록은 같다 — 어느 쪽을 다시 실행해도 줄지 않게) |
 | 발송 대기열 테이블 + 적재 함수 + 중복 방지 | ✅ | `supabase/migrations/0006_leads_forms_alimtalk.sql` |
 | 앱에서 적재 (출결 제출·체험 예약), DB에서 적재 (폼 접수) | ✅ | `NotificationPreviewModal`, `WorkspaceContext`, `submit_public_form()` |
 | 발송 서버 + 대행사 어댑터 인터페이스 + 드라이런 | ✅ 코드 | `supabase/functions/send-alimtalk/` |
@@ -79,7 +79,7 @@ npx supabase functions deploy send-alimtalk
 npx supabase secrets set ALIMTALK_PROVIDER=<어댑터 이름>
 npx supabase secrets set ALIMTALK_API_KEY=<대행사 API 키>
 npx supabase secrets set ALIMTALK_SENDER_KEY=<발신 프로필 키>
-npx supabase secrets set ALIMTALK_TEMPLATE_MAP='{"attendance_report":"…","trial_booked":"…","inquiry_received":"…","survey_request":"…","survey_reminder":"…"}'
+npx supabase secrets set ALIMTALK_TEMPLATE_MAP='{"attendance_report":"…","trial_booked":"…","inquiry_received":"…","survey_request":"…","survey_reminder":"…","welcome":"…"}'
 ```
 
 키는 Edge Function 비밀에만 둔다. 앱 번들(`VITE_…`)이나 DB에 넣지 않는다.

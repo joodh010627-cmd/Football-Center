@@ -296,78 +296,8 @@ export function countLeads(leads: Lead[], asOf: ISODate = TODAY): LeadCounts {
 export const trialsOn = (leads: Lead[], date: ISODate): Lead[] =>
   leads.filter((l) => l.trialDate === date && l.stage !== 'lost');
 
-// ---------------------------------------------------------------------------
-// Onboarding checklist
-// ---------------------------------------------------------------------------
-
-/**
- * What still has to happen before this enquiry is a settled student.
- *
- * Rendered as a checklist on the lead card rather than inferred from the stage
- * alone, because the steps genuinely aren't sequential: a parent can pay before
- * the trial, and the uniform order goes in whenever it goes in. The stage says
- * where the *conversation* is; this says what is outstanding.
- */
-export interface OnboardingStep {
-  key: string;
-  label: string;
-  done: boolean;
-  /** Shown under the label when the step isn't done yet. */
-  hint: string;
-}
-
-/**
- * `form` is where the 등록 신청서 has got to, if one was sent — it lives in the
- * survey tables, not on the lead, so the caller looks it up.
- */
-export function onboardingSteps(
-  lead: Lead,
-  form: 'none' | 'sent' | 'answered' = 'none',
-): OnboardingStep[] {
-  const reached = (stage: LeadStage) => PIPELINE.indexOf(lead.stage) >= PIPELINE.indexOf(stage);
-
-  return [
-    {
-      key: 'contact',
-      label: '첫 상담 연락',
-      done: reached('contacted'),
-      hint: `${STAGE_META.inquiry.slaDays}일 안에 연락하는 것이 목표입니다`,
-    },
-    {
-      key: 'trial',
-      label: '체험 수업 일정',
-      done: lead.trialDate !== null,
-      hint: '날짜가 정해지면 학부모에게 안내가 나갑니다',
-    },
-    {
-      key: 'attend',
-      label: '체험 참석',
-      done: reached('trial_done'),
-      hint: '체험 당일 출결에서 기록됩니다',
-    },
-    {
-      key: 'form',
-      label: '등록 신청서',
-      done: form === 'answered' || lead.stage === 'enrolled',
-      hint:
-        form === 'sent'
-          ? '보냈습니다 — 보호자의 답을 기다리는 중'
-          : '생년월일·건강·비상 연락처를 알림톡 링크로 받습니다',
-    },
-    {
-      key: 'class',
-      label: '반 배정',
-      done: lead.interestClassId !== null,
-      hint: '연령과 요일이 맞는 반을 고릅니다',
-    },
-    {
-      key: 'enroll',
-      label: '등록 확정',
-      done: lead.stage === 'enrolled',
-      hint: '확정하면 원생 명단에 추가됩니다',
-    },
-  ];
-}
+// The onboarding checklist that lived here is now the journey in
+// `onboarding.ts`, which runs past 등록 into the first month.
 
 // ---------------------------------------------------------------------------
 // Seed

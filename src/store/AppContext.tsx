@@ -136,6 +136,7 @@ export interface LoadedData {
 
 export type AppAction =
   | { type: 'data/loaded'; data: LoadedData }
+  | { type: 'student/add'; student: Student }
   // --- Session design ---------------------------------------------------
   | { type: 'builder/open'; classId: ID; date: ISODate }
   | { type: 'builder/shape'; categories: TrainingCategory[] }
@@ -244,6 +245,13 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         students: rescoreStudents(students, attendanceLogs, TODAY, action.data.classes),
       };
     }
+
+    // A family finished onboarding's 등록 확정. The row is already written
+    // (`enroll_lead()`), so this only puts it in front of the class right away
+    // instead of after the next full refetch.
+    case 'student/add':
+      if (state.students.some((s) => s.id === action.student.id)) return state;
+      return { ...state, students: [...state.students, action.student] };
 
     // --- Session design --------------------------------------------------
 

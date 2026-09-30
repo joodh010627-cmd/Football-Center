@@ -1,365 +1,218 @@
 /**
- * 폼 — every question the centre asks a parent, and what came back.
+ * 폼 — 새로운 만남. 문의부터 첫 달까지, 한 가족씩.
  *
- * This tab used to be the enquiry pipeline and nothing else, with five boxes,
- * a hero card, a queue and a link manager on one screen. It now covers more
- * ground and shows less: three short blocks, each answering one question.
+ * The tab is built on one idea: a centre with constant turnover lives or dies
+ * on how it treats families in their first weeks, from the first reply to the
+ * first month's review. So the screen answers, top to bottom:
  *
- *   할 일      — what came back that needs a person, today. At most three rows.
- *                Empty means nothing is waiting, and then the block is gone.
- *   새 학부모   — one row. The pipeline behind it is a tap away, not spread
- *                across the root.
- *   설문       — what's out right now, as progress bars.
+ *   1. How many families do I owe a contact today?  — one number, one button.
+ *   2. Where is everyone on the journey?             — four rows, 문의 → 첫 달.
+ *   3. What do I want to send?                        — four doors, chosen by
+ *                                                       purpose, not by form type.
  *
- * Making anything is one button in the header, and it starts from a list of
- * real moments in a term (대회 참가, 재등록 의향, 촬영 동의 …), not from a blank
- * form. The survey that needs no thought takes two taps; the one that does
- * opens a text box.
+ * Everything else — the individual family, the survey results, the links —
+ * is one tap down. Nothing on this screen asks to be read twice.
  */
 
 import { useMemo, useState } from 'react';
-import { ChevronRight, Phone, Plus, UserPlus } from 'lucide-react';
-import type { Class, ID } from '@/types';
-import { useApp } from '@/store/AppContext';
+import { ArrowUpRight, ClipboardCheck, MessageCircleHeart, Trophy } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import type { ID } from '@/types';
 import { useWorkspace } from '@/store/WorkspaceContext';
-import { countLeads, isOverdue, triage, STAGE_META } from '@/data/crm';
+import { TODAY } from '@/data/dates';
 import {
-  dueLabel,
-  isOpenSurvey,
-  progressOf,
-  SITUATIONS,
-  type Survey,
-  type SurveyKind,
-  type SurveyRecipient,
-} from '@/data/surveys';
-import { cn } from '@/lib/cn';
-import { ProgressBar } from '@/components/ui/ProgressBar';
-import { ScreenBody, ScreenHeader, Section, Toast } from '@/components/shell/Shell';
+  PHASES,
+  isDue,
+  phaseList,
+  queueBreakdown,
+  todayQueue,
+  type Phase,
+} from '@/data/onboarding';
+import { isOpenSurvey, progressOf, type SurveyKind } from '@/data/surveys';
 import { NewFormSheet } from './NewFormSheet';
-import { SyncBanner } from './parts';
+import {
+  DemoNote,
+  Eyebrow,
+  Page,
+  Row,
+  Rows,
+  Section,
+  Surface,
+  Tag,
+  TextLink,
+  Title,
+} from './ui';
 
 interface FormsScreenProps {
-  onOpenLead: (leadId: ID) => void;
-  onOpenLeads: () => void;
+  onOpenFamily: (key: string, queue?: boolean) => void;
+  onOpenPhase: (phase: Phase) => void;
+  onOpenInvite: () => void;
+  onOpenSent: () => void;
   onOpenSurvey: (surveyId: ID, notice?: string | null) => void;
 }
 
-interface Todo {
+/** The four doors. Grouped by what the owner is trying to do. */
+const DOORS: Array<{
   key: string;
+  icon: LucideIcon;
   label: string;
-  detail: string;
-  tone: 'urgent' | 'call' | 'normal';
-  onOpen: () => void;
-}
+  sub: string;
+  kinds?: SurveyKind[];
+}> = [
+  { key: 'invite', icon: ArrowUpRight, label: '체험 초대', sub: '신청 링크 · SNS 공유' },
+  { key: 'join', icon: Trophy, label: '참가 신청', sub: '대회 · 캠프 · 행사', kinds: ['rsvp'] },
+  {
+    key: 'check',
+    icon: ClipboardCheck,
+    label: '동의 · 조사',
+    sub: '촬영 동의 · 일정 조사',
+    kinds: ['consent', 'schedule', 'order', 'custom'],
+  },
+  {
+    key: 'listen',
+    icon: MessageCircleHeart,
+    label: '의견 듣기',
+    sub: '재등록 의향 · 만족도',
+    kinds: ['renewal', 'satisfaction'],
+  },
+];
 
-/** Offered when nothing has been sent yet — the three a centre sends most. */
-const QUICK_START: SurveyKind[] = ['rsvp', 'renewal', 'consent'];
-
-export function FormsScreen({ onOpenLead, onOpenLeads, onOpenSurvey }: FormsScreenProps) {
-  const { state } = useApp();
-  const { leads, surveys, recipients, surveyMode, syncError, reload } = useWorkspace();
-  const [sheet, setSheet] = useState<{ open: boolean; startKind?: SurveyKind; n: number }>({
+export function FormsScreen({
+  onOpenFamily,
+  onOpenPhase,
+  onOpenInvite,
+  onOpenSent,
+  onOpenSurvey,
+}: FormsScreenProps) {
+  const { families, surveys, recipients, mode, surveyMode, touchMode } = useWorkspace();
+  const [sheet, setSheet] = useState<{ open: boolean; kinds?: SurveyKind[]; n: number }>({
     open: false,
     n: 0,
   });
-  const [showPast, setShowPast] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
 
-  const counts = useMemo(() => countLeads(leads), [leads]);
+  const queue = useMemo(() => todayQueue(families), [families]);
+  const late = queue.filter((f) => f.next!.late).length;
 
-  // 등록 신청서 belong to a lead and are shown there, not in the class list.
-  const classSurveys = surveys.filter((v) => v.kind !== 'enrollment');
-  const current = classSurveys.filter((v) => isOpenSurvey(v));
-  const past = classSurveys.filter((v) => !isOpenSurvey(v));
+  // The next thing on the horizon, for the day there's nothing due.
+  const upcoming = useMemo(
+    () =>
+      families
+        .filter((f) => f.next && !isDue(f) && f.next.due >= TODAY)
+        .sort((a, b) => a.next!.due.localeCompare(b.next!.due))[0],
+    [families],
+  );
 
-  const todos = useMemo<Todo[]>(() => {
-    const out: Todo[] = [];
+  const sent = surveys.filter((v) => v.kind !== 'enrollment');
+  const live = sent.filter((v) => isOpenSurvey(v)).length;
+  const toTalk = sent.reduce((n, v) => n + progressOf(v, recipients).toCall.length, 0);
 
-    if (counts.overdue > 0) {
-      const late = triage(leads).filter((l) => isOverdue(l));
-      out.push({
-        key: 'leads',
-        label: late.length === 1 ? `${late[0].childName} 문의 · 응대 지연` : `응대가 늦은 문의 ${late.length}건`,
-        detail: late.length === 1 ? STAGE_META[late[0].stage].duty : `${late[0].childName} 외 · 오늘 안에 전화하세요`,
-        tone: 'urgent',
-        onOpen: late.length === 1 ? () => onOpenLead(late[0].id) : onOpenLeads,
-      });
-    }
-
-    for (const v of surveys) {
-      const p = progressOf(v, recipients);
-      if (v.kind === 'enrollment') {
-        const r = recipients.find((x) => x.surveyId === v.id && x.answeredAt);
-        const lead = r && leads.find((l) => l.id === r.leadId);
-        if (lead && lead.stage !== 'enrolled' && lead.stage !== 'lost') {
-          out.push({
-            key: `enroll-${v.id}`,
-            label: `${lead.childName} 등록 신청서 도착`,
-            detail: '읽어 보고 등록을 확정하세요',
-            tone: 'normal',
-            onOpen: () => onOpenLead(lead.id),
-          });
-        }
-        continue;
-      }
-      if (p.toCall.length > 0) {
-        out.push({
-          key: `call-${v.id}`,
-          label: `전화할 집 ${p.toCall.length}`,
-          detail: v.title,
-          tone: 'call',
-          onOpen: () => onOpenSurvey(v.id),
-        });
-      }
-      if (p.daysLeft !== null && p.daysLeft <= 1 && p.pending.length > 0) {
-        out.push({
-          key: `due-${v.id}`,
-          label: `답이 없는 집 ${p.pending.length} · ${dueLabel(v)}`,
-          detail: v.title,
-          tone: 'normal',
-          onOpen: () => onOpenSurvey(v.id),
-        });
-      }
-    }
-
-    return out.slice(0, 3);
-  }, [counts.overdue, leads, surveys, recipients, onOpenLead, onOpenLeads, onOpenSurvey]);
-
-  const openSheet = (startKind?: SurveyKind) =>
-    setSheet((s) => ({ open: true, startKind, n: s.n + 1 }));
-
-  const flash = (message: string) => {
-    setToast(message);
-    window.setTimeout(() => setToast(null), 2600);
-  };
+  const demo = mode === 'local' || surveyMode === 'local' || touchMode === 'local';
 
   return (
-    <>
-      <ScreenHeader
-        eyebrow="Forms"
-        title="폼"
-        action={
-          <button
-            type="button"
-            onClick={() => openSheet()}
-            className="btn-primary !px-4 !py-2.5 text-[14px]"
-          >
-            <Plus size={16} strokeWidth={2.6} />새 폼
-          </button>
-        }
-      />
+    <Page>
+      <Title eyebrow="Welcome to the team" title="새로운 만남" sub="문의부터 첫 달까지, 한 가족씩." />
 
-      <ScreenBody>
-        <SyncBanner
-          mode={surveyMode}
-          error={syncError}
-          onReload={reload}
-          migration="0007"
-          what="설문 링크"
-        />
-
-        {/* --- 할 일 ------------------------------------------------------ */}
-        {todos.length > 0 && (
-          <ul className="stagger space-y-2">
-            {todos.map((t) => (
-              <li key={t.key}>
-                <button
-                  type="button"
-                  onClick={t.onOpen}
-                  className={cn(
-                    'pressable flex w-full items-center gap-3 rounded-lg px-4 py-3.5 text-left',
-                    t.tone === 'urgent'
-                      ? 'bg-gradient-to-br from-[#F8E8E2] to-[#FCF5F2]'
-                      : 'bg-gradient-to-br from-[#DCEEE4] to-[#F1F7F3]',
-                  )}
-                >
-                  <span
-                    className={cn(
-                      'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
-                      t.tone === 'urgent' ? 'bg-error text-white' : 'bg-primary text-white',
-                    )}
-                  >
-                    {t.tone === 'normal' ? (
-                      <ChevronRight size={16} strokeWidth={2.6} />
-                    ) : (
-                      <Phone size={14} strokeWidth={2.6} />
-                    )}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[15px] font-semibold text-ink">
-                      {t.label}
-                    </span>
-                    <span className="mt-0.5 block truncate text-[12.5px] text-slate">
-                      {t.detail}
-                    </span>
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
+      {/* --- Today ---------------------------------------------------------- */}
+      <Surface tone={late > 0 ? 'alert' : 'calm'} className="mt-6">
+        <Eyebrow tone={late > 0 ? 'alert' : 'calm'}>{late > 0 ? `늦은 연락 ${late}` : 'Today'}</Eyebrow>
+        <p className="mt-2.5 flex items-baseline gap-2.5">
+          <strong className="text-[46px] font-bold leading-none tracking-[-0.05em] text-ink">
+            {queue.length}
+          </strong>
+          <span className="text-[18px] font-semibold text-ink">
+            {queue.length > 0 ? '가족에게 연락할 차례' : '오늘 연락은 모두 마쳤어요'}
+          </span>
+        </p>
+        <p className="mt-2 text-[14.5px] leading-[1.55] text-steel">
+          {queue.length > 0
+            ? queueBreakdown(queue)
+            : upcoming
+              ? `다음 · ${upcoming.name} ${upcoming.next!.reason}`
+              : '새 문의가 들어오면 여기에 먼저 나타납니다.'}
+        </p>
+        {queue.length > 0 && (
+          <div className="mt-2">
+            <TextLink onClick={() => onOpenFamily(queue[0].key, true)}>
+              {queue[0].name}부터 시작하기 →
+            </TextLink>
+          </div>
         )}
+      </Surface>
 
-        {/* --- 새 학부모 --------------------------------------------------- */}
-        <button
-          type="button"
-          onClick={onOpenLeads}
-          className={cn(
-            'pressable flex w-full items-center gap-3 rounded-lg border border-hairline bg-canvas px-4 py-4 text-left hover:border-hairline-strong',
-            todos.length > 0 && 'mt-5',
-          )}
-        >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-wash text-primary">
-            <UserPlus size={18} strokeWidth={2.2} />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[16px] font-semibold text-ink">새 학부모</span>
-            <span className="mt-0.5 block truncate text-[13px] tabular-nums text-steel">
-              진행 중 {counts.open}
-              {counts.upcomingTrials > 0 && ` · 체험 예정 ${counts.upcomingTrials}`}
-            </span>
-          </span>
-          {counts.overdue > 0 && (
-            <span className="shrink-0 rounded-full bg-tint-alert px-2.5 py-1 text-[11.5px] font-bold text-error">
-              지연 {counts.overdue}
-            </span>
-          )}
-          <ChevronRight size={18} className="shrink-0 text-stone" />
-        </button>
+      {/* --- Journey --------------------------------------------------------- */}
+      <Section title="문의에서 정착까지">
+        <Rows>
+          {PHASES.map((p) => {
+            const list = phaseList(families, p.key);
+            const due = list.filter((f) => isDue(f)).length;
+            const lateHere = list.filter((f) => isDue(f) && f.next!.late).length;
+            return (
+              <Row
+                key={p.key}
+                lead={list.length}
+                title={p.label}
+                sub={due > 0 ? `오늘 연락 ${due} · ${p.blurb}` : p.blurb}
+                tag={lateHere > 0 ? <Tag tone="amber">늦음 {lateHere}</Tag> : undefined}
+                onClick={() => onOpenPhase(p.key)}
+              />
+            );
+          })}
+        </Rows>
+      </Section>
 
-        {/* --- 설문 ----------------------------------------------------------- */}
-        <Section title="설문" meta={current.length > 0 ? `진행 중 ${current.length}` : undefined}>
-          {current.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-hairline-strong bg-canvas px-4 py-5">
-              <p className="text-[14px] font-semibold text-ink">지금 받고 있는 설문이 없습니다</p>
-              <p className="mt-1 text-[12.5px] leading-[1.6] text-steel">
-                반을 고르면 보호자마다 개인 링크가 알림톡으로 갑니다. 아이 이름은 이미 적혀 있어서
-                보호자는 고르기만 하면 됩니다.
-              </p>
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {QUICK_START.map((k) => (
-                  <button
-                    key={k}
-                    type="button"
-                    onClick={() => openSheet(k)}
-                    className="pill-tab !py-1.5 !text-[13px]"
-                  >
-                    {SITUATIONS[k].label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <ul className="space-y-2">
-              {current.map((v) => (
-                <SurveyCard
-                  key={v.id}
-                  survey={v}
-                  recipients={recipients}
-                  classes={state.classes}
-                  onOpen={() => onOpenSurvey(v.id)}
-                />
-              ))}
-            </ul>
-          )}
-
-          {past.length > 0 && (
-            <>
+      {/* --- Doors ---------------------------------------------------------- */}
+      <Section title="어떤 안내가 필요한가요?">
+        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-hairline-soft bg-hairline-soft">
+          {DOORS.map((d) => {
+            const Icon = d.icon;
+            return (
               <button
+                key={d.key}
                 type="button"
-                onClick={() => setShowPast((x) => !x)}
-                className="mt-3 w-full py-2 text-center text-[13px] font-semibold text-steel transition-colors hover:text-ink"
+                onClick={() =>
+                  d.key === 'invite'
+                    ? onOpenInvite()
+                    : setSheet((s) => ({ open: true, kinds: d.kinds, n: s.n + 1 }))
+                }
+                className="flex min-h-[112px] flex-col items-start bg-canvas px-4 py-4 text-left transition-colors hover:bg-[#FAFBFA] active:bg-surface-soft"
               >
-                {showPast ? '지난 설문 접기' : `지난 설문 ${past.length}`}
+                <Icon size={20} strokeWidth={2} className="text-primary" />
+                <span className="mt-3 text-[16px] font-bold text-ink">{d.label}</span>
+                <span className="mt-1 text-[13px] leading-[1.45] text-steel">{d.sub}</span>
               </button>
-              {showPast && (
-                <ul className="animate-swap-in space-y-2">
-                  {past.map((v) => (
-                    <SurveyCard
-                      key={v.id}
-                      survey={v}
-                      recipients={recipients}
-                      classes={state.classes}
-                      onOpen={() => onOpenSurvey(v.id)}
-                      muted
-                    />
-                  ))}
-                </ul>
-              )}
-            </>
-          )}
-        </Section>
-      </ScreenBody>
+            );
+          })}
+        </div>
 
-      {/* Keyed so each open starts clean — or on the quick-start it was opened with. */}
+        <div className="mt-3">
+          <Rows>
+            <Row
+              title="보낸 안내"
+              sub={
+                sent.length === 0
+                  ? '아직 보낸 안내가 없어요'
+                  : `진행 중 ${live} · 전체 ${sent.length}`
+              }
+              tag={toTalk > 0 ? <Tag>상담 필요 {toTalk}</Tag> : undefined}
+              onClick={onOpenSent}
+            />
+          </Rows>
+        </div>
+      </Section>
+
+      <DemoNote show={demo}>
+        예시 데이터로 보는 중 · 새로고침하면 초기화됩니다.
+        <br />
+        Supabase에 마이그레이션 0006~0008을 적용하면 실제로 동작합니다.
+      </DemoNote>
+
       <NewFormSheet
         key={sheet.n}
         open={sheet.open}
-        startKind={sheet.startKind}
+        kinds={sheet.kinds}
         onClose={() => setSheet((s) => ({ ...s, open: false }))}
         onSent={(surveyId, notice) => onOpenSurvey(surveyId, notice)}
-        onLinkMade={flash}
       />
-
-      {toast && <Toast>{toast}</Toast>}
-    </>
-  );
-}
-
-// ---------------------------------------------------------------------------
-
-function SurveyCard({
-  survey,
-  recipients,
-  classes,
-  onOpen,
-  muted = false,
-}: {
-  survey: Survey;
-  recipients: SurveyRecipient[];
-  classes: Class[];
-  onOpen: () => void;
-  muted?: boolean;
-}) {
-  const p = progressOf(survey, recipients);
-  const classNames = survey.classIds
-    .map((id) => classes.find((c) => c.id === id)?.title)
-    .filter(Boolean)
-    .join(' · ');
-
-  return (
-    <li>
-      <button
-        type="button"
-        onClick={onOpen}
-        className={cn(
-          'pressable block w-full rounded-lg border border-hairline bg-canvas px-4 py-3.5 text-left hover:border-hairline-strong',
-          muted && 'opacity-70',
-        )}
-      >
-        <span className="flex items-start gap-2">
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-[15px] font-semibold text-ink">
-              {survey.title}
-            </span>
-            <span className="mt-0.5 block truncate text-[12.5px] text-steel">
-              {dueLabel(survey)}
-              {classNames && ` · ${classNames}`}
-            </span>
-          </span>
-          {p.toCall.length > 0 && (
-            <span className="flex shrink-0 items-center gap-1 rounded-full bg-primary-wash px-2 py-1 text-[11.5px] font-bold text-primary">
-              <Phone size={10} strokeWidth={2.8} />
-              {p.toCall.length}
-            </span>
-          )}
-        </span>
-        <span className="mt-3 flex items-center gap-2.5">
-          <ProgressBar value={p.total ? p.answered / p.total : 0} className="flex-1" />
-          <span className="shrink-0 text-[12.5px] font-semibold tabular-nums text-slate">
-            {p.answered}/{p.total}
-          </span>
-        </span>
-      </button>
-    </li>
+    </Page>
   );
 }

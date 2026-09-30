@@ -203,10 +203,27 @@ describe('0007 agrees with the app', () => {
     expect(kinds).toEqual(Object.keys(SITUATIONS).sort());
   });
 
+  // The latest migration that redefines enqueue_alimtalk is the one in force.
   it('enqueue_alimtalk accepts every template the app renders', () => {
-    const m = sql.match(/not in \(('attendance_report'[^)]*)\)/);
+    const latest = readFileSync(
+      resolve(__dirname, '../../supabase/migrations/0008_onboarding.sql'),
+      'utf8',
+    );
+    const m = latest.match(/not in \(('attendance_report'[^)]*)\)/);
     expect(m).not.toBeNull();
     const codes = [...m![1].matchAll(/'([a-z_]+)'/g)].map((x) => x[1]).sort();
     expect(codes).toEqual(Object.keys(TEMPLATES).sort());
+  });
+
+  // Migrations are re-runnable. If 0007 listed fewer templates than 0008,
+  // re-running 0007 later would quietly stop welcome messages from queueing.
+  it('0007 and 0008 allow the same templates, so re-running either is safe', () => {
+    const list = (file: string) => {
+      const text = readFileSync(resolve(__dirname, `../../supabase/migrations/${file}`), 'utf8');
+      return [...text.match(/not in \(('attendance_report'[^)]*)\)/)![1].matchAll(/'([a-z_]+)'/g)]
+        .map((x) => x[1])
+        .sort();
+    };
+    expect(list('0007_surveys.sql')).toEqual(list('0008_onboarding.sql'));
   });
 });

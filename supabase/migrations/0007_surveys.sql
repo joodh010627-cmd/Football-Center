@@ -285,7 +285,8 @@ $$;
 
 -- -----------------------------------------------------------------------------
 -- 알림톡 대기열 — 설문 템플릿 두 개를 허용 목록에 더한다.
--- 본문은 0006과 같고, 바뀐 곳은 템플릿 코드 목록 한 줄이다.
+-- 본문은 0006과 같고, 바뀐 곳은 템플릿 코드 목록 한 줄이다. 0008의 welcome도
+-- 미리 넣어 둔다: 0008 뒤에 이 파일을 다시 실행해도 목록이 줄어들지 않게.
 -- -----------------------------------------------------------------------------
 
 create or replace function public.enqueue_alimtalk(p_academy_id uuid, p_items jsonb)
@@ -319,7 +320,7 @@ begin
     v_phone   := null;
 
     if coalesce(v_code, '') not in ('attendance_report', 'trial_booked', 'inquiry_received',
-                                    'survey_request', 'survey_reminder') then
+                                    'survey_request', 'survey_reminder', 'welcome') then
       raise exception '등록되지 않은 템플릿입니다: %', v_code;
     end if;
 

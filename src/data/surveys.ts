@@ -147,7 +147,7 @@ export const SITUATIONS: Record<SurveyKind, Situation> = {
   renewal: {
     kind: 'renewal',
     label: '재등록 의향',
-    when: '다음 달 인원을 미리 알고, 흔들리는 집을 먼저 찾을 때',
+    when: '다음 달 인원을 미리 알고, 고민 중인 가족을 먼저 찾을 때',
     title: '다음 달 수업 안내',
     questions: [
       '다음 달에도 함께하나요? : 계속할게요 / 고민 중이에요! / 쉬려고 해요!',

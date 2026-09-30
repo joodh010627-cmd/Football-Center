@@ -20,7 +20,8 @@ export type TemplateCode =
   | 'trial_booked'
   | 'inquiry_received'
   | 'survey_request'
-  | 'survey_reminder';
+  | 'survey_reminder'
+  | 'welcome';
 
 export interface AlimtalkTemplate {
   code: TemplateCode;
@@ -103,6 +104,28 @@ export const TEMPLATES: Record<TemplateCode, AlimtalkTemplate> = {
       '▪ 답하기: #{링크}',
       '',
       '이 메시지는 #{학원명} 수업과 관련해 보호자님께 발송됩니다.',
+    ].join('\n'),
+  },
+
+  // 첫 달의 첫 접점. 연구가 공통으로 말하는 "첫날의 환영"이고, 첫 수업 뒤에
+  // 나가는 수업 리포트(attendance_report)가 이 메시지의 약속을 지킨다.
+  welcome: {
+    code: 'welcome',
+    name: '입단 환영 안내',
+    trigger: '등록을 확정한 뒤 폼 탭에서 환영 안내를 보낼 때, 새 원생의 보호자에게 1회',
+    body: [
+      '[#{학원명}] #{학생명} 학생, 입단을 환영합니다',
+      '',
+      '#{보호자명} 님, #{학생명} 학생이 #{반이름}의 새 식구가 되었습니다.',
+      '',
+      '▪ 첫 수업: #{첫수업}',
+      '▪ 장소: #{장소}',
+      '▪ 담당: #{코치명} 코치',
+      '▪ 준비물: 운동복, 축구화(또는 운동화), 물',
+      '',
+      '첫 수업이 끝나면 아이가 어땠는지 수업 리포트로 알려 드립니다.',
+      '',
+      '이 메시지는 등록을 마친 보호자님께 1회 발송됩니다.',
     ].join('\n'),
   },
 

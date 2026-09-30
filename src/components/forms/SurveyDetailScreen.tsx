@@ -1,36 +1,43 @@
 /**
- * One survey: who to call, what they said, who hasn't answered.
+ * One survey's results, in the order of what to do about them.
  *
- * In that order, because that is the order of what the coach should do about
- * it. The call list opens the screen when there is one — a flagged answer is
- * the reason the survey was worth sending. The counts come next, as bars you
- * can open to see names (the 참가 list is what goes on the tournament entry).
- * The silent families are last, with one button: remind them, once.
+ *   상담 필요 — families whose answer asked, in effect, for a conversation
+ *               (a choice marked `!`, like "고민 중이에요"). Call, then 통화 완료.
+ *   결과      — each pick as a bar; tap to see who.
+ *   미응답    — who hasn't answered, and one reminder per family.
  *
- * Nothing on this screen is an editor. A survey that is already in thirty
- * KakaoTalk chats does not get its questions changed under it.
+ * Nothing here edits the survey: it's already in every family's KakaoTalk.
  */
 
 import { useMemo, useState } from 'react';
-import { ArrowLeft, Bell, Check, Copy, MessageSquare, Phone } from 'lucide-react';
+import { Phone } from 'lucide-react';
 import type { ID } from '@/types';
 import { useApp } from '@/store/AppContext';
 import { useWorkspace } from '@/store/WorkspaceContext';
 import {
+  SITUATIONS,
   dueLabel,
   flaggedAnswers,
   isOpenSurvey,
   progressOf,
   summaryText,
   tallyOf,
-  SITUATIONS,
   type SurveyRecipient,
 } from '@/data/surveys';
 import { formatDateKo } from '@/lib/format';
 import { cn } from '@/lib/cn';
-import { ProgressBar } from '@/components/ui/ProgressBar';
-import { ScreenBody, Section, Toast } from '@/components/shell/Shell';
+import { Toast } from '@/components/shell/Shell';
 import { describeEnqueue, telHref } from './parts';
+import {
+  DemoNote,
+  Eyebrow,
+  Page,
+  Section,
+  SecondaryButton,
+  Surface,
+  TextLink,
+  Title,
+} from './ui';
 
 interface SurveyDetailScreenProps {
   surveyId: ID;
@@ -55,10 +62,7 @@ export function SurveyDetailScreen({
   const [confirmClose, setConfirmClose] = useState(false);
 
   const survey = surveys.find((v) => v.id === surveyId);
-  const mine = useMemo(
-    () => recipients.filter((r) => r.surveyId === surveyId),
-    [recipients, surveyId],
-  );
+  const mine = useMemo(() => recipients.filter((r) => r.surveyId === surveyId), [recipients, surveyId]);
 
   const who = useMemo(() => {
     const students = new Map(state.students.map((s) => [s.id, s]));
@@ -66,251 +70,202 @@ export function SurveyDetailScreen({
     return (r: SurveyRecipient) => {
       if (r.studentId) {
         const s = students.get(r.studentId);
-        return { name: s?.name ?? '원생', phone: s?.parentPhone ?? '', parent: s?.parentName ?? '' };
+        return { name: s?.name ?? '원생', phone: s?.parentPhone ?? '' };
       }
       const l = r.leadId ? leadMap.get(r.leadId) : undefined;
-      return { name: l?.childName ?? '문의', phone: l?.parentPhone ?? '', parent: l?.parentName ?? '' };
+      return { name: l?.childName ?? '문의', phone: l?.parentPhone ?? '' };
     };
   }, [state.students, leads]);
 
   if (!survey) {
     return (
-      <ScreenBody>
-        <BackLink onBack={onBack} label={backLabel} />
-        <p className="py-10 text-center text-[14px] text-steel">설문을 찾을 수 없습니다.</p>
-      </ScreenBody>
+      <Page>
+        <Title back={{ label: backLabel, onBack }} eyebrow="Sent" title="안내를 찾을 수 없어요" />
+      </Page>
     );
   }
 
   const p = progressOf(survey, recipients);
   const open = isOpenSurvey(survey);
   const unreminded = p.pending.filter((r) => !r.remindedAt).length;
-  const answered = mine.filter((r) => r.answeredAt);
   const texts = survey.questions.filter((q) => q.choices.length === 0);
   const picks = survey.questions.filter((q) => q.choices.length > 0);
+  const calling = new Set(p.toCall.map((r) => r.id));
   const classNames = survey.classIds
     .map((id) => state.classes.find((c) => c.id === id)?.title)
     .filter(Boolean)
     .join(' · ');
 
-  const flash = (message: string) => {
-    setToast(message);
+  const flash = (m: string) => {
+    setToast(m);
     window.setTimeout(() => setToast(null), 2200);
   };
 
-  const remind = async () => {
-    const result = await remindSurvey(survey.id);
-    if (result) setNotice(describeEnqueue(result, '마감 전'));
-    else flash(surveyMode === 'db' ? '보낼 곳이 없습니다' : '예시 데이터에서는 보내지 않습니다');
-  };
-
-  const copy = () => {
-    void navigator.clipboard?.writeText(summaryText(survey, recipients, (r) => who(r).name));
-    flash('결과를 복사했습니다');
-  };
-
   return (
-    <>
-      <header className="px-5 pb-1 pt-5 sm:px-7 lg:px-10 lg:pt-8">
-        <BackLink onBack={onBack} label={backLabel} />
-        <p className="mt-4 eyebrow-ink">{SITUATIONS[survey.kind].label}</p>
-        <h1 className="mt-2 text-[25px] font-bold leading-[1.2] tracking-tightest text-ink">
-          {survey.title}
-        </h1>
-        <p className="mt-1.5 text-[13.5px] text-steel">
-          {classNames || '개별 발송'} ·{' '}
-          {survey.dueDate && open ? `${formatDateKo(survey.dueDate)}까지` : dueLabel(survey)}
-        </p>
+    <Page>
+      <Title
+        back={{ label: backLabel, onBack }}
+        eyebrow={SITUATIONS[survey.kind].label}
+        title={survey.title}
+        sub={`${classNames || '개별 발송'} · ${
+          survey.dueDate && open ? `${formatDateKo(survey.dueDate)}까지` : dueLabel(survey)
+        }`}
+      />
 
-        <div className="mt-4 flex items-center gap-3">
-          <ProgressBar value={p.total ? p.answered / p.total : 0} className="h-2 flex-1" />
-          <span className="shrink-0 text-[14px] font-bold tabular-nums text-ink">
-            {p.answered}
-            <span className="font-medium text-steel">/{p.total} 응답</span>
-          </span>
-        </div>
-      </header>
+      {/* --- Progress --------------------------------------------------------- */}
+      <div className="mt-6 flex items-baseline gap-2">
+        <strong className="text-[40px] font-bold leading-none tracking-[-0.05em] text-ink">
+          {p.answered}
+        </strong>
+        <span className="text-[17px] font-semibold text-steel">/ {p.total} 응답</span>
+      </div>
+      <div className="mt-3 h-[5px] overflow-hidden rounded-full bg-hairline-soft">
+        <div
+          className="h-full rounded-full bg-primary transition-[width] duration-300"
+          style={{ width: `${p.total ? (p.answered / p.total) * 100 : 0}%` }}
+        />
+      </div>
 
-      <ScreenBody>
-        {notice && (
-          <p className="mb-4 flex items-start gap-2 rounded-lg bg-primary-wash px-4 py-3 text-[13px] leading-[1.55] text-charcoal">
-            <MessageSquare size={15} className="mt-0.5 shrink-0 text-primary" />
-            {notice}
-          </p>
-        )}
+      {notice && <p className="mt-4 text-[14px] leading-[1.6] text-slate">{notice}</p>}
 
-        {/* --- Call list ------------------------------------------------ */}
-        {p.toCall.length > 0 && (
-          <section className="rounded-xl bg-gradient-to-br from-[#DCEEE4] to-[#F1F7F3] p-4">
-            <p className="micro-label text-primary">전화할 집 {p.toCall.length}</p>
-            <ul className="mt-2.5 space-y-2">
-              {p.toCall.map((r) => {
-                const w = who(r);
-                const note = texts.map((q) => r.answers[q.label]).filter(Boolean)[0];
-                return (
-                  <li key={r.id} className="rounded-lg bg-canvas px-3.5 py-3">
-                    <div className="flex items-center gap-2">
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-[15px] font-semibold text-ink">{w.name}</span>
-                        <span className="mt-0.5 block text-[12.5px] font-semibold text-primary">
-                          {flaggedAnswers(survey, r).join(' · ')}
-                        </span>
+      {/* --- 상담 필요 --------------------------------------------------------- */}
+      {p.toCall.length > 0 && (
+        <Surface tone="alert" className="mt-7">
+          <Eyebrow tone="alert">상담 필요 {p.toCall.length}</Eyebrow>
+          <ul className="mt-3 divide-y divide-black/5">
+            {p.toCall.map((r) => {
+              const w = who(r);
+              const said = texts.map((q) => r.answers[q.label]).filter(Boolean)[0];
+              return (
+                <li key={r.id} className="py-3.5 first:pt-1">
+                  <div className="flex items-center gap-3">
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[17px] font-bold text-ink">{w.name}</span>
+                      <span className="mt-0.5 block text-[14px] font-semibold text-[#946216]">
+                        {flaggedAnswers(survey, r).join(' · ')}
                       </span>
-                      <a
-                        href={telHref(w.phone)}
-                        aria-label={`${w.name} 보호자에게 전화`}
-                        className="pressable flex h-10 w-10 items-center justify-center rounded-full bg-primary text-white"
-                      >
-                        <Phone size={16} strokeWidth={2.4} />
-                      </a>
-                      <button
-                        type="button"
-                        onClick={() => markCalled(r.id)}
-                        className="pressable rounded-full border border-hairline-strong px-3 py-2 text-[12.5px] font-semibold text-slate"
-                      >
-                        통화함
-                      </button>
-                    </div>
-                    {note && (
-                      <p className="mt-2 text-[13px] leading-[1.55] text-slate">“{note}”</p>
+                    </span>
+                    <a
+                      href={telHref(w.phone)}
+                      aria-label={`${w.name} 보호자에게 전화`}
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-white"
+                    >
+                      <Phone size={17} strokeWidth={2.4} />
+                    </a>
+                  </div>
+                  {said && <p className="mt-2 text-[14.5px] leading-[1.6] text-slate">“{said}”</p>}
+                  <div className="mt-1">
+                    <TextLink onClick={() => markCalled(r.id)}>통화 완료</TextLink>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </Surface>
+      )}
+
+      {/* --- 결과 ------------------------------------------------------------- */}
+      {picks.map((q) => {
+        const tally = tallyOf(q, mine);
+        const max = Math.max(1, ...tally.map((t) => t.recipientIds.length));
+        return (
+          <Section key={q.label} title={q.label}>
+            <ul className="space-y-3">
+              {tally.map((t) => {
+                const key = `${q.label}|${t.choice}`;
+                const shown = openChoice === key;
+                const n = t.recipientIds.length;
+                return (
+                  <li key={t.choice}>
+                    <button
+                      type="button"
+                      disabled={n === 0}
+                      onClick={() => setOpenChoice(shown ? null : key)}
+                      className="w-full text-left"
+                    >
+                      <span className="flex items-baseline justify-between text-[15.5px]">
+                        <span className={cn(t.flagged ? 'text-[#946216]' : 'text-ink')}>{t.choice}</span>
+                        <span className="font-bold tabular-nums text-ink">{n}</span>
+                      </span>
+                      <span className="mt-1.5 block h-[5px] overflow-hidden rounded-full bg-hairline-soft">
+                        <span
+                          className={cn('block h-full rounded-full', t.flagged ? 'bg-[#D9A441]' : 'bg-primary')}
+                          style={{ width: `${(n / max) * 100}%` }}
+                        />
+                      </span>
+                    </button>
+                    {shown && (
+                      <p className="animate-swap-in mt-2 text-[14px] leading-[1.6] text-slate">
+                        {t.recipientIds.map((id) => who(mine.find((r) => r.id === id)!).name).join(', ')}
+                      </p>
                     )}
                   </li>
                 );
               })}
             </ul>
-          </section>
-        )}
-
-        {/* --- Counts ----------------------------------------------------- */}
-        {picks.map((q) => {
-          const tally = tallyOf(q, mine);
-          const max = Math.max(1, ...tally.map((t) => t.recipientIds.length));
-          return (
-            <Section key={q.label} title={q.label}>
-              <ul className="space-y-1.5">
-                {tally.map((t) => {
-                  const key = `${q.label}|${t.choice}`;
-                  const shown = openChoice === key;
-                  const n = t.recipientIds.length;
-                  return (
-                    <li key={t.choice}>
-                      <button
-                        type="button"
-                        disabled={n === 0}
-                        onClick={() => setOpenChoice(shown ? null : key)}
-                        className="w-full text-left"
-                      >
-                        <span className="flex items-baseline justify-between text-[14px]">
-                          <span className={cn('font-medium', t.flagged ? 'text-primary' : 'text-ink')}>
-                            {t.choice}
-                          </span>
-                          <span className="tabular-nums font-bold text-ink">{n}</span>
-                        </span>
-                        <ProgressBar
-                          value={n / max}
-                          className="mt-1"
-                          barClassName={t.flagged ? 'bg-brand-orange' : 'bg-primary'}
-                        />
-                      </button>
-                      {shown && (
-                        <p className="animate-swap-in mt-1.5 text-[12.5px] leading-[1.6] text-slate">
-                          {t.recipientIds
-                            .map((id) => who(mine.find((r) => r.id === id)!).name)
-                            .join(', ')}
-                        </p>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            </Section>
-          );
-        })}
-
-        {/* --- Sentences ---------------------------------------------------- */}
-        {texts.map((q) => {
-          // Families on the call list already show what they wrote, up there.
-          const calling = new Set(p.toCall.map((r) => r.id));
-          const said = answered.filter((r) => r.answers[q.label] && !calling.has(r.id));
-          if (said.length === 0) return null;
-          return (
-            <Section key={q.label} title={q.label} meta={`${said.length}`}>
-              <ul className="space-y-2">
-                {said.map((r) => (
-                  <li key={r.id} className="rounded-lg border border-hairline bg-canvas px-3.5 py-2.5">
-                    <p className="whitespace-pre-wrap text-[13.5px] leading-[1.6] text-ink">
-                      {r.answers[q.label]}
-                    </p>
-                    <p className="mt-1 text-[12px] text-stone">{who(r).name}</p>
-                  </li>
-                ))}
-              </ul>
-            </Section>
-          );
-        })}
-
-        {/* --- Silent families ------------------------------------------------ */}
-        {p.pending.length > 0 && (
-          <Section title="아직 답이 없는 집" meta={`${p.pending.length}`}>
-            <p className="text-[13.5px] leading-[1.7] text-slate">
-              {p.pending.map((r) => who(r).name).join(', ')}
-            </p>
-            {open && (
-              <button
-                type="button"
-                disabled={unreminded === 0}
-                onClick={() => void remind()}
-                className="btn-secondary mt-3 w-full py-2.5 text-[13.5px] disabled:opacity-50"
-              >
-                <Bell size={14} strokeWidth={2.4} />
-                {unreminded > 0 ? `${unreminded}가정에 한 번 더 알리기` : '다시 알림을 보냈습니다'}
-              </button>
-            )}
           </Section>
-        )}
+        );
+      })}
 
-        {/* --- Footer actions ------------------------------------------------- */}
-        <div className="mt-8 flex gap-2">
-          <button
-            type="button"
-            onClick={copy}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-hairline py-2.5 text-[13.5px] font-semibold text-slate transition-colors hover:border-hairline-strong hover:text-ink"
-          >
-            <Copy size={14} strokeWidth={2.2} />
-            결과 복사
-          </button>
-          {open && !survey.closed && (
-            <button
-              type="button"
-              onClick={() => (confirmClose ? closeSurvey(survey.id) : setConfirmClose(true))}
-              className={cn(
-                'flex flex-1 items-center justify-center gap-1.5 rounded-full border py-2.5 text-[13.5px] font-semibold transition-colors',
-                confirmClose
-                  ? 'border-error bg-tint-alert-soft text-error'
-                  : 'border-hairline text-slate hover:border-hairline-strong hover:text-ink',
-              )}
-            >
-              <Check size={14} strokeWidth={2.4} />
-              {confirmClose ? '한 번 더 누르면 마감' : '지금 마감'}
-            </button>
+      {texts.map((q) => {
+        const said = mine.filter((r) => r.answeredAt && r.answers[q.label] && !calling.has(r.id));
+        if (said.length === 0) return null;
+        return (
+          <Section key={q.label} title={q.label} aside={`${said.length}`}>
+            <div className="divide-y divide-hairline-soft">
+              {said.map((r) => (
+                <div key={r.id} className="py-3">
+                  <p className="whitespace-pre-wrap text-[15px] leading-[1.6] text-ink">{r.answers[q.label]}</p>
+                  <p className="mt-1 text-[13px] text-stone">{who(r).name}</p>
+                </div>
+              ))}
+            </div>
+          </Section>
+        );
+      })}
+
+      {/* --- 미응답 ----------------------------------------------------------- */}
+      {p.pending.length > 0 && (
+        <Section title="미응답" aside={`${p.pending.length}`}>
+          <p className="text-[15px] leading-[1.7] text-slate">{p.pending.map((r) => who(r).name).join(', ')}</p>
+          {open && (
+            <div className="mt-4">
+              <SecondaryButton
+                disabled={unreminded === 0}
+                onClick={() =>
+                  void remindSurvey(survey.id).then((result) =>
+                    result
+                      ? setNotice(describeEnqueue(result, '마감 전'))
+                      : flash(surveyMode === 'db' ? '보낼 곳이 없어요' : '예시 데이터라 실제로 보내지 않아요'),
+                  )
+                }
+              >
+                {unreminded > 0 ? `${unreminded}명에게 한 번 더 알리기` : '다시 알림을 보냈어요'}
+              </SecondaryButton>
+            </div>
           )}
-        </div>
-      </ScreenBody>
+        </Section>
+      )}
 
+      {/* --- Footer --------------------------------------------------------- */}
+      <div className="mt-10 flex justify-center gap-6">
+        <TextLink
+          onClick={() => {
+            void navigator.clipboard?.writeText(summaryText(survey, recipients, (r) => who(r).name));
+            flash('결과를 복사했어요');
+          }}
+        >
+          결과 복사
+        </TextLink>
+        {open && (
+          <TextLink tone="gray" onClick={() => (confirmClose ? closeSurvey(survey.id) : setConfirmClose(true))}>
+            {confirmClose ? '한 번 더 누르면 마감' : '지금 마감'}
+          </TextLink>
+        )}
+      </div>
+
+      <DemoNote show={surveyMode === 'local'}>예시 데이터로 보는 중 · 새로고침하면 초기화됩니다.</DemoNote>
       {toast && <Toast>{toast}</Toast>}
-    </>
-  );
-}
-
-function BackLink({ onBack, label }: { onBack: () => void; label: string }) {
-  return (
-    <button
-      type="button"
-      onClick={onBack}
-      className="flex items-center gap-1 text-[13.5px] font-medium text-steel transition-colors hover:text-ink"
-    >
-      <ArrowLeft size={15} strokeWidth={2.2} />
-      {label}
-    </button>
+    </Page>
   );
 }
