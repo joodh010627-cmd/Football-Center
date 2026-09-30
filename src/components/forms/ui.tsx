@@ -1,11 +1,13 @@
 /**
- * The 폼 tab's visual language, taken from the FC Growth mockup.
+ * The 폼 tab's building blocks — the 수업 tab's visual language, reused.
  *
- * White page, large quiet headings, rows divided by a hairline rather than
- * boxed in cards, one soft green surface per screen for the thing that
- * matters, and one wide button at the end. Every screen in this folder is
- * built out of these few pieces so the tab reads as one place — and so a
- * screen can't quietly grow a fourth kind of card.
+ *   · Header: a small green label over a large title. No wide-tracked English
+ *     eyebrow — it spaces Hangul apart letter by letter.
+ *   · One `.mesh` card per screen for the thing that matters now.
+ *   · Lists sit in white rounded cards, rows divided by a hairline.
+ *   · Green only. State is told by the green's brightness (done / now / not
+ *     yet), never by switching to a warm colour.
+ *   · One pill button per card; the rest folds behind 더 보기.
  */
 
 import type { ReactNode } from 'react';
@@ -13,21 +15,20 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { SyncError } from './parts';
 
-/**
- * White page for the whole tab — the mockup has no grey behind its rows.
- * Every page carries the failed-save line, so no screen can forget it.
- */
+/** Page gutters, same as every other tab. Carries the failed-save line. */
 export function Page({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-[calc(100vh-3.5rem)] bg-canvas lg:min-h-screen">
-      <div className="mx-auto w-full max-w-[640px] px-5 pb-14 pt-6 sm:px-7 lg:pt-10">
-        <SyncError />
-        {children}
-      </div>
+    <div className="px-5 pb-10 pt-5 sm:px-7 lg:max-w-2xl lg:px-10 lg:pt-8">
+      <SyncError />
+      {children}
     </div>
   );
 }
 
+/**
+ * Tab root: small label + large title (like 오늘의 수업 / 날짜).
+ * Drill-down: 뒤로 + title + one line of context (like DetailHeader).
+ */
 export function Title({
   eyebrow,
   title,
@@ -35,32 +36,37 @@ export function Title({
   back,
   action,
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   title: ReactNode;
   sub?: ReactNode;
   back?: { label: string; onBack: () => void };
   action?: ReactNode;
 }) {
   return (
-    <header>
+    <header className="pb-1">
       {back && (
         <button
           type="button"
           onClick={back.onBack}
-          className="-ml-1 mb-5 flex items-center gap-0.5 text-[15px] text-steel transition-colors hover:text-ink"
+          className="-ml-1 mb-3 flex items-center gap-0.5 text-[13.5px] font-medium text-steel transition-colors hover:text-ink"
         >
-          <ChevronLeft size={18} strokeWidth={2} />
+          <ChevronLeft size={16} strokeWidth={2.4} />
           {back.label}
         </button>
       )}
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-primary">{eyebrow}</p>
-        {action}
+      {eyebrow && <p className="text-[14px] font-semibold text-primary">{eyebrow}</p>}
+      <div className="mt-1 flex items-start justify-between gap-3">
+        <h1
+          className={cn(
+            'min-w-0 font-bold leading-[1.15] tracking-tightest text-ink',
+            back ? 'text-[27px] sm:text-[30px]' : 'text-[30px] sm:text-[32px]',
+          )}
+        >
+          {title}
+        </h1>
+        {action && <div className="shrink-0 pt-1">{action}</div>}
       </div>
-      <h1 className="mt-2 text-[28px] font-bold leading-[1.25] tracking-[-0.04em] text-ink">
-        {title}
-      </h1>
-      {sub && <p className="mt-2 text-[15px] leading-[1.6] text-steel">{sub}</p>}
+      {sub && <p className="mt-2 text-[14px] text-steel">{sub}</p>}
     </header>
   );
 }
@@ -77,10 +83,10 @@ export function Section({
   className?: string;
 }) {
   return (
-    <section className={cn('mt-9', className)}>
+    <section className={cn('mt-8', className)}>
       {title && (
-        <div className="mb-2 flex items-baseline justify-between gap-3">
-          <h2 className="text-[20px] font-bold tracking-[-0.03em] text-ink">{title}</h2>
+        <div className="mb-3 flex items-baseline justify-between gap-3">
+          <h2 className="text-[19px] font-bold tracking-[-0.02em] text-ink">{title}</h2>
           {aside && <span className="shrink-0 text-[13.5px] text-steel">{aside}</span>}
         </div>
       )}
@@ -89,50 +95,23 @@ export function Section({
   );
 }
 
-/**
- * The one soft surface on a screen. `tone="alert"` only when something is
- * genuinely late — the colour is the message, so it can't be the default.
- */
-export function Surface({
-  children,
-  tone = 'calm',
-  className,
-}: {
-  children: ReactNode;
-  tone?: 'calm' | 'alert';
-  className?: string;
-}) {
+/** The one lit card on a screen — the 수업 card's mesh. Always green. */
+export function Surface({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cn('mesh rounded-2xl p-5', className)}>{children}</div>;
+}
+
+/** The small bold label at the top of a lit card ("할 일", "예정"). */
+export function Eyebrow({ children }: { children: ReactNode }) {
+  return <p className="text-[13px] font-bold text-primary">{children}</p>;
+}
+
+/** A white rounded card of divided rows. */
+export function Rows({ children }: { children: ReactNode }) {
   return (
-    <div
-      className={cn(
-        'rounded-[22px] px-6 py-5',
-        tone === 'alert'
-          ? 'bg-gradient-to-br from-[#FBEFE9] to-[#FDF7F2]'
-          : 'bg-gradient-to-br from-[#EEF6F0] to-[#F6F9EE]',
-        className,
-      )}
-    >
+    <div className="divide-y divide-hairline-soft overflow-hidden rounded-xl border border-hairline bg-canvas">
       {children}
     </div>
   );
-}
-
-export function Eyebrow({ children, tone = 'calm' }: { children: ReactNode; tone?: 'calm' | 'alert' }) {
-  return (
-    <p
-      className={cn(
-        'text-[12px] font-bold uppercase tracking-[0.12em]',
-        tone === 'alert' ? 'text-[#B4532F]' : 'text-primary',
-      )}
-    >
-      {children}
-    </p>
-  );
-}
-
-/** A divided list. Rows sit on the page, not in a box. */
-export function Rows({ children }: { children: ReactNode }) {
-  return <div className="divide-y divide-hairline-soft">{children}</div>;
 }
 
 export function Row({
@@ -145,7 +124,7 @@ export function Row({
 }: {
   title: ReactNode;
   sub?: ReactNode;
-  /** A number or short figure on the left, e.g. a phase count. */
+  /** A number or short figure on the left, e.g. a stage count or a time. */
   lead?: ReactNode;
   tag?: ReactNode;
   onClick?: () => void;
@@ -155,38 +134,41 @@ export function Row({
   const body = (
     <>
       {lead !== undefined && (
-        <span className="w-10 shrink-0 text-[26px] font-bold leading-none tabular-nums text-primary">
+        <span className="w-9 shrink-0 text-[22px] font-bold leading-none tabular-nums text-primary">
           {lead}
         </span>
       )}
       <span className="min-w-0 flex-1">
-        <span className="block text-[17px] font-bold leading-[1.4] text-ink">{title}</span>
-        {sub && <span className="mt-1 block text-[14px] leading-[1.5] text-steel">{sub}</span>}
-        {tag && <span className="mt-2 flex flex-wrap gap-1.5">{tag}</span>}
+        <span className="flex items-center gap-2">
+          <span className="truncate text-[15.5px] font-semibold text-ink">{title}</span>
+          {tag}
+        </span>
+        {sub && <span className="mt-0.5 block truncate text-[13px] text-steel">{sub}</span>}
       </span>
-      {trailing ?? (onClick && <ChevronRight size={18} className="shrink-0 text-stone" />)}
+      {trailing ?? (onClick && <ChevronRight size={17} className="shrink-0 text-stone" />)}
     </>
   );
 
-  if (!onClick) return <div className="flex items-center gap-3 py-4">{body}</div>;
+  if (!onClick) return <div className="flex items-center gap-3 px-4 py-3.5">{body}</div>;
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center gap-3 py-4 text-left transition-opacity active:opacity-60"
+      className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-surface-soft/60"
     >
       {body}
     </button>
   );
 }
 
-export function Tag({ children, tone = 'green' }: { children: ReactNode; tone?: 'green' | 'amber' | 'gray' }) {
+/** Small pill. `strong` is for what's overdue — a deeper green, not a warning colour. */
+export function Tag({ children, tone = 'green' }: { children: ReactNode; tone?: 'green' | 'strong' | 'gray' }) {
   return (
     <span
       className={cn(
-        'inline-block rounded-md px-2 py-1 text-[12.5px] font-semibold leading-none',
-        tone === 'green' && 'bg-[#EDF4EF] text-primary',
-        tone === 'amber' && 'bg-[#FAF3E5] text-[#946216]',
+        'inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11.5px] font-bold',
+        tone === 'green' && 'bg-primary-wash text-primary',
+        tone === 'strong' && 'bg-primary text-white',
         tone === 'gray' && 'bg-surface-soft text-steel',
       )}
     >
@@ -195,6 +177,7 @@ export function Tag({ children, tone = 'green' }: { children: ReactNode; tone?: 
   );
 }
 
+/** The card's pill button (수업 보기 / 수업 기록). */
 export function PrimaryButton({
   children,
   onClick,
@@ -209,7 +192,7 @@ export function PrimaryButton({
   className?: string;
 }) {
   const cls = cn(
-    'flex min-h-[52px] w-full items-center justify-center gap-2 rounded-[14px] bg-primary px-5 text-[16px] font-semibold text-white transition-colors hover:bg-primary-pressed active:bg-primary-deep disabled:bg-hairline disabled:text-muted',
+    'pressable inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full bg-primary px-6 text-[15px] font-semibold text-white hover:bg-primary-pressed active:bg-primary-deep disabled:bg-hairline disabled:text-muted',
     className,
   );
   if (href) {
@@ -243,7 +226,7 @@ export function SecondaryButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        'flex min-h-[48px] w-full items-center justify-center gap-2 rounded-[12px] bg-[#EEF4EF] px-4 text-[15px] font-semibold text-primary transition-colors hover:bg-[#E3EEE6] disabled:opacity-50',
+        'pressable inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full border border-hairline-strong bg-canvas px-5 text-[15px] font-semibold text-ink hover:border-primary hover:text-primary disabled:opacity-50',
         className,
       )}
     >
@@ -266,8 +249,8 @@ export function TextLink({
       type="button"
       onClick={onClick}
       className={cn(
-        'py-1.5 text-[14.5px] font-semibold transition-opacity active:opacity-60',
-        tone === 'green' ? 'text-primary' : 'text-steel',
+        'py-1 text-[13.5px] font-semibold transition-colors',
+        tone === 'green' ? 'text-primary hover:text-primary-pressed' : 'text-steel hover:text-ink',
       )}
     >
       {children}
@@ -275,7 +258,7 @@ export function TextLink({
   );
 }
 
-/** Choice pills. `pressed` is what's selected. */
+/** Choice chips — the ability chips' shape, selected in green. */
 export function Pills<T extends string>({
   options,
   pressed,
@@ -287,7 +270,7 @@ export function Pills<T extends string>({
 }) {
   const on = (v: T) => (Array.isArray(pressed) ? pressed.includes(v) : pressed === v);
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-1.5">
       {options.map(([value, label]) => (
         <button
           key={value}
@@ -295,8 +278,10 @@ export function Pills<T extends string>({
           aria-pressed={on(value)}
           onClick={() => onPick(value)}
           className={cn(
-            'rounded-full px-3.5 py-2 text-[14px] transition-colors',
-            on(value) ? 'bg-primary font-semibold text-white' : 'bg-[#F3F6F3] text-[#5B6A60] hover:bg-[#EAEFEA]',
+            'rounded-full border px-3.5 py-1.5 text-[13.5px] font-semibold transition-colors duration-150',
+            on(value)
+              ? 'border-primary bg-primary text-white'
+              : 'border-hairline bg-canvas text-charcoal hover:border-hairline-strong',
           )}
         >
           {label}
@@ -306,15 +291,12 @@ export function Pills<T extends string>({
   );
 }
 
-/** Label-left, value-right lines under a hairline. */
+/** Label-left, value-right lines in a white card. */
 export function Facts({ items }: { items: Array<[string, ReactNode]> }) {
   return (
-    <dl>
+    <dl className="divide-y divide-hairline-soft overflow-hidden rounded-xl border border-hairline bg-canvas">
       {items.map(([label, value]) => (
-        <div
-          key={label}
-          className="flex items-baseline justify-between gap-4 border-b border-hairline-soft py-3 text-[15px]"
-        >
+        <div key={label} className="flex items-baseline justify-between gap-4 px-4 py-3 text-[14.5px]">
           <dt className="shrink-0 text-steel">{label}</dt>
           <dd className="min-w-0 text-right text-ink">{value}</dd>
         </div>
@@ -327,20 +309,61 @@ export function Facts({ items }: { items: Array<[string, ReactNode]> }) {
 export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <div className="mt-5 first:mt-0">
-      <p className="text-[15px] font-semibold text-ink">
+      <p className="text-[13.5px] font-semibold text-charcoal">
         {label}
-        {hint && <span className="ml-2 text-[13px] font-normal text-stone">{hint}</span>}
+        {hint && <span className="ml-2 text-[12px] font-normal text-stone">{hint}</span>}
       </p>
-      <div className="mt-2.5">{children}</div>
+      <div className="mt-2">{children}</div>
     </div>
   );
 }
 
-export const inputClass =
-  'w-full rounded-[12px] border border-[#E2E8E2] bg-[#F6F8F6] px-3.5 py-3 text-[16px] text-ink outline-none transition-colors placeholder:text-stone focus:border-primary';
+export const inputClass = 'input-field !py-3 !text-[16px]';
+
+/**
+ * Steps as bars of green brightness — the 준비·수업·기록 bar of a lesson card,
+ * with as many steps as the caller has.
+ */
+export function StepBar({
+  steps,
+  className,
+}: {
+  steps: Array<{ label: string; state: 'done' | 'current' | 'todo' }>;
+  className?: string;
+}) {
+  return (
+    <ol
+      className={cn('grid gap-1.5', className)}
+      style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}
+    >
+      {steps.map((s) => (
+        <li key={s.label} aria-current={s.state === 'current' ? 'step' : undefined}>
+          <span
+            className={cn(
+              'block h-[5px] rounded-full',
+              s.state === 'done' && 'bg-primary',
+              s.state === 'current' && 'bg-primary-soft',
+              s.state === 'todo' && 'bg-primary/15',
+            )}
+          />
+          <span
+            className={cn(
+              'mt-1.5 block truncate text-[12.5px]',
+              s.state === 'done' && 'text-primary',
+              s.state === 'todo' && 'text-stone',
+              s.state === 'current' && 'font-bold text-ink',
+            )}
+          >
+            {s.label}
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
 
 /** The quiet line at the foot of a screen that says the data is a demo. */
 export function DemoNote({ show, children }: { show: boolean; children: ReactNode }) {
   if (!show) return null;
-  return <p className="mt-10 text-center text-[12.5px] leading-[1.6] text-stone">{children}</p>;
+  return <p className="mt-10 text-center text-[11.5px] leading-[1.6] text-stone">{children}</p>;
 }

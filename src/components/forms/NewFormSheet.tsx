@@ -168,7 +168,7 @@ export function NewFormSheet({
 
   const footer =
     step === 'survey' ? (
-      <PrimaryButton disabled={!ready} onClick={() => void send()}>
+      <PrimaryButton className="w-full" disabled={!ready} onClick={() => void send()}>
         {busy
           ? '보내는 중…'
           : families === 0
@@ -178,7 +178,7 @@ export function NewFormSheet({
               : `${families}가족에게 보내기 (예시)`}
       </PrimaryButton>
     ) : step === 'intake' ? (
-      <PrimaryButton disabled={linkTitle.trim().length === 0} onClick={makeLink}>
+      <PrimaryButton className="w-full" disabled={linkTitle.trim().length === 0} onClick={makeLink}>
         링크 만들고 복사하기
       </PrimaryButton>
     ) : undefined;
@@ -204,7 +204,7 @@ export function NewFormSheet({
                 </button>
               ))}
             </div>
-            <p className="mt-4 flex items-start gap-2 rounded-[14px] bg-[#F6F8F6] px-4 py-3.5 text-[13.5px] leading-[1.6] text-steel">
+            <p className="mt-4 flex items-start gap-2 rounded-xl bg-surface-soft px-4 py-3.5 text-[13.5px] leading-[1.6] text-steel">
               <Phone size={14} className="mt-[3px] shrink-0" />
               <span>
                 <strong className="font-semibold text-slate">전화로 할 일</strong> · {CALL_INSTEAD}
@@ -322,14 +322,14 @@ export function NewFormSheet({
 function QuestionPreview({ questions }: { questions: Question[] }) {
   if (questions.length === 0) {
     return (
-      <p className="rounded-[14px] bg-[#F6F8F6] px-4 py-5 text-center text-[14px] text-steel">
+      <p className="rounded-xl bg-surface-soft px-4 py-5 text-center text-[14px] text-steel">
         질문 없음 · 질문 수정에서 입력
       </p>
     );
   }
 
   return (
-    <ol className="space-y-4 rounded-[14px] bg-[#F6F8F6] px-4 py-4">
+    <ol className="space-y-4 rounded-xl bg-surface-soft px-4 py-4">
       {questions.map((q, i) => (
         <li key={q.label}>
           <p className="text-[15px] font-semibold text-ink">
@@ -344,7 +344,7 @@ function QuestionPreview({ questions }: { questions: Question[] }) {
                   key={c}
                   className={cn(
                     'flex items-center gap-1 rounded-full px-2.5 py-1 text-[13px]',
-                    q.flagged.includes(c) ? 'bg-[#FAF3E5] text-[#946216]' : 'bg-canvas text-slate',
+                    q.flagged.includes(c) ? 'bg-primary-wash text-primary' : 'bg-canvas text-slate',
                   )}
                 >
                   {q.flagged.includes(c) && <Phone size={10} strokeWidth={2.6} />}
@@ -359,7 +359,7 @@ function QuestionPreview({ questions }: { questions: Question[] }) {
       ))}
       {questions.some((q) => q.flagged.length > 0) && (
         <li className="flex items-center gap-1.5 border-t border-hairline-soft pt-3 text-[13px] text-steel">
-          <Phone size={11} strokeWidth={2.6} className="text-[#946216]" />
+          <Phone size={11} strokeWidth={2.6} className="text-primary" />
           표시된 답은 &lsquo;상담 필요&rsquo;로 분류
         </li>
       )}

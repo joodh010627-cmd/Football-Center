@@ -27,6 +27,7 @@ import {
   STEP_LABEL,
   firstClassOn,
   isDue,
+  phaseSteps,
   todayQueue,
   type Family,
   type NextAction,
@@ -43,8 +44,8 @@ import {
   Page,
   PrimaryButton,
   SecondaryButton,
+  StepBar,
   Surface,
-  Tag,
   TextLink,
   Title,
   inputClass,
@@ -136,7 +137,7 @@ export function FamilyScreen({ familyKey, queue = false, backLabel, onBack, onNe
         />
         {lead?.stage === 'lost' && (
           <div className="mt-8">
-            <SecondaryButton onClick={() => ws.advanceLead(lead.id, 'inquiry')}>다시 열기</SecondaryButton>
+            <SecondaryButton className="w-full" onClick={() => ws.advanceLead(lead.id, 'inquiry')}>다시 열기</SecondaryButton>
           </div>
         )}
       </Page>
@@ -208,22 +209,24 @@ export function FamilyScreen({ familyKey, queue = false, backLabel, onBack, onNe
 
       {/* --- Next ----------------------------------------------------------- */}
       {next && (
-        <Surface tone={isDue(family) && next.late ? 'alert' : 'calm'} className="mt-6">
+        <Surface className="mt-6">
           <div className="flex items-center justify-between gap-3">
-            <Eyebrow tone={isDue(family) && next.late ? 'alert' : 'calm'}>
+            <Eyebrow>
               {next.channel === 'wait' ? '예정' : isDue(family) ? (next.late ? '기한 지남' : '할 일') : '예정'}
             </Eyebrow>
-            {next.channel === 'wait' && <Tag tone="gray">{md(next.due)}</Tag>}
+            <p className="shrink-0 text-[15px] font-semibold tabular-nums text-charcoal">
+              {next.channel === 'wait' ? md(next.due) : PHASE_LABEL[family.phase]}
+            </p>
           </div>
-          <h2 className="mt-2 text-[23px] font-bold leading-[1.35] tracking-[-0.03em] text-ink">
+          <h2 className="mt-5 text-[24px] font-bold leading-[1.2] tracking-tightest text-ink">
             {next.label}
           </h2>
-          <p className="mt-1 text-[15px] leading-[1.55] text-slate">{next.reason}</p>
+          <p className="mt-1.5 text-[15px] text-charcoal">{next.reason}</p>
           {next.script && next.channel === 'call' && (
-            <p className="mt-3 text-[14px] leading-[1.6] text-steel">
-              <span className="font-semibold text-slate">통화 요점</span> · {next.script}
-            </p>
+            <p className="mt-1 text-[13.5px] text-slate">통화 요점 · {next.script}</p>
           )}
+
+          <StepBar steps={phaseSteps(family.phase)} className="mt-5" />
 
           <div className="mt-5">
             <NextControls
@@ -268,11 +271,11 @@ export function FamilyScreen({ familyKey, queue = false, backLabel, onBack, onNe
         <button
           type="button"
           onClick={() => onNext(nextInLine.key)}
-          className="mt-3 flex w-full items-center justify-between rounded-[14px] border border-hairline px-5 py-4 text-left transition-colors hover:border-hairline-strong"
+          className="pressable mt-3 flex w-full items-center justify-between rounded-xl border border-hairline bg-canvas px-4 py-3.5 text-left hover:border-hairline-strong"
         >
           <span>
             <span className="block text-[13px] text-steel">다음</span>
-            <span className="mt-0.5 block text-[16px] font-bold text-ink">
+            <span className="mt-0.5 block text-[15.5px] font-semibold text-ink">
               {nextInLine.name} · {nextInLine.next!.label}
             </span>
           </span>
@@ -280,11 +283,8 @@ export function FamilyScreen({ familyKey, queue = false, backLabel, onBack, onNe
         </button>
       )}
 
-      {/* --- Journey ------------------------------------------------------- */}
-      <Journey family={family} />
-
       {/* --- Facts --------------------------------------------------------- */}
-      <div className="mt-8">
+      <div className="mt-6">
         <Facts
           items={[
             [
@@ -313,13 +313,18 @@ export function FamilyScreen({ familyKey, queue = false, backLabel, onBack, onNe
       </div>
 
       {/* --- Folded -------------------------------------------------------- */}
-      <Answers family={family} surveys={surveys} recipients={recipients} />
-      {lead && !student && <Memo leadId={lead.id} memo={lead.memo} onSave={ws.updateLead} />}
-      <History
-        subjectIds={[lead?.id, student?.id].filter(Boolean) as ID[]}
-        activity={activity}
-        touches={touches.filter((t) => t.leadId === lead?.id || (student && t.studentId === student.id))}
-      />
+      <div className="mt-3 divide-y divide-hairline-soft overflow-hidden rounded-xl border border-hairline bg-canvas px-4">
+        <Fold title="단계">
+          <Journey family={family} />
+        </Fold>
+        <Answers family={family} surveys={surveys} recipients={recipients} />
+        {lead && !student && <Memo leadId={lead.id} memo={lead.memo} onSave={ws.updateLead} />}
+        <History
+          subjectIds={[lead?.id, student?.id].filter(Boolean) as ID[]}
+          activity={activity}
+          touches={touches.filter((t) => t.leadId === lead?.id || (student && t.studentId === student.id))}
+        />
+      </div>
 
       {lead && !student && (
         <div className="mt-8 text-center">
@@ -439,17 +444,17 @@ function NextControls({
     return (
       <div>
         <PrimaryButton href={telHref(family.phone)}>
-          <Phone size={17} strokeWidth={2.4} />
+          <Phone size={15} strokeWidth={2.4} />
           전화 걸기
         </PrimaryButton>
-        <p className="mb-2 mt-4 text-[13px] font-semibold text-steel">통화 결과</p>
-        <div className="grid grid-cols-2 gap-2">
+        <p className="mb-2 mt-5 text-[13px] font-bold text-primary">통화 결과</p>
+        <div className="grid grid-cols-2 gap-1.5">
           {CALL_RESULTS[call].map((r) => (
             <button
               key={r.label}
               type="button"
               onClick={() => onCall(call, r.outcome)}
-              className="min-h-[46px] rounded-[12px] bg-canvas px-3 text-[14.5px] font-semibold text-ink shadow-[0_0_0_1px_rgba(0,0,0,0.06)] transition-colors hover:bg-[#FAFBFA] active:bg-surface-soft"
+              className="pressable min-h-[42px] rounded-full bg-canvas/90 px-3 text-[14px] font-semibold text-charcoal hover:bg-canvas"
             >
               {r.label}
             </button>
@@ -466,8 +471,8 @@ function NextControls({
     case 'mark_trial':
       return (
         <div className="grid grid-cols-2 gap-2">
-          <PrimaryButton onClick={() => onMarkTrial(true)}>참석</PrimaryButton>
-          <SecondaryButton onClick={() => onMarkTrial(false)} className="min-h-[52px]">
+          <PrimaryButton onClick={() => onMarkTrial(true)} className="w-full">참석</PrimaryButton>
+          <SecondaryButton onClick={() => onMarkTrial(false)} className="w-full">
             불참
           </SecondaryButton>
         </div>
@@ -475,9 +480,9 @@ function NextControls({
 
     case 'send_form':
       return (
-        <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
           <PrimaryButton onClick={() => onOpen('form')}>등록 신청서 보내기</PrimaryButton>
-          <SecondaryButton onClick={() => onOpen('enroll')}>신청서 없이 바로 등록</SecondaryButton>
+          <SecondaryButton onClick={() => onOpen('enroll')}>바로 등록</SecondaryButton>
         </div>
       );
 
@@ -524,51 +529,37 @@ function NextControls({
   }
 }
 
-/** Four segments, 문의 → 첫 달, and the current phase's steps under them. */
+/** Every step of the journey, checked off, grouped by stage. */
 function Journey({ family }: { family: Family }) {
-  const current = PHASES.findIndex((p) => p.key === family.phase);
-  const steps = family.steps.filter((s) => s.phase === family.phase);
-
   return (
-    <section className="mt-9">
-      <div className="grid grid-cols-4 gap-2">
-        {PHASES.map((p, i) => (
+    <div className="space-y-4">
+      {PHASES.map((p) => {
+        const steps = family.steps.filter((s) => s.phase === p.key);
+        return (
           <div key={p.key}>
-            <div
-              className={cn(
-                'h-[3px] rounded-full',
-                i < current ? 'bg-primary' : i === current ? 'bg-primary/40' : 'bg-hairline',
-              )}
-            />
-            <p
-              className={cn(
-                'mt-2 text-[13.5px] font-bold',
-                i <= current ? 'text-primary' : 'text-stone',
-              )}
-            >
-              {i + 1} {p.label}
+            <p className={cn('text-[12.5px] font-bold', p.key === family.phase ? 'text-primary' : 'text-stone')}>
+              {p.label}
             </p>
+            <ul className="mt-1.5 space-y-1.5">
+              {steps.map((s) => (
+                <li key={s.key} className="flex items-center gap-2.5 text-[14.5px]">
+                  <span
+                    className={cn(
+                      'flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full',
+                      s.done ? 'bg-primary text-white' : 'border-[1.5px] border-hairline-strong',
+                    )}
+                  >
+                    {s.done && <Check size={11} strokeWidth={3} />}
+                  </span>
+                  <span className={cn('flex-1', s.done ? 'text-steel' : 'text-ink')}>{s.label}</span>
+                  {s.detail && <span className="text-[13px] text-steel">{s.detail}</span>}
+                </li>
+              ))}
+            </ul>
           </div>
-        ))}
-      </div>
-
-      <ul className="mt-4 space-y-2.5">
-        {steps.map((s) => (
-          <li key={s.key} className="flex items-center gap-3 text-[15px]">
-            <span
-              className={cn(
-                'flex h-5 w-5 shrink-0 items-center justify-center rounded-full',
-                s.done ? 'bg-primary text-white' : 'border-[1.5px] border-hairline-strong',
-              )}
-            >
-              {s.done && <Check size={12} strokeWidth={3} />}
-            </span>
-            <span className={cn('flex-1', s.done ? 'text-steel' : 'font-semibold text-ink')}>{s.label}</span>
-            {s.detail && <span className="text-[13.5px] text-steel">{s.detail}</span>}
-          </li>
-        ))}
-      </ul>
-    </section>
+        );
+      })}
+    </div>
   );
 }
 
@@ -576,20 +567,20 @@ function Journey({ family }: { family: Family }) {
 function Fold({ title, count, children }: { title: string; count?: number; children: ReactNode }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="border-b border-hairline-soft">
+    <div>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex w-full items-center justify-between py-4 text-left"
+        className="flex w-full items-center justify-between py-3.5 text-left"
       >
-        <span className="text-[16px] text-ink">
+        <span className="text-[15px] font-semibold text-ink">
           {title}
           {count !== undefined && <span className="ml-1.5 text-steel">{count}</span>}
         </span>
         <ChevronDown size={18} className={cn('text-steel transition-transform', open && 'rotate-180')} />
       </button>
-      {open && <div className="animate-swap-in pb-5">{children}</div>}
+      {open && <div className="animate-fade-in pb-4">{children}</div>}
     </div>
   );
 }
@@ -640,6 +631,7 @@ function Memo({
       />
       <div className="mt-2">
         <SecondaryButton
+          className="w-full"
           disabled={!text.trim()}
           onClick={() => {
             onSave(leadId, { memo: memo ? `${memo}\n${text.trim()}` : text.trim() }, '상담 메모 추가');

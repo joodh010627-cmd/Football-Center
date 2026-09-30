@@ -1,5 +1,5 @@
 /**
- * 온보딩 여정 — 문의에서 첫 달까지, 한 가족씩.
+ * 온보딩 여정 — 문의 → 체험 → 등록 → 신규 원생(등록 후 4주).
  *
  * A football centre's roster turns over every term, so the business is decided
  * at two cliffs, and both are about new families:
@@ -40,15 +40,24 @@ export const PHASES: ReadonlyArray<{ key: Phase; label: string; blurb: string }>
   { key: 'inquiry', label: '문의', blurb: '체험 전' },
   { key: 'trial', label: '체험', blurb: '체험 예정' },
   { key: 'decision', label: '등록', blurb: '체험 후 등록 전' },
-  { key: 'firstMonth', label: '첫 달', blurb: '등록 후 4주' },
+  { key: 'firstMonth', label: '신규 원생', blurb: '등록 후 4주' },
 ];
 
 export const PHASE_LABEL: Record<Phase, string> = {
   inquiry: '문의',
   trial: '체험',
   decision: '등록',
-  firstMonth: '첫 달',
+  firstMonth: '신규 원생',
 };
+
+/** The four stages as a step bar, lit up to where the family is. */
+export function phaseSteps(phase: Phase): Array<{ label: string; state: 'done' | 'current' | 'todo' }> {
+  const at = PHASES.findIndex((p) => p.key === phase);
+  return PHASES.map((p, i) => ({
+    label: p.label,
+    state: i < at ? 'done' : i === at ? 'current' : 'todo',
+  }));
+}
 
 /** The contacts worth writing down. Stage moves live on the lead itself. */
 export type TouchStep = 'first_call' | 'trial_followup' | 'welcome' | 'week1' | 'month1';

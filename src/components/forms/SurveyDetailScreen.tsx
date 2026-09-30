@@ -80,7 +80,7 @@ export function SurveyDetailScreen({
   if (!survey) {
     return (
       <Page>
-        <Title back={{ label: backLabel, onBack }} eyebrow="Sent" title="안내 없음" />
+        <Title back={{ label: backLabel, onBack }} title="안내 없음" />
       </Page>
     );
   }
@@ -130,9 +130,9 @@ export function SurveyDetailScreen({
 
       {/* --- 상담 필요 --------------------------------------------------------- */}
       {p.toCall.length > 0 && (
-        <Surface tone="alert" className="mt-7">
-          <Eyebrow tone="alert">상담 필요 {p.toCall.length}</Eyebrow>
-          <ul className="mt-3 divide-y divide-black/5">
+        <Surface className="mt-7">
+          <Eyebrow>상담 필요 {p.toCall.length}</Eyebrow>
+          <ul className="mt-3 divide-y divide-primary/10">
             {p.toCall.map((r) => {
               const w = who(r);
               const said = texts.map((q) => r.answers[q.label]).filter(Boolean)[0];
@@ -141,7 +141,7 @@ export function SurveyDetailScreen({
                   <div className="flex items-center gap-3">
                     <span className="min-w-0 flex-1">
                       <span className="block text-[17px] font-bold text-ink">{w.name}</span>
-                      <span className="mt-0.5 block text-[14px] font-semibold text-[#946216]">
+                      <span className="mt-0.5 block text-[14px] font-semibold text-primary">
                         {flaggedAnswers(survey, r).join(' · ')}
                       </span>
                     </span>
@@ -184,12 +184,12 @@ export function SurveyDetailScreen({
                       className="w-full text-left"
                     >
                       <span className="flex items-baseline justify-between text-[15.5px]">
-                        <span className={cn(t.flagged ? 'text-[#946216]' : 'text-ink')}>{t.choice}</span>
+                        <span className={cn(t.flagged ? 'text-primary' : 'text-ink')}>{t.choice}</span>
                         <span className="font-bold tabular-nums text-ink">{n}</span>
                       </span>
                       <span className="mt-1.5 block h-[5px] overflow-hidden rounded-full bg-hairline-soft">
                         <span
-                          className={cn('block h-full rounded-full', t.flagged ? 'bg-[#D9A441]' : 'bg-primary')}
+                          className={cn('block h-full rounded-full', t.flagged ? 'bg-primary-soft' : 'bg-primary')}
                           style={{ width: `${(n / max) * 100}%` }}
                         />
                       </span>
@@ -230,7 +230,7 @@ export function SurveyDetailScreen({
           <p className="text-[15px] leading-[1.7] text-slate">{p.pending.map((r) => who(r).name).join(', ')}</p>
           {open && (
             <div className="mt-4">
-              <SecondaryButton
+              <SecondaryButton className="w-full"
                 disabled={unreminded === 0}
                 onClick={() =>
                   void remindSurvey(survey.id).then((result) =>

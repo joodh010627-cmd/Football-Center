@@ -48,7 +48,6 @@ export function InviteScreen({ backLabel, onBack }: { backLabel: string; onBack:
     <Page>
       <Title
         back={{ label: backLabel, onBack }}
-        eyebrow="Invite"
         title="체험 초대"
         sub="신청 링크를 공유하면 신청 내용이 문의로 들어옵니다."
       />
@@ -76,8 +75,8 @@ export function InviteScreen({ backLabel, onBack }: { backLabel: string; onBack:
       </Section>
 
       <div className="mt-6 space-y-2">
-        <PrimaryButton onClick={() => setMaking((n) => n + 1)}>새 신청 링크 만들기</PrimaryButton>
-        <SecondaryButton onClick={() => setComposing(true)}>전화·방문 문의 직접 등록</SecondaryButton>
+        <PrimaryButton className="w-full" onClick={() => setMaking((n) => n + 1)}>새 신청 링크 만들기</PrimaryButton>
+        <SecondaryButton className="w-full" onClick={() => setComposing(true)}>전화·방문 문의 직접 등록</SecondaryButton>
       </div>
 
       {stopped.length > 0 && (

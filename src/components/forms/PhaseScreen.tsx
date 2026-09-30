@@ -12,13 +12,6 @@ import { PHASES, isDue, phaseList, type Family, type Phase } from '@/data/onboar
 import { LeadComposer } from './sheets';
 import { DemoNote, Page, Row, Rows, Section, SecondaryButton, Tag, TextLink, Title } from './ui';
 
-const EYEBROW: Record<Phase, string> = {
-  inquiry: 'Inquiry',
-  trial: 'Trial',
-  decision: 'Decision',
-  firstMonth: 'First month',
-};
-
 export function PhaseScreen({
   phase,
   backLabel,
@@ -44,7 +37,6 @@ export function PhaseScreen({
     <Page>
       <Title
         back={{ label: backLabel, onBack }}
-        eyebrow={EYEBROW[phase]}
         title={meta.label}
         sub={`${meta.blurb} · ${list.length}명`}
       />
@@ -76,7 +68,7 @@ export function PhaseScreen({
       {phase === 'inquiry' && (
         <>
           <div className="mt-8">
-            <SecondaryButton onClick={() => setComposing(true)}>전화·방문 문의 등록</SecondaryButton>
+            <SecondaryButton className="w-full" onClick={() => setComposing(true)}>전화·방문 문의 등록</SecondaryButton>
           </div>
 
           {lost.length > 0 && (
@@ -135,7 +127,7 @@ export function FamilyRow({ family, onOpen }: { family: Family; onOpen: () => vo
       sub={n?.reason}
       tag={
         n ? (
-          <Tag tone={due ? (n.late ? 'amber' : 'green') : 'gray'}>
+          <Tag tone={due ? (n.late ? 'strong' : 'green') : 'gray'}>
             {due ? n.label : `${Number(n.due.slice(5, 7))}/${Number(n.due.slice(8, 10))} ${n.label}`}
           </Tag>
         ) : undefined

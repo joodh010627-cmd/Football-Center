@@ -42,7 +42,7 @@ export function TrialSheet({
       variant="sheet"
       title="체험 날짜 잡기"
       footer={
-        <PrimaryButton onClick={() => onSubmit(date, classId)}>예약하고 안내 보내기</PrimaryButton>
+        <PrimaryButton className="w-full" onClick={() => onSubmit(date, classId)}>예약하고 안내 보내기</PrimaryButton>
       }
     >
       <Field label="날짜">
@@ -95,7 +95,7 @@ export function EnrollSheet({
       variant="sheet"
       title={`${lead.childName || '새 원생'} 등록 확정`}
       footer={
-        <PrimaryButton
+        <PrimaryButton className="w-full"
           disabled={!classId || !ageGroup}
           onClick={() => onSubmit(classId, ageGroup as AgeGroup)}
         >
@@ -153,7 +153,7 @@ export function LostSheet({
       variant="sheet"
       title="미등록 처리"
       footer={
-        <PrimaryButton disabled={!reason} onClick={() => onSubmit(reason)}>
+        <PrimaryButton className="w-full" disabled={!reason} onClick={() => onSubmit(reason)}>
           저장
         </PrimaryButton>
       }
@@ -213,7 +213,7 @@ export function LeadComposer({
       variant="sheet"
       title="문의 직접 등록"
       footer={
-        <PrimaryButton
+        <PrimaryButton className="w-full"
           disabled={!valid}
           onClick={() => {
             onSubmit({

@@ -43,7 +43,7 @@ export function SentScreen({
         tag={
           p.toCall.length > 0 || (p.daysLeft !== null && p.daysLeft <= 1 && p.pending.length > 0) ? (
             <>
-              {p.toCall.length > 0 && <Tag tone="amber">상담 필요 {p.toCall.length}</Tag>}
+              {p.toCall.length > 0 && <Tag tone="strong">상담 필요 {p.toCall.length}</Tag>}
               {p.daysLeft !== null && p.daysLeft <= 1 && p.pending.length > 0 && (
                 <Tag>미응답 {p.pending.length}</Tag>
               )}
@@ -59,7 +59,6 @@ export function SentScreen({
     <Page>
       <Title
         back={{ label: backLabel, onBack }}
-        eyebrow="Sent"
         title="보낸 안내"
         sub="재원생 보호자에게 보낸 안내"
       />
