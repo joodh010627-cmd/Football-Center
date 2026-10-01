@@ -81,14 +81,6 @@ export function recentLessons(
 // ---------------------------------------------------------------------------
 
 /**
- * Where the goal list opens: the focus of the last lesson, so carrying a
- * theme on is the zero-tap path and switching is one tap away.
- */
-export function suggestedAbility(recent: PastLesson[]): Ability {
-  return recent.find((l) => l.template)?.template?.ability ?? 'technical';
-}
-
-/**
  * The goals on offer for one focus.
  *
  * The class's own curriculum comes first — it is what the centre decided this
@@ -249,3 +241,212 @@ export function composeLesson(
     notes,
   };
 }
+
+// ---------------------------------------------------------------------------
+// From the last lessons to today's goal
+// ---------------------------------------------------------------------------
+
+/**
+ * One block as it ran (or will run) in one lesson. `lesson` is the index into
+ * `recentLessons` (0 = the last lesson); today is `TODAY`.
+ */
+export interface Bead {
+  lesson: number;
+  blockId: ID;
+  title: string;
+  category: TrainingBlock['category'];
+  ability: Ability;
+  minutes: number;
+  /** The skills this block works on, in the coach's words (see `THREADS`). */
+  threads: string[];
+}
+
+export const TODAY = -1;
+
+/**
+ * The skills a goal can carry over from one lesson to the next.
+ *
+ * Abilities are too coarse to say "today follows on from last time" — every
+ * 기술 lesson would follow every other. These are the words coaches use for
+ * what a drill is *about*, each with the phrasings the library uses for it.
+ * A lesson on 패스 정확도 and one on 패스 후 움직임 share 패스; that shared
+ * word is the link the coach sees.
+ */
+// prettier-ignore
+const THREADS: Array<[thread: string, words: string[]]> = [
+  ['패스', ['패스']],
+  ['첫 터치', ['터치', '받고', '받아', '받기']],
+  ['드리블', ['드리블', '돌파', '제치']],
+  ['슈팅', ['슈팅', '마무리']],
+  ['1대1', ['1대1']],
+  ['공간', ['공간', '빈 곳', '빈 모서리']],
+  ['압박', ['압박', '되찾']],
+  ['수비', ['수비', '커버']],
+  ['방향 전환', ['방향', '민첩', '지그재그']],
+  ['스피드', ['스피드', '출발', '가속', '세 걸음']],
+  ['몸싸움', ['밸런스', '지키', '몸싸움']],
+  ['체력', ['체력', '인터벌', '강도']],
+  ['재도전', ['도전', '실패', '실수']],
+  ['집중', ['집중', '신호']],
+  ['소통', ['이름', '부르', '소통']],
+  ['협력', ['협력', '함께', '미션']],
+  ['역할', ['역할', '책임']],
+];
+
+/** The threads a piece of text mentions, in `THREADS` order. */
+export function threadsIn(text: string): string[] {
+  return THREADS.filter(([, words]) => words.some((w) => text.includes(w))).map(([t]) => t);
+}
+
+/** A lesson's blocks as beads. Items whose block is gone are skipped. */
+export function beadsOf(
+  items: SessionItem[],
+  blockMap: Map<ID, TrainingBlock>,
+  lesson: number,
+): Bead[] {
+  return items.flatMap((item) => {
+    const base = item.blockId ? blockMap.get(item.blockId) : undefined;
+    if (!base) return [];
+    const block = blockAsRun(base, item);
+    return [
+      {
+        lesson,
+        blockId: base.id,
+        title: block.title,
+        category: block.category,
+        ability: block.ability,
+        minutes: item.durationMin ?? block.durationMin,
+        threads: threadsIn(`${block.title} ${block.description}`),
+      },
+    ];
+  });
+}
+
+export const pastBeads = (recent: PastLesson[], blockMap: Map<ID, TrainingBlock>): Bead[] =>
+  recent.flatMap((l, i) => beadsOf(l.plan?.items ?? [], blockMap, i));
+
+/** Minutes each ability got across the beads. */
+export function minutesByAbility(beads: Bead[]): Record<Ability, number> {
+  const out: Record<Ability, number> = { technical: 0, tactical: 0, physical: 0, mental: 0, attitude: 0 };
+  for (const b of beads) out[b.ability] += b.minutes;
+  return out;
+}
+
+/**
+ * What a past lesson was, in a few words.
+ *
+ * A lesson run from a goal is that goal. One the coach put together by hand has
+ * no title, and "직접 구성한 수업" three times in a row tells the coach
+ * nothing — so it is named after its main drill: the longest 훈련 block, or the
+ * game only when there is none, since every lesson ends in one.
+ */
+export function lessonTitle(lesson: PastLesson, beads: Bead[]): string {
+  if (lesson.template) return lesson.template.title;
+  const longest = (category: Bead['category']) =>
+    beads.filter((b) => b.category === category).sort((a, b) => b.minutes - a.minutes)[0];
+  return (longest('skill') ?? longest('game') ?? beads[0])?.title ?? '계획 없이 진행';
+}
+
+/** Threads a goal is *about* — its name and sentence, not every drill in it. */
+const goalThreads = (t: Pick<SessionTemplate, 'title' | 'goal'>) => threadsIn(`${t.title} ${t.goal}`);
+
+export interface GoalContext {
+  cls: Pick<Class, 'ageGroup' | 'curriculumId'>;
+  recent: PastLesson[];
+  /** `pastBeads(recent, …)`. */
+  past: Bead[];
+  library: TrainingBlock[];
+  when: LessonConditions;
+}
+
+/** Threads each past lesson worked on — its goal, and everything its blocks did. */
+const threadsByLesson = (ctx: GoalContext): Array<Set<string>> =>
+  ctx.recent.map((lesson, i) => {
+    const out = new Set(lesson.template ? goalThreads(lesson.template) : []);
+    for (const b of ctx.past) if (b.lesson === i) b.threads.forEach((t) => out.add(t));
+    return out;
+  });
+
+/** Where today's goal picks up from: a past lesson, and the skill it shares. */
+export interface CarryOver {
+  lesson: number;
+  /** The shared skill. Absent when it is simply the same goal again. */
+  thread?: string;
+}
+
+/** The most recent past lesson the goal follows on from, if any. */
+export function carryOver(goal: SessionTemplate, ctx: GoalContext): CarryOver | null {
+  if (ctx.recent[0]?.plan?.templateId === goal.id) return { lesson: 0 };
+  const threads = threadsByLesson(ctx);
+  const focus = goalThreads(goal);
+  const lesson = threads.findIndex((set) => focus.some((t) => set.has(t)));
+  if (lesson < 0) return null;
+  return { lesson, thread: focus.find((t) => threads[lesson].has(t)) };
+}
+
+/** Last lesson's tags that name one of the goal's skills, most frequent first. */
+function tagsFor(goal: SessionTemplate, ctx: GoalContext): Array<[string, number]> {
+  const focus = goalThreads(goal);
+  return (ctx.recent[0]?.tags ?? []).filter(([tag]) => threadsIn(tag).some((t) => focus.includes(t)));
+}
+
+/** Blocks the composer had to swap out for today's headcount or age. */
+const swapsFor = (goal: SessionTemplate, ctx: GoalContext) =>
+  composeLesson(goal, ctx.library, ctx.when).items.filter(
+    (i) => i.blockId && !goal.blockIds.includes(i.blockId),
+  ).length;
+
+/**
+ * How well a goal follows on from the last lessons and fits today.
+ *
+ * In order of weight: don't repeat last lesson's goal; carry a skill on from
+ * the last lesson (from the ones before, a little less); the class's own
+ * curriculum; something the coach tagged last time; and a goal whose blocks
+ * run as written with today's children beats one that has to be patched.
+ */
+export function scoreGoal(
+  goal: SessionTemplate,
+  ctx: GoalContext,
+  threads = threadsByLesson(ctx),
+): number {
+  const focus = goalThreads(goal);
+  const shared = (i: number) => focus.filter((t) => threads[i]?.has(t)).length;
+  const ranLast = ctx.recent[0]?.plan?.templateId === goal.id;
+  const ranLately = ctx.recent.some((l, i) => i > 0 && l.plan?.templateId === goal.id);
+  const older = threads.some((_, i) => i > 0 && shared(i) > 0);
+  const own = Boolean(ctx.cls.curriculumId) && goal.curriculumId === ctx.cls.curriculumId;
+  return (
+    (ranLast ? -6 : 0) +
+    (ranLately ? -3 : 0) +
+    2 * Math.min(shared(0), 2) +
+    (older ? 1 : 0) +
+    (own ? 2 : 0) +
+    (tagsFor(goal, ctx).length > 0 ? 1 : 0) -
+    swapsFor(goal, ctx)
+  );
+}
+
+/**
+ * The goal to put in front of the coach for one focus.
+ *
+ * `options` is `goalOptions`' list; ties keep its order, so with no history at
+ * all this is simply the class's own curriculum first.
+ */
+export function recommendGoal(
+  options: SessionTemplate[],
+  ctx: GoalContext,
+): SessionTemplate | undefined {
+  const threads = threadsByLesson(ctx);
+  let best: SessionTemplate | undefined;
+  let bestScore = -Infinity;
+  for (const goal of options) {
+    const score = scoreGoal(goal, ctx, threads);
+    if (score > bestScore) {
+      best = goal;
+      bestScore = score;
+    }
+  }
+  return best;
+}
+
+export const shortDate = (d: ISODate) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;

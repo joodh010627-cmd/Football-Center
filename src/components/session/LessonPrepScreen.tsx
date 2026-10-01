@@ -1,12 +1,13 @@
 /**
  * 수업 준비 — one class on one day, planned the way coaches already plan it.
  *
- * Top to bottom is the order of the thinking: who is coming, what we did last
- * time, so what is today for. The first two are read-only facts. The third is
- * a tap — a focus from the growth pentagon, then one of a few goals — and the
- * moment a goal is chosen its 훈련 블록 appear already fitted to today's
- * headcount and minutes. Editing is there for the day the coach wants it, not a
- * step every day has to pass through.
+ * Top to bottom is the order of the thinking: who is coming, then what the last
+ * lessons did and so what today is for. The second is one picture — the growth
+ * pentagon with the last lessons' blocks on it — and one tap: the coach picks
+ * the ability to work on, and the app picks the goal, from what the last
+ * lessons left off, today's headcount and the class's age group. The goal's
+ * 훈련 블록 arrive already fitted to the day. A coach who'd rather do something
+ * else opens 바꾸기; the recommendation is a starting point, not a gate.
  *
  * The same screen edits a lesson that is already prepared: it opens on the
  * saved goal and blocks, and choosing a different goal recomposes.
@@ -21,18 +22,25 @@ import { trialsOn } from '@/data/crm';
 import { fromMinutes } from '@/data/today';
 import { blocksFor, planFor, sessionDuration, studentsInClass } from '@/data/selectors';
 import {
+  TODAY,
+  beadsOf,
   blockAsRun,
   composeLesson,
+  carryOver,
   goalOptions,
+  minutesByAbility,
+  pastBeads,
   recentLessons,
-  suggestedAbility,
-  type PastLesson,
+  recommendGoal,
+  type GoalContext,
 } from '@/data/lessonPrep';
 import { formatDateKo } from '@/lib/format';
 import { cn } from '@/lib/cn';
-import { ABILITY_META, ABILITY_ORDER, CATEGORY_META } from './meta';
-import { AbilityChips, AbilityTag, DetailHeader, More } from './parts';
+import { ABILITY_META, CATEGORY_META } from './meta';
+import { AbilityChips, DetailHeader, More } from './parts';
 import { BlockAdder } from './BlockAdder';
+import { GoalPentagon } from './GoalPentagon';
+import { LessonFlow } from './LessonFlow';
 
 interface LessonPrepScreenProps {
   cls: Class;
@@ -62,49 +70,85 @@ export function LessonPrepScreen({ cls, date, backLabel, onBack, onDone }: Lesso
   );
   const headcount = roster.length + trials.length;
   const recent = useMemo(() => recentLessons(state, cls, date), [state, cls, date]);
+  const past = useMemo(() => pastBeads(recent, blockMap), [recent, blockMap]);
+
+  const ctx: GoalContext = useMemo(
+    () => ({
+      cls,
+      recent,
+      past,
+      library: state.trainingBlocks,
+      when: { ageGroup: cls.ageGroup, headcount, minutes: cls.schedule.durationMin },
+    }),
+    [cls, recent, past, state.trainingBlocks, headcount],
+  );
 
   // --- The plan being prepared -------------------------------------------
 
   const saved = planFor(state.sessionPlans, cls.id, date);
   const savedGoal = saved?.templateId ? getTemplate(saved.templateId) : undefined;
 
-  const [ability, setAbility] = useState<Ability>(
-    savedGoal?.ability ?? suggestedAbility(recent),
-  );
+  // No focus until the coach taps one: which ability today is for is the one
+  // decision the app leaves to them.
+  const [ability, setAbility] = useState<Ability | null>(savedGoal?.ability ?? null);
   const [goalId, setGoalId] = useState<ID | null>(saved?.templateId ?? null);
   const [items, setItems] = useState<SessionItem[]>(() =>
     (saved?.items ?? []).filter((i) => i.blockId),
   );
   const [notes, setNotes] = useState<string[]>([]);
+  const [picking, setPicking] = useState(false);
   const [allGoals, setAllGoals] = useState(false);
   const blocksRef = useRef<HTMLElement>(null);
 
   const recentIds = useMemo(() => recent.map((l) => l.plan?.templateId), [recent]);
   const goals = useMemo(
-    () => goalOptions(state.sessionTemplates, cls, ability, recentIds),
+    () => (ability ? goalOptions(state.sessionTemplates, cls, ability, recentIds) : []),
     [state.sessionTemplates, cls, ability, recentIds],
   );
+  const recommended = useMemo(() => recommendGoal(goals, ctx), [goals, ctx]);
   const shownGoals = allGoals ? goals : goals.slice(0, SHOWN_GOALS);
   const goal = goalId ? getTemplate(goalId) : undefined;
 
+  const pastMin = useMemo(() => minutesByAbility(past), [past]);
+  const todayMin = useMemo(
+    () => (items.length > 0 ? minutesByAbility(beadsOf(items, blockMap, TODAY)) : null),
+    [items, blockMap],
+  );
+  const carry = useMemo(() => (goal ? carryOver(goal, ctx) : null), [goal, ctx]);
+
   const total = sessionDuration(items, blockMap);
 
-  const choose = (id: ID) => {
+  const choose = (id: ID, scroll = false) => {
     const template = getTemplate(id);
     if (!template) return;
-    const composed = composeLesson(template, state.trainingBlocks, {
-      ageGroup: cls.ageGroup,
-      headcount,
-      minutes: cls.schedule.durationMin,
-    });
+    const composed = composeLesson(template, state.trainingBlocks, ctx.when);
     setGoalId(id);
     setItems(composed.items);
     setNotes(composed.notes);
-    // The blocks land below the fold on a phone; bring them up.
-    window.setTimeout(
-      () => blocksRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
-      60,
-    );
+    if (scroll) {
+      // Picked from the list, which can push the blocks off a phone screen.
+      window.setTimeout(
+        () => blocksRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+        60,
+      );
+    }
+  };
+
+  /** A focus tapped on the pentagon: the app answers with a goal. */
+  const pickAbility = (a: Ability) => {
+    setAbility(a);
+    setPicking(false);
+    setAllGoals(false);
+    const options = goalOptions(state.sessionTemplates, cls, a, recentIds);
+    const best = recommendGoal(options, ctx);
+    if (best) choose(best.id);
+    else {
+      // Nothing for this age on this ability: say so rather than keep a goal
+      // from another ability on screen as if it answered the tap.
+      setGoalId(null);
+      setItems([]);
+      setNotes([]);
+    }
   };
 
   const save = () => {
@@ -167,91 +211,113 @@ export function LessonPrepScreen({ cls, date, backLabel, onBack, onDone }: Lesso
           </div>
         </Step>
 
-        {/* 2 — what we did last time */}
-        <Step n={2} title="지난 수업">
-          {recent.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-hairline-strong px-4 py-5 text-center text-[14px] text-steel">
-              이 클래스의 첫 수업이에요
-            </p>
-          ) : (
-            <LastLessons recent={recent} />
-          )}
-        </Step>
-
-        {/* 3 — so what is today for */}
-        <Step n={3} title="오늘의 목표">
-          <FocusPicker
-            value={ability}
-            last={recent.find((l) => l.template)?.template?.ability}
-            onChange={(a) => {
-              setAbility(a);
-              setAllGoals(false);
-            }}
+        {/* 2 — what today is for, read off what the last lessons did */}
+        <Step n={2} title="오늘의 목표">
+          <GoalPentagon
+            past={pastMin}
+            today={todayMin}
+            hasHistory={past.length > 0}
+            selected={ability}
+            onSelect={pickAbility}
           />
 
-          <ul className="mt-3 space-y-2">
-            {shownGoals.map((t) => {
-              const on = t.id === goalId;
-              const last = t.id === recent[0]?.plan?.templateId;
-              const lately = !last && recentIds.includes(t.id);
-              return (
-                <li key={t.id}>
-                  <button
-                    type="button"
-                    onClick={() => choose(t.id)}
-                    aria-pressed={on}
-                    className={cn(
-                      'pressable flex w-full items-start gap-3 rounded-xl border px-4 py-3.5 text-left',
-                      on
-                        ? 'border-primary bg-primary-wash ring-1 ring-inset ring-primary'
-                        : 'border-hairline bg-canvas hover:border-hairline-strong',
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        'mt-[3px] flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2',
-                        on ? 'border-primary' : 'border-hairline-strong',
-                      )}
-                    >
-                      {on && <span className="h-2 w-2 rounded-full bg-primary" />}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-center gap-2">
-                        <span className="text-[16px] font-bold leading-snug text-ink">{t.title}</span>
-                        {(last || lately) && (
-                          <span className="shrink-0 text-[12px] font-semibold text-steel">
-                            {last ? '지난 수업' : '최근 진행'}
-                          </span>
+          <div className="mt-3">
+            <LessonFlow
+              recent={recent}
+              past={past}
+              carry={carry}
+              today={{
+                ready: Boolean(goal),
+                body: (
+                  <div>
+                    <p className={cn('text-[13px] font-bold', goal ? 'text-primary' : 'text-stone')}>
+                      오늘
+                    </p>
+                    {goal ? (
+                      <div key={goal.id} className="animate-fade-in">
+                        <div className="mt-0.5 flex items-baseline gap-3">
+                          <p className="min-w-0 flex-1 text-[20px] font-bold leading-tight tracking-[-0.02em] text-ink">
+                            {goal.title}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setPicking((v) => !v)}
+                            aria-expanded={picking}
+                            className="flex shrink-0 items-center gap-0.5 text-[13px] font-semibold text-steel transition-colors hover:text-ink"
+                          >
+                            바꾸기
+                            <ChevronDown
+                              size={14}
+                              strokeWidth={2.4}
+                              className={cn('transition-transform duration-200', picking && 'rotate-180')}
+                            />
+                          </button>
+                        </div>
+
+                        {picking && (
+                          <ul className="animate-fade-in mt-2.5 space-y-1">
+                            {shownGoals.map((t) => {
+                              const on = t.id === goalId;
+                              return (
+                                <li key={t.id}>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      choose(t.id, true);
+                                      setPicking(false);
+                                    }}
+                                    aria-pressed={on}
+                                    className={cn(
+                                      'flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-[14.5px] transition-colors',
+                                      on ? 'bg-primary-wash font-bold text-primary' : 'text-ink hover:bg-surface-soft',
+                                    )}
+                                  >
+                                    <span className="min-w-0 flex-1 truncate">{t.title}</span>
+                                    {t.id === recommended?.id && (
+                                      <span className="shrink-0 text-[12px] font-semibold text-primary">추천</span>
+                                    )}
+                                  </button>
+                                </li>
+                              );
+                            })}
+                            {!allGoals && goals.length > SHOWN_GOALS && (
+                              <li>
+                                <button
+                                  type="button"
+                                  onClick={() => setAllGoals(true)}
+                                  className="w-full py-1.5 text-center text-[13px] font-semibold text-steel hover:text-ink"
+                                >
+                                  {goals.length - SHOWN_GOALS}개 더 보기
+                                </button>
+                              </li>
+                            )}
+                          </ul>
                         )}
-                      </span>
-                      <span className="mt-1 block text-[14px] leading-[1.5] text-slate">{t.goal}</span>
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-            {goals.length === 0 && (
-              <li className="rounded-xl border border-dashed border-hairline-strong px-4 py-6 text-center text-[14px] text-steel">
-                {cls.ageGroup}에 맞는 {ABILITY_META[ability].label} 목표가 아직 없어요
-              </li>
-            )}
-          </ul>
-          {!allGoals && goals.length > SHOWN_GOALS && (
-            <button
-              type="button"
-              onClick={() => setAllGoals(true)}
-              className="mt-2 w-full py-2 text-center text-[13.5px] font-semibold text-steel hover:text-ink"
-            >
-              목표 {goals.length - SHOWN_GOALS}개 더 보기
-            </button>
-          )}
+                      </div>
+                    ) : (
+                      <p className="mt-0.5 text-[15px] text-steel">
+                        {ability && goals.length === 0
+                          ? `${cls.ageGroup} ${ABILITY_META[ability].label} 목표가 아직 없어요`
+                          : items.length > 0
+                            ? '직접 구성한 수업'
+                            : '역량을 누르면 목표가 정해져요'}
+                      </p>
+                    )}
+                  </div>
+                ),
+              }}
+            />
+          </div>
         </Step>
 
-        {/* 4 — the blocks, once there is a goal (or a plan to edit) */}
+        {/* 3 — the blocks, once there is a goal (or a plan to edit) */}
         {(goalId || items.length > 0) && (
           <section ref={blocksRef} className="scroll-mt-4">
             <div className="flex items-baseline justify-between gap-3">
-              <h2 className="text-[19px] font-bold tracking-[-0.02em] text-ink">훈련 블록</h2>
+              <h2 className="flex items-center gap-2 text-[19px] font-bold tracking-[-0.02em] text-ink">
+                <StepNo n={3} />
+                훈련 블록
+              </h2>
               <span
                 className={cn(
                   'text-[13px] tabular-nums',
@@ -282,7 +348,7 @@ export function LessonPrepScreen({ cls, date, backLabel, onBack, onDone }: Lesso
               items={items}
               onChange={setItems}
               ageGroup={cls.ageGroup}
-              focus={goal?.ability ?? ability}
+              focus={goal?.ability ?? ability ?? 'technical'}
             />
           </section>
         )}
@@ -295,7 +361,7 @@ export function LessonPrepScreen({ cls, date, backLabel, onBack, onDone }: Lesso
           disabled={items.length === 0}
           className="btn-primary w-full py-3.5 text-[15px] lg:max-w-2xl"
         >
-          {items.length === 0 ? '목표를 골라 주세요' : saved ? '저장' : '준비 완료'}
+          {items.length === 0 ? '오늘 키울 역량을 눌러 주세요' : saved ? '저장' : '준비 완료'}
         </button>
       </div>
     </div>
@@ -306,101 +372,23 @@ export function LessonPrepScreen({ cls, date, backLabel, onBack, onDone }: Lesso
 // Pieces
 // ---------------------------------------------------------------------------
 
+function StepNo({ n }: { n: number }) {
+  return (
+    <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-ink text-[12px] font-bold text-white">
+      {n}
+    </span>
+  );
+}
+
 function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
   return (
     <section>
       <h2 className="flex items-center gap-2 text-[19px] font-bold tracking-[-0.02em] text-ink">
-        <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-ink text-[12px] font-bold text-white">
-          {n}
-        </span>
+        <StepNo n={n} />
         {title}
       </h2>
       <div className="mt-3">{children}</div>
     </section>
-  );
-}
-
-/** The last lesson in full, the two before it as one line each. */
-function LastLessons({ recent }: { recent: PastLesson[] }) {
-  const [last, ...earlier] = recent;
-  return (
-    <div className="overflow-hidden rounded-xl border border-hairline bg-canvas">
-      <div className="p-4">
-        <div className="flex items-center justify-between gap-3 text-[13px] text-steel">
-          <span>{formatDateKo(last.date)}</span>
-          {last.total > 0 && (
-            <span className="tabular-nums">
-              출석 {last.present}/{last.total}
-            </span>
-          )}
-        </div>
-        <p className="mt-1.5 flex items-center gap-2">
-          {last.template && <AbilityTag ability={last.template.ability} />}
-          <span className="truncate text-[16px] font-bold text-ink">
-            {last.template?.title ?? (last.plan ? '직접 구성한 수업' : '계획 없이 진행')}
-          </span>
-        </p>
-        {last.tags.length > 0 && (
-          <ul className="mt-2.5 flex flex-wrap gap-1.5">
-            {last.tags.slice(0, 3).map(([tag, count]) => (
-              <li
-                key={tag}
-                className="rounded-full bg-surface-soft px-2.5 py-1 text-[12.5px] font-medium text-charcoal"
-              >
-                {tag} <span className="tabular-nums text-steel">{count}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-      {earlier.length > 0 && (
-        <ul className="border-t border-hairline-soft bg-surface-soft/50 px-4 py-2">
-          {earlier.map((l) => (
-            <li key={l.date} className="flex items-center gap-2 py-1 text-[13px] text-steel">
-              <span className="w-[74px] shrink-0 tabular-nums">{formatDateKo(l.date).split(' (')[0]}</span>
-              {l.template && <AbilityTag ability={l.template.ability} />}
-              <span className="truncate text-charcoal">{l.template?.title ?? '직접 구성'}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-/** The five abilities as one row. The last lesson's focus carries a dot. */
-function FocusPicker({
-  value,
-  last,
-  onChange,
-}: {
-  value: Ability;
-  last?: Ability;
-  onChange: (a: Ability) => void;
-}) {
-  return (
-    <div className="grid grid-cols-5 gap-1 rounded-full bg-surface-soft p-1">
-      {ABILITY_ORDER.map((a) => (
-        <button
-          key={a}
-          type="button"
-          onClick={() => onChange(a)}
-          aria-pressed={value === a}
-          className={cn(
-            'relative rounded-full py-2 text-[14px] font-semibold transition-colors duration-150',
-            value === a ? 'bg-canvas text-ink shadow-card' : 'text-steel hover:text-ink',
-          )}
-        >
-          {ABILITY_META[a].label}
-          {last === a && (
-            <span
-              aria-label="지난 수업"
-              className="absolute right-2 top-1.5 h-1.5 w-1.5 rounded-full bg-primary"
-            />
-          )}
-        </button>
-      ))}
-    </div>
   );
 }
 

@@ -207,6 +207,14 @@
     mix-blend-mode: overlay;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
   }
+
+  /* 수업 준비's pentagon (GoalPentagon): today's figure morphs from one focus
+     to the next. Browsers without CSS `d` simply snap to the new shape. */
+  .pentagon-shape {
+    transition:
+      d 520ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 240ms ease-out;
+  }
 }
 
 /* Declared here rather than in the Tailwind theme: `.stagger` is plain CSS, and

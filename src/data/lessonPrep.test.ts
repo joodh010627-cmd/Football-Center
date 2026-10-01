@@ -7,7 +7,19 @@
 import { describe, expect, it } from 'vitest';
 import type { SessionTemplate } from '@/types';
 import { STANDARD_BLOCKS, STANDARD_SESSIONS } from './sessionLibrary';
-import { blockAsRun, composeLesson, goalOptions, minPlayers } from './lessonPrep';
+import {
+  beadsOf,
+  blockAsRun,
+  composeLesson,
+  goalOptions,
+  carryOver,
+  lessonTitle,
+  minPlayers,
+  pastBeads,
+  recommendGoal,
+  type GoalContext,
+  type PastLesson,
+} from './lessonPrep';
 import { fromSessionPlan, toSessionPlan } from './mappers';
 import { sessionDuration } from './selectors';
 
@@ -143,5 +155,77 @@ describe('plan items round-trip', () => {
       items: [{ category: 'skill' as const, blockId: 'std-t-gates', durationMin: null, edit: { title: '수정' } }],
     };
     expect(toSessionPlan(fromSessionPlan(plan)).items[0].edit).toEqual({ title: '수정' });
+  });
+});
+
+describe('recommending a goal', () => {
+  const library = STANDARD_BLOCKS;
+  const lib = new Map(library.map((b) => [b.id, b]));
+  const lesson = (templateId: string, date: string, tags: Array<[string, number]> = []): PastLesson => {
+    const t = session(templateId);
+    return {
+      date,
+      template: t,
+      present: 10,
+      total: 12,
+      tags,
+      plan: {
+        id: date, academyId: 'a', classId: 'c', coachId: 'k', date, createdAt: '', status: 'completed',
+        templateId: t.id,
+        items: t.blockIds.map((id) => ({ category: lib.get(id)!.category, blockId: id, durationMin: null })),
+      },
+    };
+  };
+  const ctxOf = (recent: PastLesson[], headcount = 12, ageGroup: 'U7' | 'U9' = 'U9'): GoalContext => ({
+    cls: { ageGroup, curriculumId: null },
+    recent,
+    past: pastBeads(recent, lib),
+    library,
+    when: { ageGroup, headcount, minutes: 60 },
+  });
+  const options = (ability: SessionTemplate['ability'], recent: PastLesson[], age: 'U7' | 'U9' = 'U9') =>
+    goalOptions(STANDARD_SESSIONS, { ageGroup: age, curriculumId: null }, ability, recent.map((l) => l.plan?.templateId));
+
+  it('carries a skill on from the last lesson instead of repeating it', () => {
+    // Last time was 패스 정확도; the 전술 goal that continues 패스 is 패스 후 움직임.
+    const recent = [lesson('std-s-pass', '2026-09-29')];
+    const pick = recommendGoal(options('tactical', recent), ctxOf(recent));
+    expect(pick?.id).toBe('std-s-passmove');
+    expect(carryOver(pick!, ctxOf(recent))).toEqual({ lesson: 0, thread: '패스' });
+  });
+
+  it('never puts last lesson\'s goal first when another fits', () => {
+    const recent = [lesson('std-s-pass', '2026-09-29')];
+    expect(recommendGoal(options('technical', recent), ctxOf(recent))?.id).not.toBe('std-s-pass');
+  });
+
+  it('prefers a goal whose blocks fit the children who are coming', () => {
+    // 첫 터치 ends in a 5대5; with seven children it would need patching.
+    const pick = recommendGoal(options('technical', []), ctxOf([], 7));
+    expect(pick?.id).not.toBe('std-s-firsttouch');
+  });
+
+  it("follows the coach's tags from last time", () => {
+    const recent = [lesson('std-s-firsttouch', '2026-09-29', [['#드리블우수', 4]])];
+    const pick = recommendGoal(options('technical', recent), ctxOf(recent))!;
+    expect(pick.id).toBe('std-s-dribble');
+  });
+});
+
+describe('lessonTitle', () => {
+  const lib = new Map(STANDARD_BLOCKS.map((b) => [b.id, b]));
+  const custom = (ids: string[]): PastLesson => ({
+    date: '2026-09-29', template: undefined, present: 0, total: 0, tags: [],
+    plan: {
+      id: 'p', academyId: 'a', classId: 'c', coachId: 'k', date: '2026-09-29', createdAt: '', status: 'completed', templateId: null,
+      items: ids.map((id) => ({ category: lib.get(id)!.category, blockId: id, durationMin: null })),
+    },
+  });
+
+  it('names a hand-built lesson after its main drill, not "직접 구성"', () => {
+    const l = custom(['std-w-ball', 'std-c-scan', 'std-g-3pass']);
+    const title = lessonTitle(l, beadsOf(l.plan!.items, lib, 0));
+    // Named after the drill, not the (longer) game every lesson ends in.
+    expect(title).toBe('색깔 보고 받기');
   });
 });
