@@ -330,7 +330,7 @@ function Notice({ term, children }: { term: string; children: ReactNode }) {
   );
 }
 
-function Frame({ academy, children }: { academy?: string; children: ReactNode }) {
+export function Frame({ academy, children }: { academy?: string; children: ReactNode }) {
   return (
     <div className="min-h-screen bg-surface-soft">
       <div className="glass sticky top-0 z-10 flex h-14 items-center gap-2 border-b border-hairline px-5">

@@ -37,13 +37,19 @@ import { isOwner } from '@/lib/permissions';
 import { EXIT_WINDOW, useSystemBack } from '@/lib/systemBack';
 import { TODAY } from '@/data/dates';
 import { buildDay, summarise } from '@/data/today';
-import { countLeads, triage } from '@/data/crm';
+import { countLeads } from '@/data/crm';
+import { progressOf } from '@/data/surveys';
+import { PHASE_LABEL, todayQueue, type Phase } from '@/data/onboarding';
 import { planFor } from '@/data/selectors';
 import { Shell, Toast, type Alert, type TabItem } from '@/components/shell/Shell';
 import { ClassHomeScreen } from '@/components/home/ClassHomeScreen';
 import { ScheduleScreen } from '@/components/schedule/ScheduleScreen';
 import { FormsScreen } from '@/components/forms/FormsScreen';
-import { LeadDetailScreen } from '@/components/forms/LeadDetailScreen';
+import { FamilyScreen } from '@/components/forms/FamilyScreen';
+import { PhaseScreen } from '@/components/forms/PhaseScreen';
+import { InviteScreen } from '@/components/forms/InviteScreen';
+import { SentScreen } from '@/components/forms/SentScreen';
+import { SurveyDetailScreen } from '@/components/forms/SurveyDetailScreen';
 import { ClubScreen } from '@/components/club/ClubScreen';
 import { OwnerConsole } from '@/components/club/OwnerConsole';
 import { ActivityScreen } from '@/components/club/ActivityScreen';
@@ -68,6 +74,11 @@ export type Route =
   | { name: 'pick'; classId: ID; date: ISODate }
   | { name: 'attendance'; classId: ID; date: ISODate }
   | { name: 'lead'; leadId: ID }
+  | { name: 'family'; key: string; queue?: boolean }
+  | { name: 'phase'; phase: Phase }
+  | { name: 'invite' }
+  | { name: 'sent' }
+  | { name: 'survey'; surveyId: ID; notice?: string | null }
   | { name: 'student'; studentId: ID }
   | { name: 'roster' }
   | { name: 'library' }
@@ -96,7 +107,7 @@ const EMPTY_STACKS: Stacks = { club: [], forms: [], class: [], schedule: [], fee
  */
 const TAB_TITLE: Record<Tab, string> = {
   club: '클럽',
-  forms: '문의 목록',
+  forms: '폼',
   class: '오늘의 수업',
   schedule: '일정',
   feed: '피드',
@@ -108,6 +119,11 @@ const ROUTE_TITLE: Record<Route['name'], string> = {
   pick: '수업 준비',
   attendance: '수업 기록',
   lead: '문의',
+  family: '가족',
+  phase: '단계',
+  invite: '체험 초대',
+  sent: '보낸 안내',
+  survey: '안내 결과',
   student: '원생 프로필',
   roster: '원생 명단',
   library: '수업 라이브러리',
@@ -129,7 +145,8 @@ const MOTION: Record<Motion, string> = {
 
 export function FootballApp() {
   const { state, slice, dispatch } = useApp();
-  const { leads } = useWorkspace();
+  const { leads, surveys, recipients, families, getFamily } = useWorkspace();
+  const queue = useMemo(() => todayQueue(families), [families]);
   const session = useSession();
   const owner = isOwner(session);
 
@@ -143,7 +160,13 @@ export function FootballApp() {
 
   /** What 뒤로 on the current screen returns to, named. */
   const below = stack.length >= 2 ? stack[stack.length - 2] : null;
-  const backLabel = below ? ROUTE_TITLE[below.name] : TAB_TITLE[tab];
+  const backLabel = below
+    ? below.name === 'phase'
+      ? PHASE_LABEL[below.phase]
+      : below.name === 'family'
+        ? (getFamily(below.key)?.name ?? ROUTE_TITLE.family)
+        : ROUTE_TITLE[below.name]
+    : TAB_TITLE[tab];
 
   // An owner has no `coaches` row, so `currentCoachId` is null and the day
   // builder widens to the whole centre. That is the right default for them and
@@ -244,15 +267,27 @@ export function FootballApp() {
       });
     }
 
-    const overdue = triage(leads).filter((l) => leadCounts.overdue > 0 && l.stage === 'inquiry');
-    if (leadCounts.overdue > 0) {
+    // New families first: the whole business turns on the first reply and the
+    // first month, and both are a phone call that's either made today or late.
+    if (queue.length > 0) {
+      const late = queue.filter((f) => f.next!.late).length;
       out.push({
-        id: 'leads-overdue',
-        label: `응대가 늦어진 문의 ${leadCounts.overdue}건`,
-        detail: overdue[0]
-          ? `${overdue[0].childName} 학부모 외 · 오늘 안에 연락하세요`
-          : '오늘 안에 연락하세요',
-        tone: 'urgent',
+        id: 'onboarding',
+        label: `신규 가족 할 일 ${queue.length}`,
+        detail: `${queue[0].name} · ${queue[0].next!.label}${late > 0 ? ` · 기한 지남 ${late}` : ''}`,
+        tone: late > 0 ? 'urgent' : 'normal',
+        onOpen: () => resetTo('forms'),
+      });
+    }
+
+    // A flagged answer is a family that asked, in effect, for a conversation.
+    const toTalk = surveys.reduce((n, v) => n + progressOf(v, recipients).toCall.length, 0);
+    if (toTalk > 0) {
+      out.push({
+        id: 'survey-talk',
+        label: `상담이 필요한 답변 ${toTalk}`,
+        detail: '폼 → 보낸 안내에서 확인하세요',
+        tone: 'normal',
         onOpen: () => resetTo('forms'),
       });
     }
@@ -268,11 +303,11 @@ export function FootballApp() {
     }
 
     return out;
-  }, [summary.needsLog, leadCounts, leads]);
+  }, [summary.needsLog, leadCounts, queue, surveys, recipients]);
 
   const tabs: TabItem[] = [
     { key: 'club', label: '클럽', icon: Users },
-    { key: 'forms', label: '폼', icon: FileText, badge: leadCounts.overdue },
+    { key: 'forms', label: '폼', icon: FileText, badge: queue.length },
     { key: 'class', label: '수업', icon: Home, badge: summary.needsLog },
     { key: 'schedule', label: '일정', icon: CalendarDays },
     { key: 'feed', label: '피드', icon: Newspaper },
@@ -305,7 +340,15 @@ export function FootballApp() {
         );
 
       case 'forms':
-        return <FormsScreen onOpenLead={(leadId) => push({ name: 'lead', leadId })} />;
+        return (
+          <FormsScreen
+            onOpenFamily={(key, queue) => push({ name: 'family', key, queue })}
+            onOpenPhase={(phase) => push({ name: 'phase', phase })}
+            onOpenInvite={() => push({ name: 'invite' })}
+            onOpenSent={() => push({ name: 'sent' })}
+            onOpenSurvey={(surveyId, notice) => push({ name: 'survey', surveyId, notice })}
+          />
+        );
 
       case 'schedule':
         return (
@@ -413,12 +456,49 @@ export function FootballApp() {
       }
 
       case 'lead':
+      case 'family':
         return (
-          <LeadDetailScreen
-            leadId={route.leadId}
+          <FamilyScreen
+            // Keyed by family: "다음 가족" replaces in place, and one family's
+            // half-typed note or "기록했어요" must not carry over to the next.
+            key={route.name === 'lead' ? `lead:${route.leadId}` : route.key}
+            familyKey={route.name === 'lead' ? `lead:${route.leadId}` : route.key}
+            queue={route.name === 'family' && route.queue}
             backLabel={backLabel}
             onBack={dismiss}
-            onOpenClass={(cls) => push({ name: 'class', classId: cls.id })}
+            onNext={(key) => replace({ name: 'family', key, queue: true })}
+          />
+        );
+
+      case 'phase':
+        return (
+          <PhaseScreen
+            phase={route.phase}
+            backLabel={backLabel}
+            onBack={dismiss}
+            onOpenFamily={(key) => push({ name: 'family', key })}
+          />
+        );
+
+      case 'invite':
+        return <InviteScreen backLabel={backLabel} onBack={dismiss} />;
+
+      case 'sent':
+        return (
+          <SentScreen
+            backLabel={backLabel}
+            onBack={dismiss}
+            onOpenSurvey={(surveyId) => push({ name: 'survey', surveyId })}
+          />
+        );
+
+      case 'survey':
+        return (
+          <SurveyDetailScreen
+            surveyId={route.surveyId}
+            notice={route.notice}
+            backLabel={backLabel}
+            onBack={dismiss}
           />
         );
 

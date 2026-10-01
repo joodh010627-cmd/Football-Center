@@ -32,7 +32,22 @@ import {
   type ReactNode,
 } from 'react';
 import type { AxisScores } from '@/lib/axes';
-import type { ID, ISODate } from '@/types';
+import type { AgeGroup, ID, ISODate, Student } from '@/types';
+import {
+  buildFamilies,
+  firstClassOn,
+  seedOnboarding,
+  OUTCOME_LABEL,
+  STEP_LABEL,
+  touchFromRow,
+  touchToRow,
+  type Family,
+  type Touch,
+  type TouchOutcome,
+  type TouchStep,
+} from '@/data/onboarding';
+import { TODAY, addDays } from '@/data/dates';
+import { toStudent } from '@/data/mappers';
 import {
   formLinkFromRow,
   formLinkToRow,
@@ -54,8 +69,20 @@ import {
   type ActivityEvent,
   type EventDraft,
 } from '@/data/activity';
+import {
+  newRecipient,
+  newSurvey,
+  recipientFromRow,
+  recipientToRow,
+  seedSurveys,
+  surveyFromRow,
+  surveyToRow,
+  surveyUrl,
+  type Survey,
+  type SurveyRecipient,
+} from '@/data/surveys';
 import { formatDateKo } from '@/lib/format';
-import { supabase } from '@/lib/supabase';
+import { friendlyError, supabase } from '@/lib/supabase';
 import { PREVIEW } from '@/dev/preview';
 import { enqueue, isMissingSchema, type EnqueueResult } from '@/lib/alimtalk/outbox';
 import { render } from '@/lib/alimtalk/templates';
@@ -84,6 +111,18 @@ export interface EvaluationOverride {
  */
 export type WorkspaceMode = 'loading' | 'db' | 'local';
 
+/** What a composer hands `sendSurvey`. Exactly one audience. */
+export interface SurveyDraft {
+  kind: Survey['kind'];
+  title: string;
+  questions: Survey['questions'];
+  dueDate: ISODate | null;
+  /** A whole class (or several). */
+  classIds?: ID[];
+  /** Or one family that hasn't enrolled yet — the 등록 신청서. */
+  leadId?: ID;
+}
+
 interface WorkspaceState {
   mode: WorkspaceMode;
   /** The last write that failed, in words. Cleared by the next good load. */
@@ -94,6 +133,23 @@ interface WorkspaceState {
   /** Appended live. Merged with the derived ledger on read. */
   recorded: ActivityEvent[];
   seeded: boolean;
+  /**
+   * Surveys have their own mode: an academy can have run 0006 and not 0008,
+   * and the 문의 pipeline shouldn't drop to demo data because of it.
+   */
+  surveyMode: WorkspaceMode;
+  surveys: Survey[];
+  recipients: SurveyRecipient[];
+  surveysSeeded: boolean;
+  /** The contact ledger behind the onboarding journey (0009). Own mode, same reason. */
+  touchMode: WorkspaceMode;
+  touches: Touch[];
+  touchesSeeded: boolean;
+  /**
+   * Local demo only — students shown as newly enrolled. The seeded roster was
+   * all enrolled months ago, and an empty 첫 달 demonstrates nothing.
+   */
+  enrolledOverride: Record<ID, ISODate>;
 }
 
 type WorkspaceAction =
@@ -106,7 +162,22 @@ type WorkspaceAction =
   | { type: 'form/add'; link: FormLink; event: ActivityEvent }
   | { type: 'form/toggle'; linkId: ID; event: ActivityEvent }
   | { type: 'evaluation/save'; override: EvaluationOverride; event: ActivityEvent }
-  | { type: 'record'; event: ActivityEvent };
+  | { type: 'record'; event: ActivityEvent }
+  | { type: 'surveys/load'; surveys: Survey[]; recipients: SurveyRecipient[] }
+  | { type: 'surveys/local' }
+  | { type: 'surveys/seed'; surveys: Survey[]; recipients: SurveyRecipient[] }
+  | { type: 'survey/add'; survey: Survey; recipients: SurveyRecipient[]; event: ActivityEvent }
+  | { type: 'survey/close'; surveyId: ID }
+  | {
+      type: 'recipients/patch';
+      ids: ID[];
+      patch: Partial<SurveyRecipient>;
+      event?: ActivityEvent;
+    }
+  | { type: 'touches/load'; touches: Touch[] }
+  | { type: 'touches/local' }
+  | { type: 'touches/seed'; touches: Touch[]; enrolledOverride: Record<ID, ISODate> }
+  | { type: 'touch/add'; touch: Touch; event: ActivityEvent };
 
 const EMPTY: WorkspaceState = {
   mode: 'loading',
@@ -116,6 +187,14 @@ const EMPTY: WorkspaceState = {
   overrides: {},
   recorded: [],
   seeded: false,
+  surveyMode: 'loading',
+  surveys: [],
+  recipients: [],
+  surveysSeeded: false,
+  touchMode: 'loading',
+  touches: [],
+  touchesSeeded: false,
+  enrolledOverride: {},
 };
 
 function reducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState {
@@ -184,6 +263,72 @@ function reducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState
     case 'record':
       return { ...state, recorded: [action.event, ...state.recorded] };
 
+    case 'surveys/load':
+      return {
+        ...state,
+        surveyMode: 'db',
+        surveys: action.surveys,
+        recipients: action.recipients,
+        surveysSeeded: true,
+      };
+
+    case 'surveys/local':
+      return state.surveyMode === 'local' ? state : { ...state, surveyMode: 'local' };
+
+    case 'surveys/seed':
+      if (state.surveysSeeded) return state;
+      return {
+        ...state,
+        surveys: action.surveys,
+        recipients: action.recipients,
+        surveysSeeded: true,
+      };
+
+    case 'survey/add':
+      return {
+        ...state,
+        surveys: [action.survey, ...state.surveys],
+        recipients: [...action.recipients, ...state.recipients],
+        recorded: [action.event, ...state.recorded],
+      };
+
+    case 'survey/close':
+      return {
+        ...state,
+        surveys: state.surveys.map((v) => (v.id === action.surveyId ? { ...v, closed: true } : v)),
+      };
+
+    case 'touches/load':
+      return { ...state, touchMode: 'db', touches: action.touches, touchesSeeded: true };
+
+    case 'touches/local':
+      return state.touchMode === 'local' ? state : { ...state, touchMode: 'local' };
+
+    case 'touches/seed':
+      if (state.touchesSeeded) return state;
+      return {
+        ...state,
+        touches: action.touches,
+        enrolledOverride: action.enrolledOverride,
+        touchesSeeded: true,
+      };
+
+    case 'touch/add':
+      return {
+        ...state,
+        touches: [action.touch, ...state.touches],
+        recorded: [action.event, ...state.recorded],
+      };
+
+    case 'recipients/patch':
+      return {
+        ...state,
+        recipients: state.recipients.map((r) =>
+          action.ids.includes(r.id) ? { ...r, ...action.patch } : r,
+        ),
+        recorded: action.event ? [action.event, ...state.recorded] : state.recorded,
+      };
+
     default:
       return state;
   }
@@ -219,6 +364,39 @@ interface WorkspaceValue {
 
   saveEvaluation: (studentId: ID, label: string, scores: AxisScores, note: string) => void;
 
+  surveyMode: WorkspaceMode;
+  surveys: Survey[];
+  recipients: SurveyRecipient[];
+  /**
+   * Create the survey, one private link per family, and queue the 알림톡
+   * that carries each link. Resolves with what happened to the messages
+   * (`null` in local mode, where nothing can be sent).
+   */
+  sendSurvey: (draft: SurveyDraft) => Promise<{ survey: Survey; result: EnqueueResult | null }>;
+  /** One more 알림톡 to the families who haven't answered — once per family, ever. */
+  remindSurvey: (surveyId: ID) => Promise<EnqueueResult | null>;
+  closeSurvey: (surveyId: ID) => void;
+  /** Someone rang about a flagged answer; take the family off the call list. */
+  markCalled: (recipientId: ID) => void;
+
+  // --- Onboarding ---------------------------------------------------------
+  touchMode: WorkspaceMode;
+  touches: Touch[];
+  /** Every family between 문의 and a finished 첫 달, with its next action. */
+  families: Family[];
+  getFamily: (key: string) => Family | undefined;
+  /** Write down a contact and what came of it. */
+  logTouch: (
+    to: { leadId: ID } | { studentId: ID },
+    step: TouchStep,
+    outcome: TouchOutcome,
+    note?: string,
+  ) => void;
+  /** 등록 확정: the lead becomes a student in a class. Resolves with the new student. */
+  enrollLead: (leadId: ID, classId: ID, ageGroup: AgeGroup) => Promise<Student | null>;
+  /** The day-one 알림톡 for a new student, then the touch that records it. */
+  sendWelcome: (studentId: ID) => Promise<EnqueueResult | null>;
+
   /** The escape hatch: append a ledger row for anything not modelled above. */
   record: (event: EventDraft) => void;
 }
@@ -226,7 +404,7 @@ interface WorkspaceValue {
 const WorkspaceContext = createContext<WorkspaceValue | null>(null);
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
-  const { state, slice, loading } = useApp();
+  const { state, slice, loading, dispatch: appDispatch } = useApp();
   const session = useSession();
   const [ws, dispatch] = useReducer(reducer, EMPTY);
 
@@ -247,12 +425,91 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     });
   }
 
+  if (
+    // Demo rows are built from the roster, so only in preview: on a real
+    // academy they would dress up real children as surveyed or newly enrolled.
+    PREVIEW &&
+    ws.surveyMode === 'local' &&
+    !ws.surveysSeeded &&
+    !loading &&
+    state.classes.length > 0
+  ) {
+    const seeded = seedSurveys(
+      academyId,
+      state.students,
+      state.classes.map((c) => c.id),
+    );
+    dispatch({ type: 'surveys/seed', ...seeded });
+  }
+
+  // Waits for the leads too, so the seeded unanswered call can point at one.
+  if (
+    PREVIEW &&
+    ws.touchMode === 'local' &&
+    !ws.touchesSeeded &&
+    ws.mode !== 'loading' &&
+    (ws.mode === 'db' || ws.seeded) &&
+    !loading &&
+    state.students.length > 0
+  ) {
+    dispatch({ type: 'touches/seed', ...seedOnboarding(academyId, ws.leads, state.students) });
+  }
+
+  const reloadTouches = useCallback(() => {
+    if (!academyId) return;
+    void (async () => {
+      const res = await supabase
+        .from('onboarding_touches')
+        .select('*')
+        .eq('academy_id', academyId)
+        .order('created_at', { ascending: false });
+      if (res.error) {
+        if (isMissingSchema(res.error)) dispatch({ type: 'touches/local' });
+        else dispatch({ type: 'sync/error', message: '연락 기록을 불러오지 못했습니다' });
+        return;
+      }
+      dispatch({ type: 'touches/load', touches: (res.data ?? []).map(touchFromRow) });
+    })();
+  }, [academyId]);
+
+  // Separate from the leads fetch so a project with 0006 but not 0008 keeps its
+  // real pipeline and only the surveys fall back.
+  const reloadSurveys = useCallback(() => {
+    if (!academyId) return;
+    void (async () => {
+      const [surveysRes, recipientsRes] = await Promise.all([
+        supabase
+          .from('surveys')
+          .select('*')
+          .eq('academy_id', academyId)
+          .order('created_at', { ascending: false }),
+        supabase.from('survey_recipients').select('*').eq('academy_id', academyId),
+      ]);
+      const error = surveysRes.error ?? recipientsRes.error;
+      if (error) {
+        if (isMissingSchema(error)) dispatch({ type: 'surveys/local' });
+        else dispatch({ type: 'sync/error', message: '설문을 불러오지 못했습니다' });
+        return;
+      }
+      dispatch({
+        type: 'surveys/load',
+        surveys: (surveysRes.data ?? []).map(surveyFromRow),
+        recipients: (recipientsRes.data ?? []).map(recipientFromRow),
+      });
+    })();
+  }, [academyId]);
+
   const reload = useCallback(() => {
     if (!academyId) return;
     if (PREVIEW) {
+      // Preview has no database: every workspace table runs on its demo seed.
       dispatch({ type: 'local' });
+      dispatch({ type: 'surveys/local' });
+      dispatch({ type: 'touches/local' });
       return;
     }
+    reloadSurveys();
+    reloadTouches();
     void (async () => {
       const [leadsRes, linksRes] = await Promise.all([
         supabase
@@ -278,7 +535,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         formLinks: (linksRes.data ?? []).map(formLinkFromRow),
       });
     })();
-  }, [academyId]);
+  }, [academyId, reloadSurveys, reloadTouches]);
 
   // First load, then again whenever the app comes back to the foreground and
   // once a minute while it's visible — a form submission has no other way to
@@ -539,6 +796,358 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [actorName, make],
   );
 
+  // --- Surveys --------------------------------------------------------------
+
+  const surveyPersist = useCallback(
+    (label: string, write: () => PromiseLike<{ error: unknown }>): Promise<boolean> => {
+      if (ws.surveyMode !== 'db') return Promise.resolve(true);
+      return Promise.resolve(write()).then(({ error }) => {
+        if (!error) return true;
+        console.error('[workspace]', label, error);
+        dispatch({ type: 'sync/error', message: `${label}에 실패했습니다. 다시 시도해 주세요.` });
+        reloadSurveys();
+        return false;
+      });
+    },
+    [ws.surveyMode, reloadSurveys],
+  );
+
+  /** Who a recipient row is, for the 알림톡 variables. */
+  const addressOf = useCallback(
+    (r: SurveyRecipient) => {
+      if (r.studentId) {
+        const s = state.students.find((x) => x.id === r.studentId);
+        return { parent: s?.parentName || '보호자', child: s?.name || '자녀' };
+      }
+      const l = ws.leads.find((x) => x.id === r.leadId);
+      return { parent: l?.parentName || '보호자', child: l?.childName || '자녀' };
+    },
+    [state.students, ws.leads],
+  );
+
+  const queueSurveyMessages = useCallback(
+    async (
+      survey: Survey,
+      targets: SurveyRecipient[],
+      code: 'survey_request' | 'survey_reminder',
+    ): Promise<EnqueueResult | null> => {
+      if (ws.surveyMode !== 'db' || targets.length === 0) return null;
+      const due = survey.dueDate ? `${formatDateKo(survey.dueDate)}까지` : '따로 없음';
+      const items = targets.map((r) => {
+        const who = addressOf(r);
+        const variables = {
+          학원명: academyName,
+          보호자명: who.parent,
+          학생명: who.child,
+          설문제목: survey.title,
+          마감일: due,
+          링크: surveyUrl(r.token),
+        };
+        return {
+          templateCode: code,
+          ...(r.studentId ? { studentId: r.studentId } : { leadId: r.leadId! }),
+          variables,
+          body: render(code, variables),
+          dedupeKey: `survey:${r.id}:${code === 'survey_request' ? 'request' : 'remind'}`,
+        };
+      });
+
+      try {
+        // enqueue_alimtalk takes 200 at a time; a whole-centre survey can be more.
+        let last: EnqueueResult | null = null;
+        let queued = 0;
+        for (let i = 0; i < items.length; i += 200) {
+          last = await enqueue(academyId, items.slice(i, i + 200));
+          if (last.state === 'unavailable') return last;
+          queued += last.queued;
+        }
+        return last && last.state === 'queued' ? { ...last, queued } : last;
+      } catch (error) {
+        console.error('[workspace] 설문 알림톡', error);
+        return null;
+      }
+    },
+    [academyId, academyName, addressOf, ws.surveyMode],
+  );
+
+  const sendSurvey = useCallback(
+    async (draft: SurveyDraft) => {
+      const survey = newSurvey(academyId, {
+        kind: draft.kind,
+        title: draft.title,
+        questions: draft.questions,
+        classIds: draft.leadId ? [] : (draft.classIds ?? []),
+        dueDate: draft.dueDate,
+      });
+
+      // 휴원 families are left out: a 대회 참가 조사 in their KakaoTalk is noise
+      // from a centre they have stepped away from, not an invitation back.
+      const recipients = draft.leadId
+        ? [newRecipient(survey, { leadId: draft.leadId })]
+        : state.students
+            .filter((s) => survey.classIds.includes(s.classId) && s.status !== 'inactive')
+            .map((s) => newRecipient(survey, { studentId: s.id }));
+
+      const lead = draft.leadId ? ws.leads.find((l) => l.id === draft.leadId) : undefined;
+      dispatch({
+        type: 'survey/add',
+        survey,
+        recipients,
+        event: make({
+          kind: 'survey.sent',
+          subjectType: lead ? 'lead' : 'form',
+          subjectId: lead ? lead.id : survey.id,
+          subjectLabel: lead ? lead.childName : survey.title,
+          summary: lead ? `${survey.title} 발송` : `설문 발송 · ${recipients.length}가정`,
+        }),
+      });
+
+      const saved =
+        (await surveyPersist('설문 만들기', () =>
+          supabase.from('surveys').insert(surveyToRow(survey)),
+        )) &&
+        (await surveyPersist('설문 받는 사람 저장', () =>
+          supabase.from('survey_recipients').insert(recipients.map(recipientToRow)),
+        ));
+      if (!saved) return { survey, result: null };
+
+      return { survey, result: await queueSurveyMessages(survey, recipients, 'survey_request') };
+    },
+    [academyId, make, queueSurveyMessages, state.students, surveyPersist, ws.leads],
+  );
+
+  const remindSurvey = useCallback(
+    async (surveyId: ID) => {
+      const survey = ws.surveys.find((v) => v.id === surveyId);
+      if (!survey) return null;
+      const targets = ws.recipients.filter(
+        (r) => r.surveyId === surveyId && !r.answeredAt && !r.remindedAt,
+      );
+      if (targets.length === 0) return null;
+
+      const now = new Date().toISOString();
+      const ids = targets.map((r) => r.id);
+      dispatch({ type: 'recipients/patch', ids, patch: { remindedAt: now } });
+      const saved = await surveyPersist('다시 알림', () =>
+        supabase.from('survey_recipients').update({ reminded_at: now }).in('id', ids),
+      );
+      if (!saved) return null;
+      return queueSurveyMessages(survey, targets, 'survey_reminder');
+    },
+    [queueSurveyMessages, surveyPersist, ws.recipients, ws.surveys],
+  );
+
+  const closeSurvey = useCallback(
+    (surveyId: ID) => {
+      dispatch({ type: 'survey/close', surveyId });
+      void surveyPersist('설문 마감', () =>
+        supabase.from('surveys').update({ closed: true }).eq('id', surveyId),
+      );
+    },
+    [surveyPersist],
+  );
+
+  const markCalled = useCallback(
+    (recipientId: ID) => {
+      const r = ws.recipients.find((x) => x.id === recipientId);
+      if (!r) return;
+      const survey = ws.surveys.find((v) => v.id === r.surveyId);
+      const now = new Date().toISOString();
+      dispatch({
+        type: 'recipients/patch',
+        ids: [recipientId],
+        patch: { calledAt: now },
+        event: make({
+          kind: 'survey.called',
+          subjectType: r.studentId ? 'student' : 'lead',
+          subjectId: (r.studentId ?? r.leadId)!,
+          subjectLabel: addressOf(r).child,
+          summary: `${survey?.title ?? '설문'} 답변으로 통화`,
+        }),
+      });
+      void surveyPersist('통화 기록', () =>
+        supabase.from('survey_recipients').update({ called_at: now }).eq('id', recipientId),
+      );
+    },
+    [addressOf, make, surveyPersist, ws.recipients, ws.surveys],
+  );
+
+  // --- Onboarding -----------------------------------------------------------
+
+  const families = useMemo(
+    () =>
+      buildFamilies({
+        leads: ws.leads,
+        students: state.students,
+        classes: state.classes,
+        attendanceLogs: state.attendanceLogs,
+        touches: ws.touches,
+        surveys: ws.surveys,
+        recipients: ws.recipients,
+        enrolledOverride: ws.enrolledOverride,
+      }),
+    [
+      ws.leads,
+      state.students,
+      state.classes,
+      state.attendanceLogs,
+      ws.touches,
+      ws.surveys,
+      ws.recipients,
+      ws.enrolledOverride,
+    ],
+  );
+
+  const getFamily = useCallback((key: string) => families.find((f) => f.key === key), [families]);
+
+  const logTouch = useCallback(
+    (
+      to: { leadId: ID } | { studentId: ID },
+      step: TouchStep,
+      outcome: TouchOutcome,
+      note = '',
+    ) => {
+      const leadId = 'leadId' in to ? to.leadId : null;
+      const studentId = 'studentId' in to ? to.studentId : null;
+      const touch: Touch = {
+        id: crypto.randomUUID(),
+        academyId,
+        leadId,
+        studentId,
+        step,
+        outcome,
+        note: note.trim().slice(0, 500),
+        actorName: actorName.slice(0, 60),
+        at: new Date().toISOString(),
+      };
+      const label = leadId
+        ? (ws.leads.find((l) => l.id === leadId)?.childName ?? '')
+        : (state.students.find((s) => s.id === studentId)?.name ?? '');
+
+      dispatch({
+        type: 'touch/add',
+        touch,
+        event: make({
+          kind: 'onboarding.touched',
+          subjectType: leadId ? 'lead' : 'student',
+          subjectId: (leadId ?? studentId)!,
+          subjectLabel: label,
+          summary: `${STEP_LABEL[step]} · ${OUTCOME_LABEL[outcome]}`,
+          detail: touch.note || undefined,
+        }),
+      });
+
+      if (ws.touchMode !== 'db') return;
+      void Promise.resolve(supabase.from('onboarding_touches').insert(touchToRow(touch))).then(
+        ({ error }) => {
+          if (!error) return;
+          console.error('[workspace] 연락 기록', error);
+          dispatch({ type: 'sync/error', message: '연락 기록 저장에 실패했습니다. 다시 시도해 주세요.' });
+          reloadTouches();
+        },
+      );
+    },
+    [academyId, actorName, make, reloadTouches, state.students, ws.leads, ws.touchMode],
+  );
+
+  const enrollLead = useCallback(
+    async (leadId: ID, classId: ID, ageGroup: AgeGroup): Promise<Student | null> => {
+      const lead = ws.leads.find((l) => l.id === leadId);
+      if (!lead) return null;
+
+      let student: Student;
+      if (ws.mode === 'db') {
+        const { data, error } = await supabase.rpc('enroll_lead', {
+          p_lead_id: leadId,
+          p_class_id: classId,
+          p_age_group: ageGroup,
+        });
+        if (error || !data) {
+          dispatch({ type: 'sync/error', message: friendlyError(error, '등록하지 못했습니다') });
+          return null;
+        }
+        student = toStudent(data as Record<string, unknown>);
+      } else {
+        student = {
+          id: crypto.randomUUID(),
+          academyId,
+          name: lead.childName || '이름 미상',
+          ageGroup,
+          status: 'active',
+          lastAttendanceDate: null,
+          churnScore: 0,
+          classId,
+          parentName: lead.parentName,
+          parentPhone: lead.parentPhone,
+          enrolledAt: TODAY,
+          lastParentContactDate: null,
+        };
+      }
+
+      appDispatch({ type: 'student/add', student });
+      dispatch({
+        type: 'lead/patch',
+        leadId,
+        patch: {
+          stage: 'enrolled',
+          stageChangedAt: new Date().toISOString(),
+          enrolledStudentId: student.id,
+          interestClassId: classId,
+        },
+        event: make({
+          kind: 'lead.enrolled',
+          subjectType: 'lead',
+          subjectId: leadId,
+          subjectLabel: student.name,
+          summary: `${state.classes.find((c) => c.id === classId)?.title ?? ''} 등록 확정`,
+        }),
+      });
+      return student;
+    },
+    [academyId, appDispatch, make, state.classes, ws.leads, ws.mode],
+  );
+
+  const sendWelcome = useCallback(
+    async (studentId: ID): Promise<EnqueueResult | null> => {
+      const s = state.students.find((x) => x.id === studentId);
+      if (!s) return null;
+      const cls = state.classes.find((c) => c.id === s.classId);
+      const coach = state.coaches.find((c) => c.id === cls?.coachId);
+      const enrolledAt = ws.enrolledOverride[s.id] ?? s.enrolledAt;
+      const first = firstClassOn(cls, addDays(enrolledAt, 1));
+
+      let result: EnqueueResult | null = null;
+      if (ws.mode === 'db') {
+        const variables = {
+          학원명: academyName,
+          보호자명: s.parentName || '보호자',
+          학생명: s.name,
+          반이름: cls?.title ?? '배정된 반',
+          첫수업: first ? `${formatDateKo(first)} ${cls?.schedule.startTime ?? ''}`.trim() : '코치가 따로 안내드립니다',
+          장소: cls?.venue || '센터',
+          코치명: coach?.name ?? '담당',
+        };
+        try {
+          result = await enqueue(academyId, [
+            {
+              templateCode: 'welcome',
+              studentId,
+              variables,
+              body: render('welcome', variables),
+              dedupeKey: `welcome:${studentId}`,
+            },
+          ]);
+        } catch (error) {
+          console.error('[workspace] 환영 안내', error);
+        }
+      }
+
+      logTouch({ studentId }, 'welcome', 'done', '환영 안내 발송');
+      return result;
+    },
+    [academyId, academyName, logTouch, state.classes, state.coaches, state.students, ws.enrolledOverride, ws.mode],
+  );
+
   // The derived half is recomputed only when the underlying rows change; the
   // recorded half is prepended. Both halves are already sorted, but a merge
   // sort over the union is what puts a lead logged at 14:02 between two
@@ -584,6 +1193,20 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       shareFormLink,
       saveEvaluation,
       record,
+      surveyMode: ws.surveyMode,
+      surveys: ws.surveys,
+      recipients: ws.recipients,
+      sendSurvey,
+      remindSurvey,
+      closeSurvey,
+      markCalled,
+      touchMode: ws.touchMode,
+      touches: ws.touches,
+      families,
+      getFamily,
+      logTouch,
+      enrollLead,
+      sendWelcome,
     }),
     [
       ws.mode,
@@ -603,6 +1226,20 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       shareFormLink,
       saveEvaluation,
       record,
+      ws.surveyMode,
+      ws.surveys,
+      ws.recipients,
+      sendSurvey,
+      remindSurvey,
+      closeSurvey,
+      markCalled,
+      ws.touchMode,
+      ws.touches,
+      families,
+      getFamily,
+      logTouch,
+      enrollLead,
+      sendWelcome,
     ],
   );
 
