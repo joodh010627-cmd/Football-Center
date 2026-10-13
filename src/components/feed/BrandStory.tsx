@@ -103,19 +103,32 @@ export function BrandStory({ compact = false }: { compact?: boolean }) {
           style={{ transform: `translateX(calc(${-index * 100}% + ${drag ?? 0}px))` }}
         >
           {BRAND_STORIES.map((story, i) => {
-            const light = story.ink === 'light';
+            const light = story.ink === 'light' || Boolean(story.photo);
             return (
               <article
                 key={story.id}
                 aria-hidden={i !== index}
                 className={cn(
-                  'relative flex w-full shrink-0 select-none flex-col px-6 py-6',
+                  'relative flex w-full shrink-0 select-none flex-col overflow-hidden px-6 py-6',
                   compact ? 'min-h-[272px]' : 'min-h-[320px]',
-                  story.surface,
+                  story.photo ? 'bg-[#0E1310]' : story.surface,
                   light ? 'text-white' : 'text-ink',
                 )}
               >
-                <div className="flex items-start justify-between gap-3">
+                {story.photo && (
+                  <>
+                    <img
+                      src={story.photo}
+                      alt=""
+                      draggable={false}
+                      loading="lazy"
+                      className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+                    />
+                    {/* Scrim from the left, where the copy sits. */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/10" />
+                  </>
+                )}
+                <div className="relative flex items-start justify-between gap-3">
                   <p className="text-[11.5px] font-bold uppercase tracking-label">{story.kicker}</p>
                   <span
                     className={cn(
@@ -127,7 +140,7 @@ export function BrandStory({ compact = false }: { compact?: boolean }) {
                   </span>
                 </div>
 
-                <div className="my-auto py-7">
+                <div className="relative my-auto py-7">
                   <h3
                     className={cn(
                       'whitespace-pre-line font-bold leading-[1.18] tracking-tightest',
@@ -145,7 +158,7 @@ export function BrandStory({ compact = false }: { compact?: boolean }) {
                     {story.body}
                   </p>
                 </div>
-                <p className="text-[15px] font-bold">
+                <p className="relative text-[15px] font-bold">
                   {story.brand}
                   <span className={cn('font-medium', light ? 'text-white/60' : 'text-steel')}>
                     {' '}

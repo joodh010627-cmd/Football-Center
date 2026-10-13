@@ -25,6 +25,7 @@ export function FeatureCard({
     >
       <ArticleArt
         variant={article.art}
+        photo={article.photo}
         zoom
         cover
         className="aspect-[4/3.6] w-full sm:aspect-[16/9]"
@@ -61,7 +62,7 @@ export function ArticleRow({ article, onOpen }: { article: Article; onOpen: () =
       onClick={onOpen}
       className="pressable flex w-full items-center gap-4 rounded-lg border border-hairline bg-canvas p-3 text-left hover:border-hairline-strong"
     >
-      <ArticleArt variant={article.art} className="h-[84px] w-[84px] shrink-0 rounded-md" />
+      <ArticleArt variant={article.art} photo={article.photo} className="h-[84px] w-[84px] shrink-0 rounded-md" />
       <span className="min-w-0 flex-1">
         <span className="text-[11.5px] font-semibold text-primary">{article.category}</span>
         <span className="mt-1 line-clamp-2 block text-[15.5px] font-bold leading-[1.35] text-ink">

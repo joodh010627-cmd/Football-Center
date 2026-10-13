@@ -10,7 +10,22 @@
  *
  * 광고는 전부 가상 브랜드다. 실제 광고주가 없는 상태에서 실제 브랜드 이름을
  * 쓰면 제휴처럼 보이므로, 카드마다 "광고 예시 · 가상 브랜드"를 붙인다.
+ *
+ * 사진은 시연용 임시 자료다. 칼럼 사진의 선수는 글과 무관하고, 광고에는 실존
+ * 선수 사진을 쓰지 않는다 — 가상 브랜드를 그 선수가 광고하는 것처럼 보이므로.
  */
+
+import sonFrame from '@/assets/feed/son-frame.jpg';
+import sonKnee from '@/assets/feed/son-knee.jpg';
+import parkJisung from '@/assets/feed/park-jisung.jpg';
+import ronaldoSmile from '@/assets/feed/ronaldo-smile.jpg';
+import ronaldoJump from '@/assets/feed/ronaldo-jump.jpg';
+import bellingham from '@/assets/feed/bellingham.jpg';
+import englandCelebrate from '@/assets/feed/england-celebrate.jpg';
+import rivalsFlares from '@/assets/feed/rivals-flares.jpg';
+import amateurMatch from '@/assets/feed/amateur-match.jpg';
+import stadiumNight from '@/assets/feed/stadium-night.jpg';
+import bootOnBall from '@/assets/feed/unsplash-premium.jpg';
 
 export type Audience = 'parent' | 'player' | 'coach';
 
@@ -43,6 +58,8 @@ export interface Article {
   audience: Audience[];
   minutes: number;
   art: ArtVariant;
+  /** Cover photo; when set it replaces the drawn art. */
+  photo?: string;
   sections: ArticleSection[];
   /** Shown under the body for anything touching the body or health. */
   medical?: boolean;
@@ -58,6 +75,7 @@ export const ARTICLES: Article[] = [
     audience: ['player', 'parent'],
     minutes: 3,
     art: 'ball',
+    photo: sonFrame,
     sections: [
       {
         heading: '받기 전에 한 번, 오는 동안 한 번',
@@ -97,6 +115,7 @@ export const ARTICLES: Article[] = [
     audience: ['parent'],
     minutes: 4,
     art: 'floodlight',
+    photo: rivalsFlares,
     sections: [
       {
         heading: '경기 직후, 아이는 아직 경기장에 있습니다',
@@ -136,6 +155,7 @@ export const ARTICLES: Article[] = [
     audience: ['parent', 'player'],
     minutes: 3,
     art: 'plate',
+    photo: englandCelebrate,
     medical: true,
     sections: [
       {
@@ -171,6 +191,7 @@ export const ARTICLES: Article[] = [
     audience: ['player', 'parent', 'coach'],
     minutes: 3,
     art: 'bottle',
+    photo: ronaldoSmile,
     medical: true,
     sections: [
       {
@@ -253,6 +274,7 @@ export const ARTICLES: Article[] = [
     audience: ['parent', 'coach'],
     minutes: 4,
     art: 'heel',
+    photo: ronaldoJump,
     medical: true,
     sections: [
       {
@@ -292,6 +314,7 @@ export const ARTICLES: Article[] = [
     audience: ['player'],
     minutes: 2,
     art: 'pitch',
+    photo: sonKnee,
     sections: [
       {
         heading: '10분 루틴',
@@ -327,6 +350,7 @@ export const ARTICLES: Article[] = [
     audience: ['parent', 'coach'],
     minutes: 4,
     art: 'bench',
+    photo: bellingham,
     sections: [
       {
         heading: '실망은 자연스러운 감정입니다',
@@ -366,6 +390,7 @@ export const ARTICLES: Article[] = [
     audience: ['parent', 'player'],
     minutes: 3,
     art: 'boot',
+    photo: parkJisung,
     sections: [
       {
         heading: '구장부터 확인하세요',
@@ -432,6 +457,8 @@ export interface BrandStory {
   /** Tailwind classes for the card surface and its text. */
   surface: string;
   ink: 'dark' | 'light';
+  /** Background photo; the card turns light-on-dark over a scrim. */
+  photo?: string;
 }
 
 export const BRAND_STORIES: BrandStory[] = [
@@ -444,6 +471,7 @@ export const BRAND_STORIES: BrandStory[] = [
     brand: '온필드 정형외과',
     surface: 'bg-gradient-to-br from-[#EEF3F2] via-[#E3ECEB] to-[#B9D3D8]',
     ink: 'dark',
+    photo: amateurMatch,
   },
   {
     id: 'meal',
@@ -464,6 +492,7 @@ export const BRAND_STORIES: BrandStory[] = [
     brand: '스트라이드 풋웨어',
     surface: 'bg-gradient-to-br from-[#0E1310] via-[#10241A] to-[#00563A]',
     ink: 'light',
+    photo: bootOnBall,
   },
   {
     id: 'trip',
@@ -474,6 +503,7 @@ export const BRAND_STORIES: BrandStory[] = [
     brand: '원정버스 투어',
     surface: 'bg-gradient-to-br from-[#E8EEF6] via-[#DCE5F0] to-[#A9BFD9]',
     ink: 'dark',
+    photo: stadiumNight,
   },
 ];
 

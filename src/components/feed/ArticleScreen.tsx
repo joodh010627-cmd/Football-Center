@@ -57,7 +57,7 @@ export function ArticleScreen({
 
       <ScreenBody>
         <article className="mx-auto max-w-[680px]">
-          <ArticleArt variant={article.art} zoom className="aspect-[16/10] w-full rounded-xl" />
+          <ArticleArt variant={article.art} photo={article.photo} zoom className="aspect-[16/10] w-full rounded-xl" />
 
           <p className="mt-6 eyebrow-ink">{article.kicker}</p>
           <h1 className="mt-3 whitespace-pre-line text-[28px] font-bold leading-[1.2] tracking-tightest text-ink sm:text-[34px]">

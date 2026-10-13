@@ -31,3 +31,6 @@ supabase/APPLY_ALL.generated.sql
 
 # TypeScript 증분 빌드 캐시 (빌드마다 바뀌어 diff 노이즈가 된다)
 *.tsbuildinfo
+
+# 원본 사진. 웹용으로 줄인 사본이 src/assets/feed/ 에 있다.
+pic/

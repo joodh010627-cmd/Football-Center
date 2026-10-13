@@ -27,11 +27,14 @@ const TONE: Record<ArtVariant, [string, string]> = {
 
 export function ArticleArt({
   variant,
+  photo,
   className,
   zoom = false,
   cover = false,
 }: {
   variant: ArtVariant;
+  /** A cover photo, drawn instead of the motif when present. */
+  photo?: string;
   className?: string;
   /** A slow settle-in on mount — for the one large cover on a screen. */
   zoom?: boolean;
@@ -43,6 +46,24 @@ export function ArticleArt({
 }) {
   const id = useId().replace(/:/g, '');
   const [from, to] = TONE[variant];
+
+  if (photo) {
+    return (
+      <div className={cn('relative overflow-hidden bg-[#00301C]', className)} aria-hidden="true">
+        <img
+          src={photo}
+          alt=""
+          loading="lazy"
+          className={cn(
+            'absolute inset-0 h-full w-full object-cover',
+            // A headline covers the lower part; keep faces above it.
+            cover ? 'object-[50%_20%]' : 'object-[50%_30%]',
+            zoom && 'animate-slow-zoom',
+          )}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className={cn('grain relative overflow-hidden', className)} aria-hidden="true">
