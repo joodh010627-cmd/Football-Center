@@ -185,7 +185,7 @@ function BottomTab({
           active ? 'w-11 bg-primary-wash animate-tab-pop' : 'w-7 bg-transparent',
         )}
       >
-        <Icon size={19} strokeWidth={active ? 2.4 : 2} />
+        <Icon size={19} strokeWidth={active ? 2 : 1.6} />
         <Badge count={tab.badge} />
       </span>
       <span className={cn('text-[10.5px] leading-none', active ? 'font-bold' : 'font-medium')}>
