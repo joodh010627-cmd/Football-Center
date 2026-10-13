@@ -2,8 +2,8 @@
  * 수업 준비 — one class on one day, planned the way coaches already plan it.
  *
  * Top to bottom is the order of the thinking: who is coming, then what the last
- * lessons did and so what today is for. The second is one picture — the growth
- * pentagon with the last lessons' blocks on it — and one tap: the coach picks
+ * lessons did and so what today is for. The second is one tap on one of the
+ * five abilities, written as words: the coach picks
  * the ability to work on, and the app picks the goal, from what the last
  * lessons left off, today's headcount and the class's age group. The goal's
  * 훈련 블록 arrive already fitted to the day. A coach who'd rather do something
@@ -22,13 +22,10 @@ import { trialsOn } from '@/data/crm';
 import { fromMinutes } from '@/data/today';
 import { blocksFor, planFor, sessionDuration, studentsInClass } from '@/data/selectors';
 import {
-  TODAY,
-  beadsOf,
   blockAsRun,
   composeLesson,
   carryOver,
   goalOptions,
-  minutesByAbility,
   pastBeads,
   recentLessons,
   recommendGoal,
@@ -39,7 +36,7 @@ import { cn } from '@/lib/cn';
 import { ABILITY_META, CATEGORY_META } from './meta';
 import { AbilityChips, DetailHeader, More } from './parts';
 import { BlockAdder } from './BlockAdder';
-import { GoalPentagon } from './GoalPentagon';
+import { AbilityPicker } from './AbilityPicker';
 import { LessonFlow } from './LessonFlow';
 
 interface LessonPrepScreenProps {
@@ -109,11 +106,6 @@ export function LessonPrepScreen({ cls, date, backLabel, onBack, onDone }: Lesso
   const shownGoals = allGoals ? goals : goals.slice(0, SHOWN_GOALS);
   const goal = goalId ? getTemplate(goalId) : undefined;
 
-  const pastMin = useMemo(() => minutesByAbility(past), [past]);
-  const todayMin = useMemo(
-    () => (items.length > 0 ? minutesByAbility(beadsOf(items, blockMap, TODAY)) : null),
-    [items, blockMap],
-  );
   const carry = useMemo(() => (goal ? carryOver(goal, ctx) : null), [goal, ctx]);
 
   const total = sessionDuration(items, blockMap);
@@ -134,7 +126,7 @@ export function LessonPrepScreen({ cls, date, backLabel, onBack, onDone }: Lesso
     }
   };
 
-  /** A focus tapped on the pentagon: the app answers with a goal. */
+  /** A focus tapped: the app answers with a goal. */
   const pickAbility = (a: Ability) => {
     setAbility(a);
     setPicking(false);
@@ -213,13 +205,7 @@ export function LessonPrepScreen({ cls, date, backLabel, onBack, onDone }: Lesso
 
         {/* 2 — what today is for, read off what the last lessons did */}
         <Step n={2} title="오늘의 목표">
-          <GoalPentagon
-            past={pastMin}
-            today={todayMin}
-            hasHistory={past.length > 0}
-            selected={ability}
-            onSelect={pickAbility}
-          />
+          <AbilityPicker selected={ability} onSelect={pickAbility} />
 
           <div className="mt-3">
             <LessonFlow

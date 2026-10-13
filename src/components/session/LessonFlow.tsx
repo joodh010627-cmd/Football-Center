@@ -1,9 +1,10 @@
 /**
- * 지난 수업 → 오늘 — the last lessons and today on one line, oldest first, so
- * time runs down the screen into today and on into today's blocks.
+ * 오늘 ← 지난 수업 — today and the last lessons on one line, today first, so
+ * what the coach is about to run is the first thing read and the history
+ * reads back from it.
  *
- * Each row is a date and a name, nothing more. The rail is grey; from the
- * lesson today's goal carries on from down to today it is green, and that
+ * Each row is a date and a name, nothing more. The rail is grey; from today
+ * down to the lesson today's goal carries on from it is green, and that
  * lesson carries the one skill it hands over. One colour change on one line is
  * the whole picture of "last time leads to today".
  */
@@ -29,20 +30,35 @@ export function LessonFlow({
   today: { ready: boolean; body: ReactNode };
 }) {
   const n = recent.length;
-  // Oldest first. Row r is recent[n - 1 - r]; today is row n. The rail below
-  // row r is green from the carried-over lesson's row onward.
-  const greenFrom = carry ? n - 1 - carry.lesson : Infinity;
+  // Today is the first row, then recent[0..n-1], newest first. The rail below
+  // a row is green while it still leads down to the carried-over lesson.
+  const greenTo = carry ? carry.lesson : -1;
 
   return (
     <ol className="rounded-xl border border-hairline bg-canvas px-4 py-4">
-      {[...recent].reverse().map((lesson, r) => {
-        const i = n - 1 - r;
+      <Row
+        line={n === 0 ? null : greenTo >= 0 ? 'green' : 'grey'}
+        dot={
+          <span
+            className={cn(
+              'block h-3.5 w-3.5 rounded-full transition-colors',
+              today.ready
+                ? 'bg-primary ring-4 ring-primary/15'
+                : 'border-2 border-dashed border-stone bg-canvas',
+            )}
+          />
+        }
+      >
+        {today.body}
+      </Row>
+
+      {recent.map((lesson, i) => {
         const linked = carry?.lesson === i;
         const title = lessonTitle(lesson, past.filter((b) => b.lesson === i));
         return (
           <Row
             key={lesson.date}
-            line={r >= greenFrom ? 'green' : 'grey'}
+            line={i === n - 1 ? null : i < greenTo ? 'green' : 'grey'}
             dot={
               <span
                 className={cn(
@@ -73,22 +89,6 @@ export function LessonFlow({
           </Row>
         );
       })}
-
-      <Row
-        line={null}
-        dot={
-          <span
-            className={cn(
-              'block h-3.5 w-3.5 rounded-full transition-colors',
-              today.ready
-                ? 'bg-primary ring-4 ring-primary/15'
-                : 'border-2 border-dashed border-stone bg-canvas',
-            )}
-          />
-        }
-      >
-        {today.body}
-      </Row>
     </ol>
   );
 }
