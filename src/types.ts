@@ -217,25 +217,7 @@ export type Ability = 'technical' | 'tactical' | 'physical' | 'mental' | 'attitu
  * 훈련 주제 — a textbook football ability a 훈련 블록 trains. Its own list,
  * not a level under the five abilities (`src/data/topics.ts`).
  */
-export type TopicId =
-  | 'ball-mastery'
-  | 'first-touch'
-  | 'passing'
-  | 'dribbling'
-  | 'shooting'
-  | 'heading'
-  | 'possession'
-  | 'off-ball'
-  | 'build-up'
-  | 'defending'
-  | 'transition'
-  | 'set-pieces'
-  | 'speed'
-  | 'agility'
-  | 'coordination'
-  | 'strength'
-  | 'endurance'
-  | 'goalkeeping';
+export type TopicId = 'basic' | 'passing' | 'dribbling' | 'shooting';
 
 /**
  * Where a session or block came from.

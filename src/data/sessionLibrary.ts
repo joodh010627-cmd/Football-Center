@@ -105,20 +105,20 @@ const BLOCKS: BlockSeed[] = [
  */
 // prettier-ignore
 const BLOCK_TOPICS: Record<string, TopicId[]> = {
-  'std-w-ball': ['ball-mastery'], 'std-w-move': ['agility', 'coordination'], 'std-w-rondo': ['possession', 'passing'],
-  'std-w-tag': ['dribbling', 'ball-mastery'], 'std-w-names': ['passing'],
-  'std-t-gates': ['passing'], 'std-t-triangle': ['passing', 'off-ball'], 'std-t-firsttouch': ['first-touch'], 'std-t-turn': ['first-touch'],
-  'std-t-dribble': ['dribbling'], 'std-t-1v1': ['dribbling'], 'std-t-shoot': ['shooting'], 'std-t-finish': ['shooting', 'first-touch'],
-  'std-c-passmove': ['off-ball', 'passing'], 'std-c-3v1': ['possession', 'off-ball'], 'std-c-scan': ['off-ball', 'first-touch'],
-  'std-c-zones': ['build-up', 'possession'], 'std-c-transition': ['transition', 'defending'],
-  'std-c-defend1v1': ['defending'], 'std-c-cover': ['defending'],
-  'std-p-agility': ['agility'], 'std-p-react': ['speed'], 'std-p-race': ['speed'], 'std-p-balance': ['coordination'],
-  'std-p-shield': ['strength'], 'std-p-interval': ['endurance', 'possession'],
-  'std-m-retry': ['dribbling'], 'std-m-switch': ['ball-mastery', 'dribbling'], 'std-m-challenge': ['dribbling', 'ball-mastery'],
-  'std-m-pressure': ['possession'],
-  'std-a-call': ['passing', 'possession'], 'std-a-mission': ['passing'], 'std-a-roles': ['defending', 'goalkeeping'], 'std-a-explain': [],
-  'std-g-3pass': ['passing', 'possession'], 'std-g-endzone': ['dribbling'], 'std-g-2touch': ['possession', 'first-touch'],
-  'std-g-small': ['possession', 'transition'], 'std-g-bonus': ['shooting', 'dribbling'], 'std-g-talk': ['passing', 'possession'],
+  'std-w-ball': ['basic'], 'std-w-move': ['basic'], 'std-w-rondo': ['basic', 'passing'],
+  'std-w-tag': ['dribbling', 'basic'], 'std-w-names': ['passing'],
+  'std-t-gates': ['passing'], 'std-t-triangle': ['passing', 'basic'], 'std-t-firsttouch': ['basic'], 'std-t-turn': ['basic'],
+  'std-t-dribble': ['dribbling'], 'std-t-1v1': ['dribbling'], 'std-t-shoot': ['shooting'], 'std-t-finish': ['shooting', 'basic'],
+  'std-c-passmove': ['basic', 'passing'], 'std-c-3v1': ['basic'], 'std-c-scan': ['basic'],
+  'std-c-zones': ['basic'], 'std-c-transition': ['basic'],
+  'std-c-defend1v1': ['basic'], 'std-c-cover': ['basic'],
+  'std-p-agility': ['basic'], 'std-p-react': ['basic'], 'std-p-race': ['basic'], 'std-p-balance': ['basic'],
+  'std-p-shield': ['basic'], 'std-p-interval': ['basic'],
+  'std-m-retry': ['dribbling'], 'std-m-switch': ['basic', 'dribbling'], 'std-m-challenge': ['dribbling', 'basic'],
+  'std-m-pressure': ['basic'],
+  'std-a-call': ['passing', 'basic'], 'std-a-mission': ['passing'], 'std-a-roles': ['basic'], 'std-a-explain': [],
+  'std-g-3pass': ['passing', 'basic'], 'std-g-endzone': ['dribbling'], 'std-g-2touch': ['basic'],
+  'std-g-small': ['basic'], 'std-g-bonus': ['shooting', 'dribbling'], 'std-g-talk': ['passing', 'basic'],
 };
 
 // prettier-ignore

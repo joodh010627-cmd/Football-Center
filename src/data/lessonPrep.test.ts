@@ -88,7 +88,7 @@ describe('composeForTopic — the shape of the hour', () => {
   });
 
   it('trims to a short class without gutting any block', () => {
-    const { items } = composeForTopic('possession', ctxOf([], { minutes: 45 }));
+    const { items } = composeForTopic('basic', ctxOf([], { minutes: 45 }));
     expect(sessionDuration(items, lib)).toBeLessThanOrEqual(45);
     for (const item of items) expect(item.durationMin ?? 99).toBeGreaterThanOrEqual(5);
   });
@@ -116,18 +116,19 @@ describe('composeForTopic — the children who are coming', () => {
   });
 
   it('only offers topics the age group has a drill for', () => {
-    // 빌드업's only drill is U11+.
-    expect(runnableTopics(ctxOf([], { ageGroup: 'U9' })).has('build-up')).toBe(false);
-    expect(runnableTopics(ctxOf([], { ageGroup: 'U11' })).has('build-up')).toBe(true);
+    // With only a U9+ shooting drill, 슈팅 is offered from U9.
+    const library = STANDARD_BLOCKS.filter((b) => b.id === 'std-t-finish');
+    expect(runnableTopics(ctxOf([], { ageGroup: 'U7', library })).has('shooting')).toBe(false);
+    expect(runnableTopics(ctxOf([], { ageGroup: 'U9', library })).has('shooting')).toBe(true);
   });
 
   it('never puts the same block in twice', () => {
-    const ids = composeForTopic('possession', ctxOf([], { ageGroup: 'U7', headcount: 4 })).items.map((i) => i.blockId);
+    const ids = composeForTopic('basic', ctxOf([], { ageGroup: 'U7', headcount: 4 })).items.map((i) => i.blockId);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
   it('is empty when the topic has no drill for the class', () => {
-    expect(composeForTopic('heading', ctxOf())).toEqual({ items: [], notes: [] });
+    expect(composeForTopic('shooting', ctxOf([], { library: [] }))).toEqual({ items: [], notes: [] });
   });
 });
 
