@@ -95,7 +95,7 @@ export function KitPicks() {
         {done ? '가방 준비 끝. 즐거운 경기 되세요!' : ' '}
       </p>
 
-      <div className="mt-2 flex items-center gap-3 rounded-lg bg-canvas px-4 py-3">
+      <div className="mt-2 flex items-center gap-3 rounded-lg bg-surface px-4 py-3">
         <span className="shrink-0 rounded-sm border border-hairline-strong px-1.5 py-0.5 text-[10.5px] font-medium text-steel">
           광고 예시
         </span>

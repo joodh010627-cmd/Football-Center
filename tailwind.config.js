@@ -91,15 +91,12 @@ export default {
         /**
          * The page, and the step a card rises off it.
          *
-         * `soft` used to be #F8F9F9 — seven units off white — so a white card on
-         * the page was a border and nothing else, and on a phone in daylight the
-         * border is the first thing to go. Dropping the page to #EBEFEE gives
-         * every white surface in the app an edge without touching any of them,
-         * and gives the frosted bars something to actually frost.
+         * The page is plain white (`soft`). `DEFAULT` is the lightest grey that
+         * still reads against white — for chips and boxes that have no border.
          */
         surface: {
-          DEFAULT: '#E4E9E7',
-          soft: '#EBEFEE',
+          DEFAULT: '#F4F6F5',
+          soft: '#FFFFFF',
         },
         hairline: {
           DEFAULT: '#DCE2E0',

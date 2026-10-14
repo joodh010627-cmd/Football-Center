@@ -191,7 +191,7 @@ function TodayLessons({
               aria-label={`${e.startTime} ${e.cls.title} · ${CARD_LABEL[e.state]}`}
               className={cn(
                 'pressable flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-[14px] font-semibold tabular-nums',
-                i === index ? 'bg-primary text-white' : 'bg-canvas text-charcoal',
+                i === index ? 'bg-primary text-white' : 'bg-surface text-charcoal',
               )}
             >
               <span
