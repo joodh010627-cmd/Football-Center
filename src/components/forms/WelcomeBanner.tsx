@@ -46,7 +46,7 @@ export function WelcomeBanner() {
           key={p.headline}
           className="relative h-[132px] w-[calc(100%-24px)] shrink-0 snap-start overflow-hidden rounded-2xl bg-ink sm:h-[168px]"
         >
-          <img src={p.image} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          <img src={p.bannerImage ?? p.image} alt="" className="absolute inset-0 h-full w-full object-cover" />
           <span className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/35 to-transparent" />
           <div className="relative flex h-full flex-col justify-end p-4">
             <p className="text-[22px] font-extrabold leading-tight tracking-[-0.02em] text-white">{p.headline}</p>

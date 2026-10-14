@@ -14,12 +14,15 @@ import { X } from 'lucide-react';
 import season from '@/assets/welcome/season.jpg';
 import lesson from '@/assets/welcome/lesson.jpg';
 import growth from '@/assets/welcome/growth.jpg';
+import seasonBanner from '@/assets/forms/season-banner.jpg';
 
 export interface WelcomePage {
   image: string;
   headline: string;
   /** One line for the 폼 banner, which has no room for the body. */
   tagline: string;
+  /** The banner's photo when the popup's one would crop a face. */
+  bannerImage?: string;
   body: string;
 }
 
@@ -28,6 +31,7 @@ export const WELCOME_PAGES: WelcomePage[] = [
     image: season,
     headline: '새로운 시즌',
     tagline: '3개월의 여정을 지금 시작하세요',
+    bannerImage: seasonBanner,
     body: '새로운 재미, 새로운 모습으로 시작하는 FC GROWTH의 새로운 시즌. 3개월의 여정을 지금 시작하세요.',
   },
   {
