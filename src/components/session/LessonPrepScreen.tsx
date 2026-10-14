@@ -59,7 +59,8 @@ export function LessonPrepScreen({ cls, date, backLabel, onBack, onDone }: Lesso
     () => trialsOn(leads, date).filter((l) => l.trialClassId === cls.id),
     [leads, date, cls.id],
   );
-  const headcount = roster.length + trials.length;
+  // 오늘 오는 선수 is the class's 정원, always — not the roster the account can see.
+  const headcount = cls.capacity;
   // Only to keep last lesson's blocks from coming straight back.
   const past = useMemo(
     () => pastBeads(recentLessons(state, cls, date, 1), blockMap),
@@ -136,7 +137,7 @@ export function LessonPrepScreen({ cls, date, backLabel, onBack, onDone }: Lesso
                 {cls.schedule.durationMin}분 · {cls.ageGroup}
               </span>
             </div>
-            {headcount > 0 && (
+            {roster.length + trials.length > 0 && (
               <More className="mt-3" label="명단">
                 <ul className="flex flex-wrap gap-1.5">
                   {roster.map((s) => (
