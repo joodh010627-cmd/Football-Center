@@ -1,20 +1,16 @@
 /**
  * Welcome popup — three cards, swiped left and right, shown once on a user's
- * first login on this device.
+ * every time the app loads — 수업 is the main page and the popup greets it.
  *
  * The layout follows the season popup coaches already know from pickup-football
  * apps: a photo band with one huge headline on it, two lines of copy, page dots
  * and one big button. Swiping is the browser's own scroll-snap, so it feels
  * native on a phone and still works with a mouse; the button and dots drive
  * the same scroller.
- *
- * "Seen" is remembered per user in localStorage. Losing it (private window,
- * cleared site data) only means the popup shows again — nothing depends on it.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
-import { useSession } from '@/store/AuthContext';
 import season from '@/assets/welcome/season.jpg';
 import lesson from '@/assets/welcome/lesson.jpg';
 import growth from '@/assets/welcome/growth.jpg';
@@ -46,35 +42,15 @@ const PAGES: Page[] = [
 /** The popup's lime — the one colour it borrows from the season popup it is modelled on. */
 const LIME = '#A6F26A';
 
-const seenKey = (userId: string) => `fcg.welcome.v1:${userId}`;
-
-function hasSeen(userId: string): boolean {
-  try {
-    return window.localStorage.getItem(seenKey(userId)) === '1';
-  } catch {
-    return false;
-  }
-}
-
-function markSeen(userId: string) {
-  try {
-    window.localStorage.setItem(seenKey(userId), '1');
-  } catch {
-    // Storage blocked: it shows again next time, which is harmless.
-  }
-}
-
 /** `ready` holds the popup back until the boot and crest screens have gone. */
 export function WelcomePopup({ ready }: { ready: boolean }) {
-  const { userId } = useSession();
-  const [open, setOpen] = useState(() => !hasSeen(userId));
+  const [open, setOpen] = useState(true);
   const [page, setPage] = useState(0);
   const track = useRef<HTMLDivElement>(null);
 
   const close = useCallback(() => {
-    markSeen(userId);
     setOpen(false);
-  }, [userId]);
+  }, []);
 
   useEffect(() => {
     if (!open || !ready) return;

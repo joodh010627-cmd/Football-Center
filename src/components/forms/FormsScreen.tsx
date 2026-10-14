@@ -33,8 +33,13 @@ import {
 import { isOpenSurvey, progressOf, type SurveyKind } from '@/data/surveys';
 import { cn } from '@/lib/cn';
 import { NewFormSheet } from './NewFormSheet';
+import hero from '@/assets/forms/hero.jpg';
+import inviteArt from '@/assets/forms/invite.jpg';
+import joinArt from '@/assets/forms/join.jpg';
+import checkArt from '@/assets/forms/check.jpg';
+import listenArt from '@/assets/forms/listen.jpg';
 import { telHref } from './parts';
-import { DemoNote, Page, PrimaryButton, Row, Rows, Section, StepBar, Tag, Title } from './ui';
+import { DemoNote, Page, PrimaryButton, Row, Rows, Section, StepBar, Tag } from './ui';
 
 interface FormsScreenProps {
   onOpenFamily: (key: string, queue?: boolean) => void;
@@ -44,17 +49,18 @@ interface FormsScreenProps {
   onOpenSurvey: (surveyId: ID, notice?: string | null) => void;
 }
 
-const DOORS: Array<{ key: string; icon: LucideIcon; label: string; sub: string; kinds?: SurveyKind[] }> = [
-  { key: 'invite', icon: ArrowUpRight, label: '체험 초대', sub: '신청 링크 공유' },
-  { key: 'join', icon: Trophy, label: '참가 신청', sub: '대회 · 캠프 · 행사', kinds: ['rsvp'] },
+const DOORS: Array<{ key: string; icon: LucideIcon; label: string; sub: string; art: string; kinds?: SurveyKind[] }> = [
+  { key: 'invite', icon: ArrowUpRight, label: '체험 초대', sub: '신청 링크 공유', art: inviteArt },
+  { key: 'join', icon: Trophy, label: '참가 신청', sub: '대회 · 캠프 · 행사', art: joinArt, kinds: ['rsvp'] },
   {
     key: 'check',
     icon: ClipboardCheck,
     label: '동의 · 조사',
     sub: '촬영 동의 · 일정 조사',
+    art: checkArt,
     kinds: ['consent', 'schedule', 'order', 'custom'],
   },
-  { key: 'listen', icon: MessageCircleHeart, label: '의견 듣기', sub: '재등록 · 만족도', kinds: ['renewal', 'satisfaction'] },
+  { key: 'listen', icon: MessageCircleHeart, label: '의견 듣기', sub: '재등록 · 만족도', art: listenArt, kinds: ['renewal', 'satisfaction'] },
 ];
 
 /** One card on the rail. */
@@ -102,9 +108,45 @@ export function FormsScreen({ onOpenFamily, onOpenPhase, onOpenInvite, onOpenSen
 
   return (
     <Page>
-      <Title eyebrow="폼" title="신규 문의" />
+      <img src={hero} alt="" className="h-[150px] w-full rounded-2xl object-cover sm:h-[200px]" />
 
-      <div className="mt-5">
+      {/* --- Forms to send -------------------------------------------------- */}
+      <Section title="안내 보내기" className="mt-6">
+        <div className="grid grid-cols-2 gap-2.5">
+          {DOORS.map((d) => {
+            const Icon = d.icon;
+            return (
+              <button
+                key={d.key}
+                type="button"
+                onClick={() =>
+                  d.key === 'invite' ? onOpenInvite() : setSheet((s) => ({ open: true, kinds: d.kinds, n: s.n + 1 }))
+                }
+                className="pressable relative flex min-h-[112px] flex-col items-start justify-end overflow-hidden rounded-2xl bg-ink p-4 text-left"
+              >
+                <img src={d.art} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                <span className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-black/5" />
+                <Icon size={18} strokeWidth={2.2} className="relative text-white" />
+                <span className="relative mt-1.5 text-[16px] font-bold text-white">{d.label}</span>
+                <span className="relative mt-0.5 text-[12.5px] text-white/80">{d.sub}</span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="mt-2">
+          <Rows>
+            <Row
+              title="보낸 안내"
+              sub={sent.length === 0 ? '없음' : `진행 중 ${live} · 전체 ${sent.length}`}
+              tag={toTalk > 0 ? <Tag tone="strong">상담 필요 {toTalk}</Tag> : undefined}
+              onClick={onOpenSent}
+            />
+          </Rows>
+        </div>
+      </Section>
+
+      {/* --- Today's families ----------------------------------------------- */}
+      <Section title="신규 문의">
         {items.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-hairline-strong bg-canvas px-5 py-10 text-center">
             <p className="text-[16px] font-semibold text-ink">오늘 할 일이 없어요</p>
@@ -112,10 +154,10 @@ export function FormsScreen({ onOpenFamily, onOpenPhase, onOpenInvite, onOpenSen
         ) : (
           <Rail items={items} onOpen={(i) => onOpenFamily(i.family.key, !i.arrival)} />
         )}
-      </div>
+      </Section>
 
       {/* --- Stages ---------------------------------------------------------- */}
-      <Section title="단계별 현황">
+      <Section title="현황">
         <Rows>
           {PHASES.map((p) => {
             const list = phaseList(families, p.key);
@@ -132,39 +174,6 @@ export function FormsScreen({ onOpenFamily, onOpenPhase, onOpenInvite, onOpenSen
             );
           })}
         </Rows>
-      </Section>
-
-      {/* --- Forms to send -------------------------------------------------- */}
-      <Section title="안내 보내기">
-        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-hairline bg-hairline-soft">
-          {DOORS.map((d) => {
-            const Icon = d.icon;
-            return (
-              <button
-                key={d.key}
-                type="button"
-                onClick={() =>
-                  d.key === 'invite' ? onOpenInvite() : setSheet((s) => ({ open: true, kinds: d.kinds, n: s.n + 1 }))
-                }
-                className="flex min-h-[96px] flex-col items-start bg-canvas p-4 text-left transition-colors hover:bg-surface-soft/60"
-              >
-                <Icon size={19} strokeWidth={2.2} className="text-primary" />
-                <span className="mt-2.5 text-[15.5px] font-semibold text-ink">{d.label}</span>
-                <span className="mt-0.5 text-[12.5px] text-steel">{d.sub}</span>
-              </button>
-            );
-          })}
-        </div>
-        <div className="mt-2">
-          <Rows>
-            <Row
-              title="보낸 안내"
-              sub={sent.length === 0 ? '없음' : `진행 중 ${live} · 전체 ${sent.length}`}
-              tag={toTalk > 0 ? <Tag tone="strong">상담 필요 {toTalk}</Tag> : undefined}
-              onClick={onOpenSent}
-            />
-          </Rows>
-        </div>
       </Section>
 
       <DemoNote show={demo}>
