@@ -1,9 +1,9 @@
 /**
- * 오늘 키울 역량 — the five abilities as five words, one tap.
+ * 오늘 키울 역량 — the five abilities as hashtags.
  *
- * A pentagon was tried here first. It asked the coach to read a shape before
- * choosing, and the choice is just one of five words, so the words are all
- * that's left.
+ * Tap as many as fit, or none. They are the coach's note on the day, like the
+ * "what I felt" line of a diary: they build nothing and filter nothing, so
+ * they look like tags, not like a choice that leads somewhere.
  */
 
 import type { Ability } from '@/types';
@@ -12,29 +12,29 @@ import { ABILITY_META, ABILITY_ORDER } from './meta';
 
 export function AbilityPicker({
   selected,
-  onSelect,
+  onToggle,
 }: {
-  selected: Ability | null;
-  onSelect: (a: Ability) => void;
+  selected: readonly Ability[];
+  onToggle: (a: Ability) => void;
 }) {
   return (
-    <div className="grid grid-cols-5 gap-1.5">
+    <div className="flex flex-wrap gap-1.5">
       {ABILITY_ORDER.map((a) => {
-        const on = a === selected;
+        const on = selected.includes(a);
         return (
           <button
             key={a}
             type="button"
-            onClick={() => onSelect(a)}
+            onClick={() => onToggle(a)}
             aria-pressed={on}
             className={cn(
-              'min-h-[48px] rounded-xl border text-[15px] font-bold transition-colors',
+              'pressable rounded-full border px-3.5 py-2 text-[14.5px] font-semibold transition-colors',
               on
-                ? 'border-primary bg-primary-wash text-primary'
-                : 'border-hairline bg-canvas text-ink hover:bg-surface-soft/60',
+                ? 'border-primary bg-primary text-white'
+                : 'border-hairline bg-canvas text-charcoal hover:bg-surface-soft/60',
             )}
           >
-            {ABILITY_META[a].label}
+            #{ABILITY_META[a].label}
           </button>
         );
       })}

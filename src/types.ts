@@ -214,6 +214,30 @@ export interface ClassSchedule {
 export type Ability = 'technical' | 'tactical' | 'physical' | 'mental' | 'attitude';
 
 /**
+ * 훈련 주제 — a textbook football ability a 훈련 블록 trains. Its own list,
+ * not a level under the five abilities (`src/data/topics.ts`).
+ */
+export type TopicId =
+  | 'ball-mastery'
+  | 'first-touch'
+  | 'passing'
+  | 'dribbling'
+  | 'shooting'
+  | 'heading'
+  | 'possession'
+  | 'off-ball'
+  | 'build-up'
+  | 'defending'
+  | 'transition'
+  | 'set-pieces'
+  | 'speed'
+  | 'agility'
+  | 'coordination'
+  | 'strength'
+  | 'endurance'
+  | 'goalkeeping';
+
+/**
  * Where a session or block came from.
  *
  * `standard` rows ship with the app (`data/sessionLibrary.ts`) and are the same
@@ -264,6 +288,8 @@ export interface TrainingBlock {
   category: TrainingCategory;
   /** Which ability the block mainly trains. Library filter and chip colour. */
   ability: Ability;
+  /** The 훈련 주제 this block serves — a game can serve several. Empty when nobody has said. */
+  topics: TopicId[];
   durationMin: number;
   /** How to run it — one or two sentences. */
   description: string;
@@ -305,6 +331,13 @@ export interface SessionPlan {
    * blocks keeps the link: the goal is still the goal.
    */
   templateId: ID | null;
+  /**
+   * 오늘 키울 역량 — the coach's hashtags for the day, any number of the five.
+   * A note, like a diary's "what I felt": nothing is built from it.
+   */
+  abilities?: Ability[];
+  /** The 훈련 주제 the lesson was built from. Absent on plans made before it existed. */
+  topic?: TopicId | null;
   createdAt: string;
   status: SessionPlanStatus;
 }

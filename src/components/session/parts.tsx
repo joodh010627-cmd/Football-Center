@@ -9,11 +9,11 @@
 
 import { useState, type ReactNode } from 'react';
 import { ChevronDown, ChevronLeft } from 'lucide-react';
-import type { Ability, ID, SessionItem, SessionTemplate, TrainingBlock } from '@/types';
+import type { Ability, SessionItem, SessionPlan, SessionTemplate, TrainingBlock } from '@/types';
 import { useApp } from '@/store/AppContext';
 import { sessionDuration } from '@/data/selectors';
 import type { SessionState } from '@/data/today';
-import { blockAsRun } from '@/data/lessonPrep';
+import { blockAsRun, lessonName } from '@/data/lessonPrep';
 import { cn } from '@/lib/cn';
 import { ABILITY_META, ABILITY_ORDER, CATEGORY_META } from './meta';
 
@@ -381,8 +381,24 @@ export function LessonProgress({
   );
 }
 
-/** The session a plan runs, if it names one that still exists. */
-export function useSessionOf(templateId: ID | null | undefined): SessionTemplate | undefined {
-  const { getTemplate } = useApp();
-  return templateId ? getTemplate(templateId) : undefined;
+/** What a saved lesson is called — its 훈련 주제, else its main drill. See `lessonName`. */
+export function useLessonName(plan: Pick<SessionPlan, 'items' | 'topic'> | null | undefined): string | undefined {
+  const { blockMap } = useApp();
+  return lessonName(plan, blockMap);
+}
+
+/** 오늘 키울 역량 as the coach tapped them: "#기술 #멘탈". Nothing when there are none. */
+export function AbilityHashtags({
+  abilities,
+  className,
+}: {
+  abilities: readonly Ability[] | undefined;
+  className?: string;
+}) {
+  if (!abilities?.length) return null;
+  return (
+    <span className={cn('text-[13px] font-semibold text-primary', className)}>
+      {abilities.map((a) => `#${ABILITY_META[a].label}`).join(' ')}
+    </span>
+  );
 }

@@ -17,7 +17,7 @@ import { countdown, upNext, type DayEntry, type SessionState } from '@/data/toda
 import { formatDateLong } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { ScreenBody } from '@/components/shell/Shell';
-import { AbilityTag, LessonProgress } from '@/components/session/parts';
+import { AbilityHashtags, LessonProgress, useLessonName } from '@/components/session/parts';
 import { articleOfTheDay } from '@/data/editorial';
 import { FeatureCard } from '@/components/feed/ArticleCard';
 import { BrandStory } from '@/components/feed/BrandStory';
@@ -232,7 +232,7 @@ function TodayLessons({
 }
 
 /**
- * One lesson, lit. The goal is the line under the class because it is what
+ * One lesson, lit. Its 훈련 주제 is the line under the class because it is what
  * changes from day to day; the class name is the same every week.
  */
 function LessonCard({
@@ -248,8 +248,8 @@ function LessonCard({
   onAct: () => void;
   onOpen: () => void;
 }) {
-  const { getTemplate, getCoach } = useApp();
-  const goal = entry.plan?.templateId ? getTemplate(entry.plan.templateId) : undefined;
+  const { getCoach } = useApp();
+  const name = useLessonName(entry.plan);
   const planned = !entry.unplanned;
 
   const cta =
@@ -279,14 +279,14 @@ function LessonCard({
           {entry.cls.title}
         </span>
         <span className="mt-2 flex min-h-[26px] items-center gap-2">
-          {goal ? (
+          {name ? (
             <>
-              <AbilityTag ability={goal.ability} className="bg-canvas/80" />
-              <span className="truncate text-[17px] text-charcoal">{goal.title}</span>
+              <span className="truncate text-[17px] text-charcoal">{name}</span>
+              <AbilityHashtags abilities={entry.plan?.abilities} className="shrink-0" />
             </>
           ) : (
             <span className="text-[16px] text-steel">
-              {planned ? '직접 구성한 수업' : '아직 목표를 정하지 않았어요'}
+              {planned ? '직접 구성한 수업' : '아직 준비하지 않았어요'}
             </span>
           )}
         </span>
@@ -329,9 +329,8 @@ export function DayRow({
   onOpen: () => void;
   onAct: () => void;
 }) {
-  const { getTemplate } = useApp();
   const pill = STATE_PILL[entry.state];
-  const goal = entry.plan?.templateId ? getTemplate(entry.plan.templateId) : undefined;
+  const name = useLessonName(entry.plan);
   const unplanned = entry.unplanned && (entry.state === 'upcoming' || entry.state === 'now');
 
   return (
@@ -344,7 +343,7 @@ export function DayRow({
           <span className="truncate text-[15.5px] font-semibold text-ink">{entry.cls.title}</span>
         </span>
         <span className="mt-0.5 block truncate text-[13px] text-steel">
-          {goal?.title ?? (entry.unplanned ? '목표 미정' : '직접 구성')}
+          {name ?? (entry.unplanned ? '준비 전' : '직접 구성')}
         </span>
       </button>
 

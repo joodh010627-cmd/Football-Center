@@ -1,13 +1,14 @@
 /**
  * 수업 준비 — the order a coach actually plans a day in.
  *
- * Asked how they get ready, coaches describe the same three questions: who is
+ * Asked how they get ready, coaches describe the same questions: who is
  * coming, what did we do last time, and so what is today about. The first two
- * are facts the app already holds; the third is the coach's call, offered as a
- * short list rather than a blank page. Once it is made the 훈련 블록 follow —
- * fitted to today's headcount, minutes and age group instead of copied
- * verbatim from the library, because a 4대4 게임 written for twelve children
- * is a different drill with seven.
+ * are facts the app already holds. The third is a 훈련 주제 — one textbook
+ * football ability — and the app answers it with a lesson's worth of the
+ * 훈련 블록 mapped to it, fitted to today's headcount, minutes and age group,
+ * because a 4대4 게임 written for twelve children is a different drill with
+ * seven. From there the coach edits the blocks. The five abilities are only
+ * the coach's hashtags for the day and build nothing.
  */
 
 import type {
@@ -20,9 +21,11 @@ import type {
   SessionItem,
   SessionPlan,
   SessionTemplate,
+  TopicId,
   TrainingBlock,
 } from '@/types';
-import { pastSessions, publishedBlocks, sessionsFor } from './selectors';
+import { pastSessions, publishedBlocks } from './selectors';
+import { topicMeta } from './topics';
 
 /** A block as it runs in one lesson — the library version with the coach's edit on top. */
 export function blockAsRun(block: TrainingBlock, item: Pick<SessionItem, 'edit'>): TrainingBlock {
@@ -77,32 +80,6 @@ export function recentLessons(
 }
 
 // ---------------------------------------------------------------------------
-// Today's goal
-// ---------------------------------------------------------------------------
-
-/**
- * The goals on offer for one focus.
- *
- * The class's own curriculum comes first — it is what the centre decided this
- * class is for — then everything else suited to the age. Within that, goals
- * run recently sink below ones that haven't, so the top of the list is always
- * a next step rather than a repeat.
- */
-export function goalOptions(
-  templates: SessionTemplate[],
-  cls: Pick<Class, 'ageGroup' | 'curriculumId'>,
-  ability: Ability,
-  recentIds: readonly (ID | null | undefined)[],
-): SessionTemplate[] {
-  const own = (t: SessionTemplate) => Boolean(cls.curriculumId) && t.curriculumId === cls.curriculumId;
-  const ran = (t: SessionTemplate) => recentIds.includes(t.id);
-  // `sessionsFor` already orders by source and usage; the sort is stable.
-  return [...sessionsFor(templates, ability, cls.ageGroup)].sort(
-    (a, b) => Number(own(b)) - Number(own(a)) || Number(ran(a)) - Number(ran(b)),
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Composing the blocks
 // ---------------------------------------------------------------------------
 
@@ -143,54 +120,13 @@ const floorOf = (b: TrainingBlock) => (b.category === 'warmup' ? 5 : 10);
 const CEILING = 30;
 
 /**
- * A goal's blocks, made to fit today.
+ * Minutes for the chosen blocks, so the lesson fills the class.
  *
- * Two passes. First, any block the class can't run — wrong age, more players
- * than are coming — is swapped for one that trains the same ability in the
- * same slot of the hour. Then minutes are nudged in fives until the lesson fills
- * the class: extra time goes to the game first (children came to play), and
- * cuts come off the longest drill so no single part is gutted and the game is
- * the last thing shortened.
+ * Nudged in fives: extra time goes to the game first (children came to play),
+ * and cuts come off the longest drill so no single part is gutted and the
+ * game is the last thing shortened.
  */
-export function composeLesson(
-  template: SessionTemplate,
-  library: TrainingBlock[],
-  when: LessonConditions,
-): Composition {
-  const notes: string[] = [];
-  const byId = new Map(library.map((b) => [b.id, b]));
-  const pool = publishedBlocks(library);
-  const taken = new Set(template.blockIds);
-
-  const blocks = template.blockIds.flatMap((id) => {
-    const block = byId.get(id);
-    if (!block) return [];
-
-    const ageOk = suitsAge(block, when.ageGroup);
-    const countOk = enoughPlayers(block, when.headcount);
-    if (ageOk && countOk) return [block];
-
-    const fits = (b: TrainingBlock) =>
-      !taken.has(b.id) &&
-      b.category === block.category &&
-      suitsAge(b, when.ageGroup) &&
-      enoughPlayers(b, when.headcount);
-    const alt =
-      pool.find((b) => fits(b) && b.ability === block.ability) ??
-      pool.find((b) => fits(b) && b.ability === template.ability) ??
-      pool.find(fits);
-
-    const why = ageOk ? `${when.headcount}명` : when.ageGroup;
-    if (alt) {
-      taken.add(alt.id);
-      notes.push(`${why}에 맞춰 '${block.title}' 대신 '${alt.title}'`);
-      return [alt];
-    }
-    // Nothing to swap in: keep it and say what to change on the pitch.
-    if (!countOk) notes.push(`'${block.title}'은 ${when.headcount}명에 맞춰 인원을 줄여 진행`);
-    return [block];
-  });
-
+function fitMinutes(blocks: TrainingBlock[], when: LessonConditions, notes: string[]): SessionItem[] {
   const minutes = blocks.map((b) => b.durationMin);
   const sum = () => minutes.reduce((a, b) => a + b, 0);
   const before = sum();
@@ -216,7 +152,8 @@ export function composeLesson(
       let longest = -1;
       blocks.forEach((b, i) => {
         if ((b.category === 'game') !== game || minutes[i] - 5 < floorOf(b)) return;
-        if (longest < 0 || minutes[i] > minutes[longest]) longest = i;
+        // On a tie the later drill gives way: the first is the lesson's main one.
+        if (longest < 0 || minutes[i] >= minutes[longest]) longest = i;
       });
       return longest;
     };
@@ -232,18 +169,15 @@ export function composeLesson(
     if (sum() !== before) notes.push(`${when.minutes}분에 맞춰 시간을 나눴어요`);
   }
 
-  return {
-    items: blocks.map((b, i) => ({
-      category: b.category,
-      blockId: b.id,
-      durationMin: minutes[i] === b.durationMin ? null : minutes[i],
-    })),
-    notes,
-  };
+  return blocks.map((b, i) => ({
+    category: b.category,
+    blockId: b.id,
+    durationMin: minutes[i] === b.durationMin ? null : minutes[i],
+  }));
 }
 
 // ---------------------------------------------------------------------------
-// From the last lessons to today's goal
+// What the last lessons ran
 // ---------------------------------------------------------------------------
 
 /**
@@ -257,46 +191,9 @@ export interface Bead {
   category: TrainingBlock['category'];
   ability: Ability;
   minutes: number;
-  /** The skills this block works on, in the coach's words (see `THREADS`). */
-  threads: string[];
 }
 
 export const TODAY = -1;
-
-/**
- * The skills a goal can carry over from one lesson to the next.
- *
- * Abilities are too coarse to say "today follows on from last time" — every
- * 기술 lesson would follow every other. These are the words coaches use for
- * what a drill is *about*, each with the phrasings the library uses for it.
- * A lesson on 패스 정확도 and one on 패스 후 움직임 share 패스; that shared
- * word is the link the coach sees.
- */
-// prettier-ignore
-const THREADS: Array<[thread: string, words: string[]]> = [
-  ['패스', ['패스']],
-  ['첫 터치', ['터치', '받고', '받아', '받기']],
-  ['드리블', ['드리블', '돌파', '제치']],
-  ['슈팅', ['슈팅', '마무리']],
-  ['1대1', ['1대1']],
-  ['공간', ['공간', '빈 곳', '빈 모서리']],
-  ['압박', ['압박', '되찾']],
-  ['수비', ['수비', '커버']],
-  ['방향 전환', ['방향', '민첩', '지그재그']],
-  ['스피드', ['스피드', '출발', '가속', '세 걸음']],
-  ['몸싸움', ['밸런스', '지키', '몸싸움']],
-  ['체력', ['체력', '인터벌', '강도']],
-  ['재도전', ['도전', '실패', '실수']],
-  ['집중', ['집중', '신호']],
-  ['소통', ['이름', '부르', '소통']],
-  ['협력', ['협력', '함께', '미션']],
-  ['역할', ['역할', '책임']],
-];
-
-/** The threads a piece of text mentions, in `THREADS` order. */
-export function threadsIn(text: string): string[] {
-  return THREADS.filter(([, words]) => words.some((w) => text.includes(w))).map(([t]) => t);
-}
 
 /** A lesson's blocks as beads. Items whose block is gone are skipped. */
 export function beadsOf(
@@ -316,7 +213,6 @@ export function beadsOf(
         category: block.category,
         ability: block.ability,
         minutes: item.durationMin ?? block.durationMin,
-        threads: threadsIn(`${block.title} ${block.description}`),
       },
     ];
   });
@@ -325,128 +221,121 @@ export function beadsOf(
 export const pastBeads = (recent: PastLesson[], blockMap: Map<ID, TrainingBlock>): Bead[] =>
   recent.flatMap((l, i) => beadsOf(l.plan?.items ?? [], blockMap, i));
 
-/** Minutes each ability got across the beads. */
-export function minutesByAbility(beads: Bead[]): Record<Ability, number> {
-  const out: Record<Ability, number> = { technical: 0, tactical: 0, physical: 0, mental: 0, attitude: 0 };
-  for (const b of beads) out[b.ability] += b.minutes;
-  return out;
-}
-
 /**
- * What a past lesson was, in a few words.
- *
- * A lesson run from a goal is that goal. One the coach put together by hand has
- * no title, and "직접 구성한 수업" three times in a row tells the coach
- * nothing — so it is named after its main drill: the longest 훈련 block, or the
- * game only when there is none, since every lesson ends in one.
+ * The block that says what a lesson is: its first drill, or its game when
+ * there is no drill, or whatever there is. The first rather than the longest,
+ * because minutes get trimmed to fit the class — a lesson shouldn't be named
+ * after its second drill because it kept five more minutes.
  */
-export function lessonTitle(lesson: PastLesson, beads: Bead[]): string {
-  if (lesson.template) return lesson.template.title;
-  const longest = (category: Bead['category']) =>
-    beads.filter((b) => b.category === category).sort((a, b) => b.minutes - a.minutes)[0];
-  return (longest('skill') ?? longest('game') ?? beads[0])?.title ?? '계획 없이 진행';
+export function mainBlock(beads: Bead[]): Bead | undefined {
+  const first = (category: Bead['category']) => beads.find((b) => b.category === category);
+  return first('skill') ?? first('game') ?? beads[0];
 }
 
-/** Threads a goal is *about* — its name and sentence, not every drill in it. */
-const goalThreads = (t: Pick<SessionTemplate, 'title' | 'goal'>) => threadsIn(`${t.title} ${t.goal}`);
-
-export interface GoalContext {
-  cls: Pick<Class, 'ageGroup' | 'curriculumId'>;
-  recent: PastLesson[];
-  /** `pastBeads(recent, …)`. */
+export interface LessonContext {
+  cls: Pick<Class, 'ageGroup'>;
+  /** `pastBeads(recentLessons(…), …)` — what the class ran lately. */
   past: Bead[];
   library: TrainingBlock[];
   when: LessonConditions;
 }
 
-/** Threads each past lesson worked on — its goal, and everything its blocks did. */
-const threadsByLesson = (ctx: GoalContext): Array<Set<string>> =>
-  ctx.recent.map((lesson, i) => {
-    const out = new Set(lesson.template ? goalThreads(lesson.template) : []);
-    for (const b of ctx.past) if (b.lesson === i) b.threads.forEach((t) => out.add(t));
+// ---------------------------------------------------------------------------
+// Today: 훈련 주제 → blocks
+// ---------------------------------------------------------------------------
+
+/** Drills in a lesson: one for a short class, two otherwise. */
+const drillsFor = (minutes: number) => (minutes > 0 && minutes < 55 ? 1 : 2);
+
+const usableFor = (ctx: Pick<LessonContext, 'library' | 'when'>) =>
+  publishedBlocks(ctx.library).filter((b) => suitsAge(b, ctx.when.ageGroup));
+
+/**
+ * The topics this class can build a lesson on — those with at least one drill
+ * suited to its age. The rest are shown but can't be chosen.
+ */
+export function runnableTopics(ctx: Pick<LessonContext, 'library' | 'when'>): Set<TopicId> {
+  const out = new Set<TopicId>();
+  for (const b of usableFor(ctx)) if (b.category === 'skill') b.topics.forEach((t) => out.add(t));
+  return out;
+}
+
+/**
+ * Today's blocks for one 훈련 주제: a warm-up, the topic's drills, a game.
+ *
+ * Drills come only from blocks mapped to the topic. The warm-up and the game
+ * come from the topic first and from anything after that — a lesson always has
+ * both. Within that the centre's own blocks come before the standard library
+ * (they are the director's way of coaching), then what the class did not run
+ * last time, then what is used most. A block needing more children than are
+ * coming is used only when nothing else fills the slot, and the coach is told.
+ *
+ * Empty when the topic has no drill for the class's age.
+ */
+export function composeForTopic(topic: TopicId, ctx: LessonContext): Composition {
+  const { when } = ctx;
+  const notes: string[] = [];
+  const ranLast = new Set(ctx.past.filter((b) => b.lesson === 0).map((b) => b.blockId));
+  const pool = usableFor(ctx);
+  const onTopic = (b: TrainingBlock) => b.topics.includes(topic);
+  if (!pool.some((b) => b.category === 'skill' && onTopic(b))) return { items: [], notes };
+
+  const rank = (a: TrainingBlock, b: TrainingBlock) =>
+    Number(a.source === 'standard') - Number(b.source === 'standard') ||
+    Number(ranLast.has(a.id)) - Number(ranLast.has(b.id)) ||
+    // A block whose main topic this is beats one that only touches on it.
+    Number(b.topics[0] === topic) - Number(a.topics[0] === topic) ||
+    b.usageCount - a.usageCount;
+  const taken = new Set<ID>();
+  const any = () => true;
+
+  const fill = (
+    category: TrainingBlock['category'],
+    tiers: Array<(b: TrainingBlock) => boolean>,
+    count: number,
+  ): TrainingBlock[] => {
+    const out: TrainingBlock[] = [];
+    const take = (strict: boolean) => {
+      for (const tier of tiers) {
+        const options = pool
+          .filter(
+            (b) =>
+              b.category === category &&
+              !taken.has(b.id) &&
+              tier(b) &&
+              (!strict || enoughPlayers(b, when.headcount)),
+          )
+          .sort(rank);
+        for (const b of options) {
+          if (out.length >= count) return;
+          out.push(b);
+          taken.add(b.id);
+          if (!strict) notes.push(`'${b.title}'은 ${when.headcount}명에 맞춰 인원을 줄여 진행`);
+        }
+      }
+    };
+    take(true);
+    if (out.length === 0) take(false);
     return out;
-  });
+  };
 
-/** Where today's goal picks up from: a past lesson, and the skill it shares. */
-export interface CarryOver {
-  lesson: number;
-  /** The shared skill. Absent when it is simply the same goal again. */
-  thread?: string;
-}
-
-/** The most recent past lesson the goal follows on from, if any. */
-export function carryOver(goal: SessionTemplate, ctx: GoalContext): CarryOver | null {
-  if (ctx.recent[0]?.plan?.templateId === goal.id) return { lesson: 0 };
-  const threads = threadsByLesson(ctx);
-  const focus = goalThreads(goal);
-  const lesson = threads.findIndex((set) => focus.some((t) => set.has(t)));
-  if (lesson < 0) return null;
-  return { lesson, thread: focus.find((t) => threads[lesson].has(t)) };
-}
-
-/** Last lesson's tags that name one of the goal's skills, most frequent first. */
-function tagsFor(goal: SessionTemplate, ctx: GoalContext): Array<[string, number]> {
-  const focus = goalThreads(goal);
-  return (ctx.recent[0]?.tags ?? []).filter(([tag]) => threadsIn(tag).some((t) => focus.includes(t)));
-}
-
-/** Blocks the composer had to swap out for today's headcount or age. */
-const swapsFor = (goal: SessionTemplate, ctx: GoalContext) =>
-  composeLesson(goal, ctx.library, ctx.when).items.filter(
-    (i) => i.blockId && !goal.blockIds.includes(i.blockId),
-  ).length;
-
-/**
- * How well a goal follows on from the last lessons and fits today.
- *
- * In order of weight: don't repeat last lesson's goal; carry a skill on from
- * the last lesson (from the ones before, a little less); the class's own
- * curriculum; something the coach tagged last time; and a goal whose blocks
- * run as written with today's children beats one that has to be patched.
- */
-export function scoreGoal(
-  goal: SessionTemplate,
-  ctx: GoalContext,
-  threads = threadsByLesson(ctx),
-): number {
-  const focus = goalThreads(goal);
-  const shared = (i: number) => focus.filter((t) => threads[i]?.has(t)).length;
-  const ranLast = ctx.recent[0]?.plan?.templateId === goal.id;
-  const ranLately = ctx.recent.some((l, i) => i > 0 && l.plan?.templateId === goal.id);
-  const older = threads.some((_, i) => i > 0 && shared(i) > 0);
-  const own = Boolean(ctx.cls.curriculumId) && goal.curriculumId === ctx.cls.curriculumId;
-  return (
-    (ranLast ? -6 : 0) +
-    (ranLately ? -3 : 0) +
-    2 * Math.min(shared(0), 2) +
-    (older ? 1 : 0) +
-    (own ? 2 : 0) +
-    (tagsFor(goal, ctx).length > 0 ? 1 : 0) -
-    swapsFor(goal, ctx)
-  );
+  const blocks = [
+    ...fill('warmup', [onTopic, any], 1),
+    ...fill('skill', [onTopic], drillsFor(when.minutes)),
+    ...fill('game', [onTopic, any], 1),
+  ];
+  return { items: fitMinutes(blocks, when, notes), notes };
 }
 
 /**
- * The goal to put in front of the coach for one focus.
- *
- * `options` is `goalOptions`' list; ties keep its order, so with no history at
- * all this is simply the class's own curriculum first.
+ * What a saved lesson is called: the 훈련 주제 it was built from, or — for a
+ * plan made before topics, or put together by hand — its main drill's name.
  */
-export function recommendGoal(
-  options: SessionTemplate[],
-  ctx: GoalContext,
-): SessionTemplate | undefined {
-  const threads = threadsByLesson(ctx);
-  let best: SessionTemplate | undefined;
-  let bestScore = -Infinity;
-  for (const goal of options) {
-    const score = scoreGoal(goal, ctx, threads);
-    if (score > bestScore) {
-      best = goal;
-      bestScore = score;
-    }
-  }
-  return best;
+export function lessonName(
+  plan: Pick<SessionPlan, 'items' | 'topic'> | null | undefined,
+  blockMap: Map<ID, TrainingBlock>,
+): string | undefined {
+  if (!plan) return undefined;
+  if (plan.topic) return topicMeta(plan.topic).label;
+  return mainBlock(beadsOf(plan.items, blockMap, TODAY))?.title;
 }
-
-export const shortDate = (d: ISODate) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;

@@ -1,7 +1,7 @@
 /**
  * 수업 — one class on one day.
  *
- * What the coach sees first is today's goal, lit, with where the lesson is in
+ * What the coach sees first is today's 훈련 주제 and hashtags, lit, with where the lesson is in
  * its day (준비 → 수업 → 기록) under it. The 훈련 블록 are the lesson's running
  * order, so they are listed in full rather than folded away — on the pitch this
  * is the screen a coach glances at between drills. A day not yet prepared shows
@@ -15,7 +15,7 @@ import { TODAY } from '@/data/dates';
 import { fromMinutes, minutesNow, stateOf } from '@/data/today';
 import { planFor, sessionDuration } from '@/data/selectors';
 import { formatDateKo } from '@/lib/format';
-import { AbilityTag, BlockList, DetailHeader, LessonProgress, useSessionOf } from './parts';
+import { AbilityHashtags, BlockList, DetailHeader, LessonProgress, useLessonName } from './parts';
 
 interface SessionScreenProps {
   cls: Class;
@@ -39,8 +39,8 @@ export function SessionScreen({
 }: SessionScreenProps) {
   const { state, blockMap } = useApp();
   const plan = planFor(state.sessionPlans, cls.id, date);
-  const goal = useSessionOf(plan?.templateId);
   const items = plan?.items.filter((i) => i.blockId) ?? [];
+  const name = useLessonName(plan);
   const minutes = sessionDuration(items, blockMap);
   const planned = items.length > 0;
 
@@ -72,22 +72,17 @@ export function SessionScreen({
         <section className="mesh rounded-2xl p-5">
           {planned ? (
             <>
-              <div className="flex items-center gap-2">
-                {goal && <AbilityTag ability={goal.ability} className="bg-canvas/80" />}
-                <span className="text-[13px] text-slate">오늘의 목표</span>
-              </div>
-              <h2 className="mt-2.5 text-[24px] font-bold leading-[1.25] tracking-[-0.02em] text-ink">
-                {goal?.title ?? '직접 구성한 수업'}
+              <span className="text-[13px] text-slate">{plan?.topic ? '훈련 주제' : '오늘의 메인 훈련'}</span>
+              <h2 className="mt-1.5 text-[24px] font-bold leading-[1.25] tracking-[-0.02em] text-ink">
+                {name ?? '직접 구성한 수업'}
               </h2>
-              {goal && (
-                <p className="mt-1.5 text-[15px] leading-[1.55] text-charcoal">{goal.goal}</p>
-              )}
+              <AbilityHashtags abilities={plan?.abilities} className="mt-1.5 block" />
             </>
           ) : (
             <>
               <h2 className="text-[22px] font-bold leading-[1.3] text-ink">아직 준비 전이에요</h2>
               <p className="mt-1.5 text-[14.5px] text-charcoal">
-                누가 오는지, 지난 수업에서 무엇을 했는지 보고 목표를 정해요.
+                누가 오는지 보고, 오늘 키울 역량과 훈련 주제를 골라요.
               </p>
             </>
           )}

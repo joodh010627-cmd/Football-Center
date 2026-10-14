@@ -1,37 +1,41 @@
 /**
- * The block library, filtered by the five abilities of the growth pentagon.
+ * The block library, filtered by 훈련 주제.
  * Tick any number and add them in one go — used when preparing a lesson and
  * when writing a library goal.
  */
 
 import { useMemo, useState } from 'react';
 import { Check } from 'lucide-react';
-import type { Ability, Class, ID } from '@/types';
+import type { Class, ID, TopicId } from '@/types';
 import { useApp } from '@/store/AppContext';
 import { blocksFor } from '@/data/selectors';
+import { topicsLine } from '@/data/topics';
 import { cn } from '@/lib/cn';
-import { AbilityChips, AbilityTag } from './parts';
+import { TopicChips } from './TopicPicker';
 
 export function BlockAdder({
   ageGroup,
-  initialAbility = 'all',
+  initialTopic = 'all',
   onAdd,
   onCancel,
   addLabel = '추가',
 }: {
   ageGroup?: Class['ageGroup'];
-  initialAbility?: Ability | 'all';
+  initialTopic?: TopicId | 'all';
   onAdd: (ids: ID[]) => void;
   onCancel: () => void;
   addLabel?: string;
 }) {
   const { state } = useApp();
-  const [ability, setAbility] = useState<Ability | 'all'>(initialAbility);
+  const [topic, setTopic] = useState<TopicId | 'all'>(initialTopic);
   const [picked, setPicked] = useState<ID[]>([]);
 
   const blocks = useMemo(
-    () => blocksFor(state.trainingBlocks, ability, ageGroup),
-    [state.trainingBlocks, ability, ageGroup],
+    () =>
+      blocksFor(state.trainingBlocks, 'all', ageGroup).filter(
+        (b) => topic === 'all' || b.topics.includes(topic),
+      ),
+    [state.trainingBlocks, topic, ageGroup],
   );
 
   const toggle = (id: ID) =>
@@ -39,7 +43,7 @@ export function BlockAdder({
 
   return (
     <div className="mt-3 rounded-lg border border-hairline bg-canvas p-4">
-      <AbilityChips value={ability} onChange={setAbility} />
+      <TopicChips value={topic} onChange={setTopic} />
       <ul className="mt-3 max-h-[360px] overflow-y-auto">
         {blocks.map((b) => {
           const on = picked.includes(b.id);
@@ -59,10 +63,12 @@ export function BlockAdder({
                 >
                   {on && <Check size={12} strokeWidth={3} />}
                 </span>
-                <span className="min-w-0 flex-1 truncate text-[14.5px] font-medium text-ink">
-                  {b.title}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[14.5px] font-medium text-ink">{b.title}</span>
+                  {b.topics.length > 0 && (
+                    <span className="block text-[12px] text-steel">{topicsLine(b.topics)}</span>
+                  )}
                 </span>
-                <AbilityTag ability={b.ability} />
                 <span className="w-9 shrink-0 text-right text-[12.5px] tabular-nums text-steel">
                   {b.durationMin}분
                 </span>

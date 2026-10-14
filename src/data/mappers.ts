@@ -7,12 +7,13 @@
  * please JavaScript), it all happens here.
  *
  * Keep this file boring. If a mapper starts making decisions, that decision
- * belongs in a selector. The one exception is `ability` on rows written before
- * 0007 added the column: it is inferred from the row's own words, because an
- * unfiled session is one no coach can find.
+ * belongs in a selector. The exceptions are `ability` on rows written before
+ * 0007 added the column, and a block's `topic` before 0010: both are inferred
+ * from the row's own words, because an unfiled session is one no coach can find.
  */
 
 import type {
+  Ability,
   ApprovalStatus,
   AttendanceLog,
   AttendanceStatus,
@@ -34,6 +35,8 @@ import type {
   Weekday,
 } from '@/types';
 import { axisFor, axisForBlock } from '@/lib/axes';
+import { isTopicId, topicsForBlock } from './topics';
+import { AXES } from '@/lib/axes';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Row = Record<string, any>;
@@ -86,29 +89,33 @@ export const toStudent = (r: Row): Student => ({
   memo: r.memo ?? undefined,
 });
 
-export const toTrainingBlock = (r: Row): TrainingBlock => ({
-  id: r.id,
-  academyId: r.academy_id,
-  source: 'center',
-  title: r.title,
-  category: r.category as TrainingCategory,
-  ability:
+export const toTrainingBlock = (r: Row): TrainingBlock => {
+  const ability =
     r.ability ??
     axisForBlock({
       title: r.title,
       description: r.description ?? '',
       category: r.category,
-    }),
-  durationMin: r.duration_min,
-  description: r.description ?? '',
-  coachingPoints: r.coaching_points ?? [],
-  ageGroups: (r.age_groups ?? []) as AgeGroup[],
-  equipment: r.equipment ?? [],
-  usageCount: r.usage_count ?? 0,
-  isCoreCurriculum: r.is_core_curriculum ?? false,
-  status: (r.status ?? 'published') as ApprovalStatus,
-  proposedBy: r.proposed_by ?? null,
-});
+    });
+  return {
+    id: r.id,
+    academyId: r.academy_id,
+    source: 'center',
+    title: r.title,
+    category: r.category as TrainingCategory,
+    ability,
+    topics: topicsForBlock({ title: r.title, description: r.description ?? '', topics: r.topics }),
+    durationMin: r.duration_min,
+    description: r.description ?? '',
+    coachingPoints: r.coaching_points ?? [],
+    ageGroups: (r.age_groups ?? []) as AgeGroup[],
+    equipment: r.equipment ?? [],
+    usageCount: r.usage_count ?? 0,
+    isCoreCurriculum: r.is_core_curriculum ?? false,
+    status: (r.status ?? 'published') as ApprovalStatus,
+    proposedBy: r.proposed_by ?? null,
+  };
+};
 
 export const fromTrainingBlock = (b: TrainingBlock): Row => ({
   id: b.id,
@@ -116,6 +123,7 @@ export const fromTrainingBlock = (b: TrainingBlock): Row => ({
   title: b.title,
   category: b.category,
   ability: b.ability,
+  topics: b.topics,
   duration_min: b.durationMin,
   description: b.description,
   coaching_points: b.coachingPoints,
@@ -187,6 +195,8 @@ export const toSessionPlan = (r: Row): SessionPlan => ({
   // `session_key` (0007) holds either kind of session; `template_id` can only
   // hold a centre uuid, so it is the fallback for rows written before 0007.
   templateId: r.session_key ?? r.template_id ?? null,
+  abilities: ((r.abilities ?? []) as string[]).filter((a): a is Ability => (AXES as readonly string[]).includes(a)),
+  topic: isTopicId(r.topic) ? r.topic : null,
   createdAt: r.created_at,
   status: r.status,
 });
@@ -201,6 +211,8 @@ export const fromSessionPlan = (p: SessionPlan): Row => ({
   // A library key is not a uuid and has no row to reference.
   template_id: p.templateId && !p.templateId.startsWith('std-') ? p.templateId : null,
   session_key: p.templateId,
+  abilities: p.abilities ?? [],
+  topic: p.topic ?? null,
   status: p.status,
 });
 

@@ -1,21 +1,19 @@
 /**
  * 수업 준비 — one class on one day, planned the way coaches already plan it.
  *
- * Top to bottom is the order of the thinking: who is coming, then what the last
- * lessons did and so what today is for. The second is one tap on one of the
- * five abilities, written as words: the coach picks
- * the ability to work on, and the app picks the goal, from what the last
- * lessons left off, today's headcount and the class's age group. The goal's
- * 훈련 블록 arrive already fitted to the day. A coach who'd rather do something
- * else opens 바꾸기; the recommendation is a starting point, not a gate.
+ * Top to bottom: who is coming; today's 역량, tapped as hashtags — as many as
+ * fit, a note on the day that builds nothing; the 훈련 주제, one textbook
+ * football ability; and the 훈련 블록 the app builds from that topic, fitted
+ * to today's headcount, minutes and age group. From there the coach edits the
+ * blocks and saves.
  *
  * The same screen edits a lesson that is already prepared: it opens on the
- * saved goal and blocks, and choosing a different goal recomposes.
+ * saved hashtags, topic and blocks, and choosing another topic rebuilds.
  */
 
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, ChevronDown, Minus, Pencil, Plus, Repeat2, Sparkles, X } from 'lucide-react';
-import type { Ability, BlockEdit, Class, ID, ISODate, SessionItem, TrainingBlock } from '@/types';
+import type { Ability, BlockEdit, Class, ID, ISODate, SessionItem, TopicId, TrainingBlock } from '@/types';
 import { useApp } from '@/store/AppContext';
 import { useWorkspace } from '@/store/WorkspaceContext';
 import { trialsOn } from '@/data/crm';
@@ -23,21 +21,20 @@ import { fromMinutes } from '@/data/today';
 import { blocksFor, planFor, sessionDuration, studentsInClass } from '@/data/selectors';
 import {
   blockAsRun,
-  composeLesson,
-  carryOver,
-  goalOptions,
+  composeForTopic,
   pastBeads,
   recentLessons,
-  recommendGoal,
-  type GoalContext,
+  runnableTopics,
+  type LessonContext,
 } from '@/data/lessonPrep';
+import { topicsLine } from '@/data/topics';
 import { formatDateKo } from '@/lib/format';
 import { cn } from '@/lib/cn';
-import { ABILITY_META, CATEGORY_META } from './meta';
-import { AbilityChips, DetailHeader, More } from './parts';
+import { CATEGORY_META } from './meta';
+import { DetailHeader, More } from './parts';
 import { BlockAdder } from './BlockAdder';
 import { AbilityPicker } from './AbilityPicker';
-import { LessonFlow } from './LessonFlow';
+import { TopicChips, TopicPicker } from './TopicPicker';
 
 interface LessonPrepScreenProps {
   cls: Class;
@@ -48,11 +45,8 @@ interface LessonPrepScreenProps {
   onDone: () => void;
 }
 
-/** Goals shown before 더 보기. Past four the list stops being a choice. */
-const SHOWN_GOALS = 4;
-
 export function LessonPrepScreen({ cls, date, backLabel, onBack, onDone }: LessonPrepScreenProps) {
-  const { state, dispatch, blockMap, getTemplate } = useApp();
+  const { state, dispatch, blockMap } = useApp();
   const { leads } = useWorkspace();
 
   // --- Today's facts ------------------------------------------------------
@@ -66,85 +60,49 @@ export function LessonPrepScreen({ cls, date, backLabel, onBack, onDone }: Lesso
     [leads, date, cls.id],
   );
   const headcount = roster.length + trials.length;
-  const recent = useMemo(() => recentLessons(state, cls, date), [state, cls, date]);
-  const past = useMemo(() => pastBeads(recent, blockMap), [recent, blockMap]);
+  // Only to keep last lesson's blocks from coming straight back.
+  const past = useMemo(
+    () => pastBeads(recentLessons(state, cls, date, 1), blockMap),
+    [state, cls, date, blockMap],
+  );
 
-  const ctx: GoalContext = useMemo(
+  const ctx: LessonContext = useMemo(
     () => ({
       cls,
-      recent,
       past,
       library: state.trainingBlocks,
       when: { ageGroup: cls.ageGroup, headcount, minutes: cls.schedule.durationMin },
     }),
-    [cls, recent, past, state.trainingBlocks, headcount],
+    [cls, past, state.trainingBlocks, headcount],
   );
 
   // --- The plan being prepared -------------------------------------------
 
   const saved = planFor(state.sessionPlans, cls.id, date);
-  const savedGoal = saved?.templateId ? getTemplate(saved.templateId) : undefined;
-
-  // No focus until the coach taps one: which ability today is for is the one
-  // decision the app leaves to them.
-  const [ability, setAbility] = useState<Ability | null>(savedGoal?.ability ?? null);
-  const [goalId, setGoalId] = useState<ID | null>(saved?.templateId ?? null);
   const [items, setItems] = useState<SessionItem[]>(() =>
     (saved?.items ?? []).filter((i) => i.blockId),
   );
+  const [abilities, setAbilities] = useState<Ability[]>(() => saved?.abilities ?? []);
+  const [topic, setTopic] = useState<TopicId | null>(() => saved?.topic ?? null);
   const [notes, setNotes] = useState<string[]>([]);
-  const [picking, setPicking] = useState(false);
-  const [allGoals, setAllGoals] = useState(false);
-  const blocksRef = useRef<HTMLElement>(null);
-
-  const recentIds = useMemo(() => recent.map((l) => l.plan?.templateId), [recent]);
-  const goals = useMemo(
-    () => (ability ? goalOptions(state.sessionTemplates, cls, ability, recentIds) : []),
-    [state.sessionTemplates, cls, ability, recentIds],
-  );
-  const recommended = useMemo(() => recommendGoal(goals, ctx), [goals, ctx]);
-  const shownGoals = allGoals ? goals : goals.slice(0, SHOWN_GOALS);
-  const goal = goalId ? getTemplate(goalId) : undefined;
-
-  const carry = useMemo(() => (goal ? carryOver(goal, ctx) : null), [goal, ctx]);
+  const runnable = useMemo(() => runnableTopics(ctx), [ctx]);
 
   const total = sessionDuration(items, blockMap);
 
-  const choose = (id: ID, scroll = false) => {
-    const template = getTemplate(id);
-    if (!template) return;
-    const composed = composeLesson(template, state.trainingBlocks, ctx.when);
-    setGoalId(id);
+  /** Hashtags only: toggling one changes nothing else on the screen. */
+  const toggleAbility = (a: Ability) =>
+    setAbilities((cur) => (cur.includes(a) ? cur.filter((x) => x !== a) : [...cur, a]));
+
+  /** A topic chosen: the app answers with its blocks, replacing the old ones. */
+  const pickTopic = (t: TopicId) => {
+    const composed = composeForTopic(t, ctx);
+    setTopic(t);
     setItems(composed.items);
     setNotes(composed.notes);
-    if (scroll) {
-      // Picked from the list, which can push the blocks off a phone screen.
-      window.setTimeout(
-        () => blocksRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
-        60,
-      );
-    }
-  };
-
-  /** A focus tapped: the app answers with a goal. */
-  const pickAbility = (a: Ability) => {
-    setAbility(a);
-    setPicking(false);
-    setAllGoals(false);
-    const options = goalOptions(state.sessionTemplates, cls, a, recentIds);
-    const best = recommendGoal(options, ctx);
-    if (best) choose(best.id);
-    else {
-      // Nothing for this age on this ability: say so rather than keep a goal
-      // from another ability on screen as if it answered the tap.
-      setGoalId(null);
-      setItems([]);
-      setNotes([]);
-    }
   };
 
   const save = () => {
-    dispatch({ type: 'plan/save', classId: cls.id, date, items, templateId: goalId });
+    dispatch({ type: 'plan/save', classId: cls.id, date, items, templateId: null, abilities, topic });
     onDone();
   };
 
@@ -203,105 +161,22 @@ export function LessonPrepScreen({ cls, date, backLabel, onBack, onDone }: Lesso
           </div>
         </Step>
 
-        {/* 2 — what today is for, read off what the last lessons did */}
-        <Step n={2} title="오늘의 목표">
-          <AbilityPicker selected={ability} onSelect={pickAbility} />
-
-          <div className="mt-3">
-            <LessonFlow
-              recent={recent}
-              past={past}
-              carry={carry}
-              today={{
-                ready: Boolean(goal),
-                body: (
-                  <div>
-                    <p className={cn('text-[13px] font-bold', goal ? 'text-primary' : 'text-stone')}>
-                      오늘
-                    </p>
-                    {goal ? (
-                      <div key={goal.id} className="animate-fade-in">
-                        <div className="mt-0.5 flex items-baseline gap-3">
-                          <p className="min-w-0 flex-1 text-[20px] font-bold leading-tight tracking-[-0.02em] text-ink">
-                            {goal.title}
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() => setPicking((v) => !v)}
-                            aria-expanded={picking}
-                            className="flex shrink-0 items-center gap-0.5 text-[13px] font-semibold text-steel transition-colors hover:text-ink"
-                          >
-                            바꾸기
-                            <ChevronDown
-                              size={14}
-                              strokeWidth={2.4}
-                              className={cn('transition-transform duration-200', picking && 'rotate-180')}
-                            />
-                          </button>
-                        </div>
-
-                        {picking && (
-                          <ul className="animate-fade-in mt-2.5 space-y-1">
-                            {shownGoals.map((t) => {
-                              const on = t.id === goalId;
-                              return (
-                                <li key={t.id}>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      choose(t.id, true);
-                                      setPicking(false);
-                                    }}
-                                    aria-pressed={on}
-                                    className={cn(
-                                      'flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-[14.5px] transition-colors',
-                                      on ? 'bg-primary-wash font-bold text-primary' : 'text-ink hover:bg-surface-soft',
-                                    )}
-                                  >
-                                    <span className="min-w-0 flex-1 truncate">{t.title}</span>
-                                    {t.id === recommended?.id && (
-                                      <span className="shrink-0 text-[12px] font-semibold text-primary">추천</span>
-                                    )}
-                                  </button>
-                                </li>
-                              );
-                            })}
-                            {!allGoals && goals.length > SHOWN_GOALS && (
-                              <li>
-                                <button
-                                  type="button"
-                                  onClick={() => setAllGoals(true)}
-                                  className="w-full py-1.5 text-center text-[13px] font-semibold text-steel hover:text-ink"
-                                >
-                                  {goals.length - SHOWN_GOALS}개 더 보기
-                                </button>
-                              </li>
-                            )}
-                          </ul>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="mt-0.5 text-[15px] text-steel">
-                        {ability && goals.length === 0
-                          ? `${cls.ageGroup} ${ABILITY_META[ability].label} 목표가 아직 없어요`
-                          : items.length > 0
-                            ? '직접 구성한 수업'
-                            : '역량을 누르면 목표가 정해져요'}
-                      </p>
-                    )}
-                  </div>
-                ),
-              }}
-            />
-          </div>
+        {/* 2 — the coach's hashtags for the day */}
+        <Step n={2} title="오늘 키울 역량">
+          <AbilityPicker selected={abilities} onToggle={toggleAbility} />
         </Step>
 
-        {/* 3 — the blocks, once there is a goal (or a plan to edit) */}
-        {(goalId || items.length > 0) && (
-          <section ref={blocksRef} className="scroll-mt-4">
+        {/* 3 — what today trains */}
+        <Step n={3} title="훈련 주제">
+          <TopicPicker selected={topic} runnable={runnable} onSelect={pickTopic} />
+        </Step>
+
+        {/* 4 — the blocks, once there are any */}
+        {items.length > 0 && (
+          <section>
             <div className="flex items-baseline justify-between gap-3">
               <h2 className="flex items-center gap-2 text-[19px] font-bold tracking-[-0.02em] text-ink">
-                <StepNo n={3} />
+                <StepNo n={4} />
                 훈련 블록
               </h2>
               <span
@@ -314,7 +189,7 @@ export function LessonPrepScreen({ cls, date, backLabel, onBack, onDone }: Lesso
               </span>
             </div>
 
-            {goal && notes.length > 0 && (
+            {notes.length > 0 && (
               <div className="mt-3 flex gap-2 rounded-lg bg-primary-wash px-3.5 py-3 text-[13.5px] leading-[1.55] text-charcoal">
                 <Sparkles size={15} className="mt-[3px] shrink-0 text-primary" />
                 <div>
@@ -330,12 +205,7 @@ export function LessonPrepScreen({ cls, date, backLabel, onBack, onDone }: Lesso
               </div>
             )}
 
-            <BlockPlan
-              items={items}
-              onChange={setItems}
-              ageGroup={cls.ageGroup}
-              focus={goal?.ability ?? ability ?? 'technical'}
-            />
+            <BlockPlan items={items} onChange={setItems} ageGroup={cls.ageGroup} focus={topic} />
           </section>
         )}
       </div>
@@ -347,7 +217,7 @@ export function LessonPrepScreen({ cls, date, backLabel, onBack, onDone }: Lesso
           disabled={items.length === 0}
           className="btn-primary w-full py-3.5 text-[15px] lg:max-w-2xl"
         >
-          {items.length === 0 ? '오늘 키울 역량을 눌러 주세요' : saved ? '저장' : '준비 완료'}
+          {items.length === 0 ? '훈련 주제를 골라 주세요' : saved ? '저장' : '준비 완료'}
         </button>
       </div>
     </div>
@@ -396,7 +266,8 @@ function BlockPlan({
   items: SessionItem[];
   onChange: (next: SessionItem[]) => void;
   ageGroup: Class['ageGroup'];
-  focus: Ability;
+  /** Today's 훈련 주제 — where the add list opens. */
+  focus: TopicId | null;
 }) {
   const { blockMap } = useApp();
   const [open, setOpen] = useState<number | null>(null);
@@ -457,7 +328,9 @@ function BlockPlan({
                   </span>
                   {block && (
                     <span className="mt-0.5 block text-[12.5px] text-steel">
-                      {CATEGORY_META[block.category].label} · {ABILITY_META[block.ability].label}
+                      {[CATEGORY_META[block.category].label, topicsLine(block.topics)]
+                        .filter(Boolean)
+                        .join(' · ')}
                       {item.edit && <span className="font-semibold text-primary"> · 수정함</span>}
                     </span>
                   )}
@@ -578,7 +451,7 @@ function BlockPlan({
       {adding ? (
         <BlockAdder
           ageGroup={ageGroup}
-          initialAbility={focus}
+          initialTopic={focus ?? 'all'}
           onAdd={(ids) => {
             set([
               ...items,
@@ -721,7 +594,7 @@ function Action({
   );
 }
 
-/** Blocks that could take this one's place — same ability to start with. */
+/** Blocks that could take this one's place — the block's main topic to start with. */
 function SwapList({
   current,
   ageGroup,
@@ -734,19 +607,19 @@ function SwapList({
   onPick: (b: TrainingBlock) => void;
 }) {
   const { state } = useApp();
-  const [ability, setAbility] = useState<Ability | 'all'>(current.ability);
+  const [topic, setTopic] = useState<TopicId | 'all'>(current.topics[0] ?? 'all');
   const options = useMemo(
     () =>
-      blocksFor(state.trainingBlocks, ability, ageGroup)
-        .filter((b) => !exclude.includes(b.id))
+      blocksFor(state.trainingBlocks, 'all', ageGroup)
+        .filter((b) => !exclude.includes(b.id) && (topic === 'all' || b.topics.includes(topic)))
         // Same slot of the hour first: a warm-up is swapped for a warm-up.
         .sort((a, b) => Number(b.category === current.category) - Number(a.category === current.category)),
-    [state.trainingBlocks, ability, ageGroup, exclude, current.category],
+    [state.trainingBlocks, topic, ageGroup, exclude, current.category],
   );
 
   return (
     <div className="animate-fade-in mt-3 rounded-lg border border-hairline bg-surface-soft/60 p-3">
-      <AbilityChips value={ability} onChange={setAbility} />
+      <TopicChips value={topic} onChange={setTopic} />
       <ul className="mt-2 max-h-[280px] overflow-y-auto">
         {options.map((b) => (
           <li key={b.id}>
@@ -757,7 +630,9 @@ function SwapList({
             >
               <span className="min-w-0 flex-1 truncate text-[14.5px] font-medium text-ink">{b.title}</span>
               <span className="shrink-0 text-[12.5px] text-steel">
-                {CATEGORY_META[b.category].label} · {b.durationMin}분
+                {[topicsLine(b.topics), CATEGORY_META[b.category].label, `${b.durationMin}분`]
+                  .filter(Boolean)
+                  .join(' · ')}
               </span>
             </button>
           </li>

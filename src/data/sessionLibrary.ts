@@ -15,7 +15,7 @@
  * so persistence can tell a library row from a database row at a glance.
  */
 
-import type { AgeGroup, Ability, SessionTemplate, TrainingBlock, TrainingCategory } from '@/types';
+import type { AgeGroup, Ability, SessionTemplate, TopicId, TrainingBlock, TrainingCategory } from '@/types';
 
 export const SOURCE_LABEL = {
   standard: 'FC GROWTH 표준',
@@ -98,6 +98,29 @@ const BLOCKS: BlockSeed[] = [
   ['std-g-talk', '말하는 팀 게임', 'game', 'attitude', 20, '4대4. 패스 전 이름을 부르지 않으면 상대 공. 득점하면 팀 전원이 하이파이브.', ['이름 부르기', '동료 실수에 격려'], ['미니골대 2개', '조끼', '공 4개']],
 ];
 
+/**
+ * The 훈련 주제 each block serves. Written out rather than read off the words:
+ * the library is the reference every centre's own blocks are compared
+ * against, so it should never be a guess. The first is the block's main one.
+ */
+// prettier-ignore
+const BLOCK_TOPICS: Record<string, TopicId[]> = {
+  'std-w-ball': ['ball-mastery'], 'std-w-move': ['agility', 'coordination'], 'std-w-rondo': ['possession', 'passing'],
+  'std-w-tag': ['dribbling', 'ball-mastery'], 'std-w-names': ['passing'],
+  'std-t-gates': ['passing'], 'std-t-triangle': ['passing', 'off-ball'], 'std-t-firsttouch': ['first-touch'], 'std-t-turn': ['first-touch'],
+  'std-t-dribble': ['dribbling'], 'std-t-1v1': ['dribbling'], 'std-t-shoot': ['shooting'], 'std-t-finish': ['shooting', 'first-touch'],
+  'std-c-passmove': ['off-ball', 'passing'], 'std-c-3v1': ['possession', 'off-ball'], 'std-c-scan': ['off-ball', 'first-touch'],
+  'std-c-zones': ['build-up', 'possession'], 'std-c-transition': ['transition', 'defending'],
+  'std-c-defend1v1': ['defending'], 'std-c-cover': ['defending'],
+  'std-p-agility': ['agility'], 'std-p-react': ['speed'], 'std-p-race': ['speed'], 'std-p-balance': ['coordination'],
+  'std-p-shield': ['strength'], 'std-p-interval': ['endurance', 'possession'],
+  'std-m-retry': ['dribbling'], 'std-m-switch': ['ball-mastery', 'dribbling'], 'std-m-challenge': ['dribbling', 'ball-mastery'],
+  'std-m-pressure': ['possession'],
+  'std-a-call': ['passing', 'possession'], 'std-a-mission': ['passing'], 'std-a-roles': ['defending', 'goalkeeping'], 'std-a-explain': [],
+  'std-g-3pass': ['passing', 'possession'], 'std-g-endzone': ['dribbling'], 'std-g-2touch': ['possession', 'first-touch'],
+  'std-g-small': ['possession', 'transition'], 'std-g-bonus': ['shooting', 'dribbling'], 'std-g-talk': ['passing', 'possession'],
+};
+
 // prettier-ignore
 type SessionSeed = [id: string, ability: Ability, title: string, goal: string, blockIds: string[], ages?: AgeGroup[]];
 
@@ -138,6 +161,7 @@ export const STANDARD_BLOCKS: TrainingBlock[] = BLOCKS.map(
     title,
     category,
     ability,
+    topics: BLOCK_TOPICS[id] ?? [],
     durationMin,
     description,
     coachingPoints,

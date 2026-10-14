@@ -13,7 +13,7 @@ import { useApp } from '@/store/AppContext';
 import { nextMeeting, pastSessions, planFor, studentsInClass } from '@/data/selectors';
 import { formatDateKo, formatSchedule } from '@/lib/format';
 import { Section } from '@/components/shell/Shell';
-import { AbilityTag, DetailHeader, More } from './parts';
+import { DetailHeader, More, useLessonName } from './parts';
 
 interface ClassDetailScreenProps {
   cls: Class;
@@ -99,9 +99,9 @@ function SessionDayRow({
   attendance?: string;
   onOpen: () => void;
 }) {
-  const { state, getTemplate } = useApp();
+  const { state } = useApp();
   const plan = planFor(state.sessionPlans, cls.id, date);
-  const session = plan?.templateId ? getTemplate(plan.templateId) : undefined;
+  const name = useLessonName(plan);
   const planned = Boolean(plan?.items.some((i) => i.blockId));
 
   return (
@@ -115,9 +115,8 @@ function SessionDayRow({
           {formatDateKo(date)}
         </span>
         <span className="flex min-w-0 flex-1 items-center gap-2">
-          {session && <AbilityTag ability={session.ability} />}
           <span className="truncate text-[14.5px] text-ink">
-            {session?.title ?? (planned ? '직접 구성' : '목표 미정')}
+            {name ?? (planned ? '직접 구성' : '준비 전')}
           </span>
         </span>
         {attendance && (

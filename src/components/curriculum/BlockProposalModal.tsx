@@ -9,11 +9,12 @@
 
 import { useState } from 'react';
 import { Send } from 'lucide-react';
-import type { Ability, AgeGroup, TrainingCategory } from '@/types';
+import type { Ability, AgeGroup, TopicId, TrainingCategory } from '@/types';
 import { useApp } from '@/store/AppContext';
 import { useSession } from '@/store/AuthContext';
 import { can } from '@/lib/permissions';
 import { cn } from '@/lib/cn';
+import { TOPICS } from '@/data/topics';
 import { Modal } from '@/components/ui/Modal';
 import { ABILITY_META, ABILITY_ORDER, CATEGORY_META } from '@/components/session/meta';
 
@@ -39,6 +40,7 @@ export function BlockProposalModal({
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<TrainingCategory>('skill');
   const [ability, setAbility] = useState<Ability>('technical');
+  const [topics, setTopics] = useState<TopicId[]>([]);
   const [durationMin, setDurationMin] = useState(20);
   const [description, setDescription] = useState('');
   const [equipment, setEquipment] = useState('');
@@ -59,6 +61,7 @@ export function BlockProposalModal({
         title: title.trim(),
         category,
         ability,
+        topics,
         durationMin,
         description: description.trim(),
         coachingPoints: [],
@@ -120,6 +123,30 @@ export function BlockProposalModal({
                 )}
               >
                 {ABILITY_META[a].label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <span className="mb-1.5 block text-[12px] font-semibold text-charcoal">
+            훈련 주제 <span className="font-normal text-stone">여러 개 가능</span>
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {TOPICS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                // Several allowed — a game can serve 볼 소유 and 공수 전환 alike.
+                onClick={() =>
+                  setTopics((cur) => (cur.includes(t.id) ? cur.filter((x) => x !== t.id) : [...cur, t.id]))
+                }
+                className={cn(
+                  'pill-tab !px-3.5 !py-1.5 !text-[13px]',
+                  topics.includes(t.id) && 'pill-tab-active',
+                )}
+              >
+                {t.label}
               </button>
             ))}
           </div>

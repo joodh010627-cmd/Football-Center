@@ -1,32 +1,56 @@
 /**
  * 수업 준비's composer decides what a coach walks onto the pitch with, so the
  * rules are the ones a coach would notice first: the hour adds up, nobody is
- * handed a 5대5 with seven children, and a U7 class never gets a U11 drill.
+ * handed a 5대5 with seven children, a U7 class never gets a U11 drill, and the
+ * drills are the 훈련 주제 the coach chose.
  */
 
 import { describe, expect, it } from 'vitest';
-import type { SessionTemplate } from '@/types';
-import { STANDARD_BLOCKS, STANDARD_SESSIONS } from './sessionLibrary';
+import type { AgeGroup, TopicId, TrainingBlock } from '@/types';
+import { STANDARD_BLOCKS } from './sessionLibrary';
 import {
   beadsOf,
   blockAsRun,
-  composeLesson,
-  goalOptions,
-  carryOver,
-  lessonTitle,
+  composeForTopic,
+  lessonName,
+  mainBlock,
   minPlayers,
   pastBeads,
-  recommendGoal,
-  type GoalContext,
+  runnableTopics,
+  type LessonContext,
   type PastLesson,
 } from './lessonPrep';
 import { fromSessionPlan, toSessionPlan } from './mappers';
 import { sessionDuration } from './selectors';
 
-const blockMap = new Map(STANDARD_BLOCKS.map((b) => [b.id, b]));
-const session = (id: string) => STANDARD_SESSIONS.find((s) => s.id === id) as SessionTemplate;
-const minutesOf = (items: ReturnType<typeof composeLesson>['items']) =>
-  sessionDuration(items, blockMap);
+const lib = new Map(STANDARD_BLOCKS.map((b) => [b.id, b]));
+
+/** A past lesson that ran these blocks as written. */
+const lesson = (ids: string[], date: string): PastLesson => ({
+  date,
+  template: undefined,
+  present: 10,
+  total: 12,
+  tags: [],
+  plan: {
+    id: date, academyId: 'a', classId: 'c', coachId: 'k', date, createdAt: '', status: 'completed', templateId: null,
+    items: ids.map((id) => ({ category: lib.get(id)!.category, blockId: id, durationMin: null })),
+  },
+});
+
+const ctxOf = (
+  recent: PastLesson[] = [],
+  { headcount = 12, ageGroup = 'U9', minutes = 60, library = STANDARD_BLOCKS }:
+    { headcount?: number; ageGroup?: AgeGroup; minutes?: number; library?: TrainingBlock[] } = {},
+): LessonContext => ({
+  cls: { ageGroup },
+  past: pastBeads(recent, new Map(library.map((b) => [b.id, b]))),
+  library,
+  when: { ageGroup, headcount, minutes },
+});
+
+const blocksOf = (topic: TopicId, ctx: LessonContext) =>
+  composeForTopic(topic, ctx).items.map((i) => lib.get(i.blockId!)!);
 
 describe('minPlayers', () => {
   it('reads the player count from "N대M"', () => {
@@ -37,98 +61,111 @@ describe('minPlayers', () => {
   });
 });
 
-describe('composeLesson with odd-minute blocks', () => {
+describe('composeForTopic — the shape of the hour', () => {
+  it('opens with a warm-up, ends in a game, with the drills in between', () => {
+    expect(blocksOf('passing', ctxOf()).map((b) => b.category)).toEqual(['warmup', 'skill', 'skill', 'game']);
+  });
+
+  it('runs one drill in a short class', () => {
+    const cats = blocksOf('passing', ctxOf([], { minutes: 50 })).map((b) => b.category);
+    expect(cats.filter((c) => c === 'skill')).toHaveLength(1);
+  });
+
+  it('takes every drill from the blocks mapped to the topic', () => {
+    const ctx = ctxOf();
+    for (const topic of runnableTopics(ctx)) {
+      const drills = blocksOf(topic, ctx).filter((b) => b.category === 'skill');
+      expect(drills.length, topic).toBeGreaterThan(0);
+      for (const b of drills) expect(b.topics, `${topic} ${b.id}`).toContain(topic);
+    }
+  });
+
+  it('fills the class exactly', () => {
+    for (const minutes of [60, 70, 90]) {
+      const { items } = composeForTopic('dribbling', ctxOf([], { minutes }));
+      expect(sessionDuration(items, lib), `${minutes}분`).toBe(minutes);
+    }
+  });
+
+  it('trims to a short class without gutting any block', () => {
+    const { items } = composeForTopic('possession', ctxOf([], { minutes: 45 }));
+    expect(sessionDuration(items, lib)).toBeLessThanOrEqual(45);
+    for (const item of items) expect(item.durationMin ?? 99).toBeGreaterThanOrEqual(5);
+  });
+
   it('gives the few minutes fives cannot cover to the game', () => {
     const odd = STANDARD_BLOCKS.map((b) => (b.id === 'std-t-gates' ? { ...b, durationMin: 18 } : b));
-    const { items } = composeLesson(session('std-s-pass'), odd, {
-      ageGroup: 'U9',
-      headcount: 12,
-      minutes: 65,
-    });
+    const { items } = composeForTopic('passing', ctxOf([], { minutes: 65, library: odd }));
     expect(sessionDuration(items, new Map(odd.map((b) => [b.id, b])))).toBe(65);
   });
 });
 
-describe('composeLesson', () => {
-  it('fills the class exactly when the class runs longer than the goal', () => {
-    // 10 + 15 + 15 + 20 = 60 → 70
-    const { items, notes } = composeLesson(session('std-s-pass'), STANDARD_BLOCKS, {
-      ageGroup: 'U9',
-      headcount: 12,
-      minutes: 70,
-    });
-    expect(minutesOf(items)).toBe(70);
-    expect(notes.some((n) => n.includes('70분'))).toBe(true);
-  });
-
-  it('trims to a class shorter than the goal without gutting any block', () => {
-    const { items } = composeLesson(session('std-s-pass'), STANDARD_BLOCKS, {
-      ageGroup: 'U9',
-      headcount: 12,
-      minutes: 50,
-    });
-    expect(minutesOf(items)).toBeLessThanOrEqual(50);
-    for (const item of items) expect(item.durationMin ?? 99).toBeGreaterThanOrEqual(5);
-  });
-
-  it('leaves a goal alone when it already fits', () => {
-    const { items, notes } = composeLesson(session('std-s-pass'), STANDARD_BLOCKS, {
-      ageGroup: 'U9',
-      headcount: 12,
-      minutes: 60,
-    });
-    expect(items.every((i) => i.durationMin === null)).toBe(true);
-    expect(notes).toEqual([]);
-  });
-
-  it('swaps a block that needs more players than are coming', () => {
-    // 두 터치 경기 is 5대5.
-    const { items, notes } = composeLesson(session('std-s-firsttouch'), STANDARD_BLOCKS, {
-      ageGroup: 'U9',
-      headcount: 7,
-      minutes: 60,
-    });
-    const ids = items.map((i) => i.blockId);
-    expect(ids).not.toContain('std-g-2touch');
-    for (const id of ids) expect(minPlayers(blockMap.get(id!)!)).toBeLessThanOrEqual(7);
-    expect(notes.some((n) => n.includes('7명'))).toBe(true);
-  });
-
-  it('keeps every block suitable for the age group', () => {
-    // 공간 인식 opens with a U9+ rondo.
-    const { items } = composeLesson(session('std-s-scan'), STANDARD_BLOCKS, {
-      ageGroup: 'U7',
-      headcount: 10,
-      minutes: 60,
-    });
-    for (const item of items) {
-      const block = blockMap.get(item.blockId!)!;
-      expect(block.ageGroups.includes('U7'), block.id).toBe(true);
+describe('composeForTopic — the children who are coming', () => {
+  it('never hands seven children a block that needs more', () => {
+    const ctx = ctxOf([], { headcount: 7 });
+    for (const topic of runnableTopics(ctx)) {
+      for (const b of blocksOf(topic, ctx)) expect(minPlayers(b), `${topic} ${b.title}`).toBeLessThanOrEqual(7);
     }
   });
 
+  it('keeps every block suitable for the age group', () => {
+    const ctx = ctxOf([], { ageGroup: 'U7' });
+    for (const topic of runnableTopics(ctx)) {
+      for (const b of blocksOf(topic, ctx)) expect(b.ageGroups.includes('U7'), `${topic} ${b.id}`).toBe(true);
+    }
+  });
+
+  it('only offers topics the age group has a drill for', () => {
+    // 빌드업's only drill is U11+.
+    expect(runnableTopics(ctxOf([], { ageGroup: 'U9' })).has('build-up')).toBe(false);
+    expect(runnableTopics(ctxOf([], { ageGroup: 'U11' })).has('build-up')).toBe(true);
+  });
+
   it('never puts the same block in twice', () => {
-    const { items } = composeLesson(session('std-s-scan'), STANDARD_BLOCKS, {
-      ageGroup: 'U7',
-      headcount: 4,
-      minutes: 60,
-    });
-    const ids = items.map((i) => i.blockId);
+    const ids = composeForTopic('possession', ctxOf([], { ageGroup: 'U7', headcount: 4 })).items.map((i) => i.blockId);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('is empty when the topic has no drill for the class', () => {
+    expect(composeForTopic('heading', ctxOf())).toEqual({ items: [], notes: [] });
   });
 });
 
-describe('goalOptions', () => {
-  const own: SessionTemplate = { ...session('std-s-dribble'), id: 'own', source: 'center', curriculumId: 'cur-1', usageCount: 0 };
-
-  it("puts the class's own curriculum first", () => {
-    const list = goalOptions([...STANDARD_SESSIONS, own], { ageGroup: 'U9', curriculumId: 'cur-1' }, 'technical', []);
-    expect(list[0].id).toBe('own');
+describe('composeForTopic — which blocks', () => {
+  it("puts the centre's own block ahead of the standard library", () => {
+    const own: TrainingBlock = { ...lib.get('std-t-gates')!, id: 'own', source: 'center', title: '우리 센터 패스' };
+    const { items } = composeForTopic('passing', ctxOf([], { library: [...STANDARD_BLOCKS, own] }));
+    expect(items.find((i) => i.category === 'skill')?.blockId).toBe('own');
   });
 
-  it('sinks goals run recently below ones that have not been', () => {
-    const list = goalOptions(STANDARD_SESSIONS, { ageGroup: 'U9', curriculumId: null }, 'technical', ['std-s-pass']);
-    expect(list[list.length - 1].id).toBe('std-s-pass');
+  it("doesn't bring last lesson's drills straight back when others fit", () => {
+    const first = blocksOf('dribbling', ctxOf()).filter((b) => b.category === 'skill').map((b) => b.id);
+    const last = lesson(['std-w-ball', ...first, 'std-g-endzone'], '2026-09-29');
+    const next = blocksOf('dribbling', ctxOf([last])).filter((b) => b.category === 'skill').map((b) => b.id);
+    for (const id of next) expect(first).not.toContain(id);
+  });
+});
+
+describe('lessonName', () => {
+  it('is the 훈련 주제 the lesson was built from', () => {
+    expect(lessonName({ items: [], topic: 'passing' }, lib)).toBe('패스');
+  });
+
+  it('falls back to the main drill for a lesson without one', () => {
+    const items = lesson(['std-w-ball', 'std-c-scan', 'std-g-3pass'], 'x').plan!.items;
+    expect(lessonName({ items, topic: null }, lib)).toBe('색깔 보고 받기');
+  });
+});
+
+describe('mainBlock', () => {
+  it('is the first drill, not the longer game', () => {
+    const beads = beadsOf(lesson(['std-w-ball', 'std-c-scan', 'std-g-3pass'], 'x').plan!.items, lib, 0);
+    expect(mainBlock(beads)?.blockId).toBe('std-c-scan');
+  });
+
+  it('falls back to the game when there is no drill', () => {
+    const beads = beadsOf(lesson(['std-w-move', 'std-g-talk'], 'x').plan!.items, lib, 0);
+    expect(mainBlock(beads)?.blockId).toBe('std-g-talk');
   });
 });
 
@@ -155,77 +192,5 @@ describe('plan items round-trip', () => {
       items: [{ category: 'skill' as const, blockId: 'std-t-gates', durationMin: null, edit: { title: '수정' } }],
     };
     expect(toSessionPlan(fromSessionPlan(plan)).items[0].edit).toEqual({ title: '수정' });
-  });
-});
-
-describe('recommending a goal', () => {
-  const library = STANDARD_BLOCKS;
-  const lib = new Map(library.map((b) => [b.id, b]));
-  const lesson = (templateId: string, date: string, tags: Array<[string, number]> = []): PastLesson => {
-    const t = session(templateId);
-    return {
-      date,
-      template: t,
-      present: 10,
-      total: 12,
-      tags,
-      plan: {
-        id: date, academyId: 'a', classId: 'c', coachId: 'k', date, createdAt: '', status: 'completed',
-        templateId: t.id,
-        items: t.blockIds.map((id) => ({ category: lib.get(id)!.category, blockId: id, durationMin: null })),
-      },
-    };
-  };
-  const ctxOf = (recent: PastLesson[], headcount = 12, ageGroup: 'U7' | 'U9' = 'U9'): GoalContext => ({
-    cls: { ageGroup, curriculumId: null },
-    recent,
-    past: pastBeads(recent, lib),
-    library,
-    when: { ageGroup, headcount, minutes: 60 },
-  });
-  const options = (ability: SessionTemplate['ability'], recent: PastLesson[], age: 'U7' | 'U9' = 'U9') =>
-    goalOptions(STANDARD_SESSIONS, { ageGroup: age, curriculumId: null }, ability, recent.map((l) => l.plan?.templateId));
-
-  it('carries a skill on from the last lesson instead of repeating it', () => {
-    // Last time was 패스 정확도; the 전술 goal that continues 패스 is 패스 후 움직임.
-    const recent = [lesson('std-s-pass', '2026-09-29')];
-    const pick = recommendGoal(options('tactical', recent), ctxOf(recent));
-    expect(pick?.id).toBe('std-s-passmove');
-    expect(carryOver(pick!, ctxOf(recent))).toEqual({ lesson: 0, thread: '패스' });
-  });
-
-  it('never puts last lesson\'s goal first when another fits', () => {
-    const recent = [lesson('std-s-pass', '2026-09-29')];
-    expect(recommendGoal(options('technical', recent), ctxOf(recent))?.id).not.toBe('std-s-pass');
-  });
-
-  it('prefers a goal whose blocks fit the children who are coming', () => {
-    // 첫 터치 ends in a 5대5; with seven children it would need patching.
-    const pick = recommendGoal(options('technical', []), ctxOf([], 7));
-    expect(pick?.id).not.toBe('std-s-firsttouch');
-  });
-
-  it("follows the coach's tags from last time", () => {
-    const recent = [lesson('std-s-firsttouch', '2026-09-29', [['#드리블우수', 4]])];
-    const pick = recommendGoal(options('technical', recent), ctxOf(recent))!;
-    expect(pick.id).toBe('std-s-dribble');
-  });
-});
-
-describe('lessonTitle', () => {
-  const lib = new Map(STANDARD_BLOCKS.map((b) => [b.id, b]));
-  const custom = (ids: string[]): PastLesson => ({
-    date: '2026-09-29', template: undefined, present: 0, total: 0, tags: [],
-    plan: {
-      id: 'p', academyId: 'a', classId: 'c', coachId: 'k', date: '2026-09-29', createdAt: '', status: 'completed', templateId: null,
-      items: ids.map((id) => ({ category: lib.get(id)!.category, blockId: id, durationMin: null })),
-    },
-  });
-
-  it('names a hand-built lesson after its main drill, not "직접 구성"', () => {
-    const l = custom(['std-w-ball', 'std-c-scan', 'std-g-3pass']);
-    const title = lessonTitle(l, beadsOf(l.plan!.items, lib, 0));
-    // Named after the drill, not the (longer) game every lesson ends in.
-    expect(title).toBe('색깔 보고 받기');
   });
 });

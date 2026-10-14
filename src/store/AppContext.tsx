@@ -28,6 +28,7 @@ import {
   type ReactNode,
 } from 'react';
 import type {
+  Ability,
   ApprovalStatus,
   AttendanceLog,
   AttendanceStatus,
@@ -44,6 +45,7 @@ import type {
   SessionPlan,
   SessionTemplate,
   Student,
+  TopicId,
   TrainingBlock,
 } from '@/types';
 import { TODAY } from '@/data/dates';
@@ -122,6 +124,8 @@ export type AppAction =
       date: ISODate;
       items: SessionItem[];
       templateId: ID | null;
+      abilities?: Ability[];
+      topic?: TopicId | null;
     }
   | { type: 'plan/complete'; planId: ID }
   // --- Curriculum authoring ---------------------------------------------
@@ -259,6 +263,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         date: action.date,
         items: action.items.filter((i) => i.blockId),
         templateId: action.templateId,
+        abilities: action.abilities ?? [],
+        topic: action.topic ?? null,
         createdAt: previous?.createdAt ?? new Date().toISOString(),
         // A day that already ran stays completed; changing its blocks is an
         // edit to the record of what happened, not a reopening.
