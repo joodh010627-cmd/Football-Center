@@ -110,7 +110,7 @@ export function ClassHomeScreen({
           Reading and the ad slots live under everything a coach came here to
           do, on their own band, so they are there for the quiet minutes before
           a lesson and invisible during the busy ones. */}
-      <div className="mt-6 border-t border-hairline bg-canvas/60">
+      <div className="mt-6 bg-canvas/60">
         <div className="space-y-10 px-5 pb-8 pt-7 sm:px-7 lg:px-10">
           <section>
             <h2 className="text-[19px] font-bold tracking-[-0.02em] text-ink">오늘의 칼럼</h2>

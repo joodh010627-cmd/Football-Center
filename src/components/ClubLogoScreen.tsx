@@ -78,8 +78,8 @@ export function ClubLogoScreen({
         />
 
         <p
-          className={`mt-5 text-[34px] leading-none tracking-[0.02em] text-black ${rise(420).className}`}
-          style={{ fontFamily: '"Black Han Sans", "Pretendard Variable", sans-serif', ...rise(420).style }}
+          className={`mt-5 text-[34px] font-extrabold leading-none tracking-[-0.01em] text-black ${rise(420).className}`}
+          style={rise(420).style}
         >
           FC 광진
         </p>

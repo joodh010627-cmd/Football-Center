@@ -89,7 +89,7 @@ export function ScheduleScreen({
       <ScreenBody>
         <div className="lg:max-w-2xl">
           {/* --- Month grid -------------------------------------------------- */}
-          <div className="grid grid-cols-7">
+          <div className="grid grid-cols-7 rounded-xl border border-hairline px-2 pb-1 pt-3">
             {WEEKDAY.map((w, i) => (
               <span
                 key={w}

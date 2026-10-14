@@ -15,26 +15,31 @@ import season from '@/assets/welcome/season.jpg';
 import lesson from '@/assets/welcome/lesson.jpg';
 import growth from '@/assets/welcome/growth.jpg';
 
-interface Page {
+export interface WelcomePage {
   image: string;
   headline: string;
+  /** One line for the 폼 banner, which has no room for the body. */
+  tagline: string;
   body: string;
 }
 
-const PAGES: Page[] = [
+export const WELCOME_PAGES: WelcomePage[] = [
   {
     image: season,
     headline: '새로운 시즌',
+    tagline: '3개월의 여정을 지금 시작하세요',
     body: '새로운 재미, 새로운 모습으로 시작하는 FC GROWTH의 새로운 시즌. 3개월의 여정을 지금 시작하세요.',
   },
   {
     image: lesson,
     headline: '오늘의 수업',
+    tagline: '주제 하나로 오늘 수업이 짜여요',
     body: '키울 역량을 해시태그로 남기고 훈련 주제 하나만 고르세요. 오늘 오는 아이들과 수업 시간에 맞춰 훈련 블록이 짜여요.',
   },
   {
     image: growth,
     headline: '함께 자라요',
+    tagline: '출석과 한 줄 기록이 성장이 돼요',
     body: '출석과 한 줄 기록이 쌓이면 아이의 성장이 보여요. 학부모에게는 리포트로, 코치에게는 다음 수업의 단서로.',
   },
 ];
@@ -66,7 +71,7 @@ export function WelcomePopup({ ready }: { ready: boolean }) {
     if (el) el.scrollTo({ left: i * el.clientWidth, behavior: 'smooth' });
   };
 
-  const last = page === PAGES.length - 1;
+  const last = page === WELCOME_PAGES.length - 1;
 
   return (
     <div
@@ -101,11 +106,11 @@ export function WelcomePopup({ ready }: { ready: boolean }) {
           }}
           className="no-scrollbar flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain"
         >
-          {PAGES.map((p, i) => (
+          {WELCOME_PAGES.map((p, i) => (
             <section
               key={p.headline}
               aria-roledescription="slide"
-              aria-label={`${i + 1} / ${PAGES.length}`}
+              aria-label={`${i + 1} / ${WELCOME_PAGES.length}`}
               className="w-full shrink-0 snap-center"
             >
               <div className="film-grain relative aspect-[7/6] max-h-[40vh] w-full overflow-hidden bg-[#1a1a1a]">
@@ -138,7 +143,7 @@ export function WelcomePopup({ ready }: { ready: boolean }) {
         </div>
 
         <div className="flex items-center justify-center gap-1.5" role="tablist">
-          {PAGES.map((p, i) => (
+          {WELCOME_PAGES.map((p, i) => (
             <button
               key={p.headline}
               type="button"

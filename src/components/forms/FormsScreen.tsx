@@ -33,7 +33,7 @@ import {
 import { isOpenSurvey, progressOf, type SurveyKind } from '@/data/surveys';
 import { cn } from '@/lib/cn';
 import { NewFormSheet } from './NewFormSheet';
-import hero from '@/assets/forms/hero.jpg';
+import { WelcomeBanner } from './WelcomeBanner';
 import inviteArt from '@/assets/forms/invite.jpg';
 import joinArt from '@/assets/forms/join.jpg';
 import checkArt from '@/assets/forms/check.jpg';
@@ -108,7 +108,7 @@ export function FormsScreen({ onOpenFamily, onOpenPhase, onOpenInvite, onOpenSen
 
   return (
     <Page>
-      <img src={hero} alt="" className="h-[150px] w-full rounded-2xl object-cover sm:h-[200px]" />
+      <WelcomeBanner />
 
       {/* --- Forms to send -------------------------------------------------- */}
       <Section title="안내 보내기" className="mt-6">
@@ -125,10 +125,11 @@ export function FormsScreen({ onOpenFamily, onOpenPhase, onOpenInvite, onOpenSen
                 className="pressable relative flex min-h-[112px] flex-col items-start justify-end overflow-hidden rounded-2xl bg-ink p-4 text-left"
               >
                 <img src={d.art} alt="" className="absolute inset-0 h-full w-full object-cover" />
-                <span className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-black/5" />
-                <Icon size={18} strokeWidth={2.2} className="relative text-white" />
-                <span className="relative mt-1.5 text-[16px] font-bold text-white">{d.label}</span>
-                <span className="relative mt-0.5 text-[12.5px] text-white/80">{d.sub}</span>
+                <span className="absolute inset-0 bg-black/45" />
+                <span className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                <Icon size={18} strokeWidth={2.2} className="relative text-white drop-shadow" />
+                <span className="relative mt-1.5 text-[16px] font-bold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.5)]">{d.label}</span>
+                <span className="relative mt-0.5 text-[12.5px] font-medium text-white/90 [text-shadow:0_1px_3px_rgba(0,0,0,0.5)]">{d.sub}</span>
               </button>
             );
           })}
