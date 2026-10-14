@@ -209,6 +209,28 @@
   }
 }
 
+/* Film grain over a photo: finer and stronger than `.grain`, which is meant
+   for flat colour. Two blends — light grain lifts the shadows, dark grain sits
+   in the highlights — so it reads as film, not as a dirty screen. */
+.film-grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.42;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+.film-grain::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  /* A soft vignette, as a film frame has. */
+  background: radial-gradient(120% 95% at 50% 45%, transparent 55%, rgba(0, 0, 0, 0.28) 100%);
+}
+
 /* Declared here rather than in the Tailwind theme: `.stagger` is plain CSS, and
    Tailwind only emits a theme keyframe when some `animate-*` class uses it. */
 @keyframes stagger-in {

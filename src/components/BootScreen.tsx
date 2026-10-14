@@ -16,7 +16,7 @@ import { Crest } from '@/components/ui/Crest';
 const HOLD_MS = 2100;
 const FADE_MS = 520;
 
-export function BootScreen({ onDone }: { onDone?: () => void }) {
+export function BootScreen({ onLeave, onDone }: { onLeave?: () => void; onDone?: () => void }) {
   const [leaving, setLeaving] = useState(false);
   const [gone, setGone] = useState(false);
 
@@ -27,12 +27,16 @@ export function BootScreen({ onDone }: { onDone?: () => void }) {
 
   useEffect(() => {
     if (!leaving) return;
+    // Whatever comes next starts now, underneath, so the fade reveals it
+    // already moving rather than a still frame of the app.
+    onLeave?.();
     const t = window.setTimeout(() => {
       setGone(true);
       onDone?.();
     }, FADE_MS);
     return () => window.clearTimeout(t);
-  }, [leaving, onDone]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leaving]);
 
   if (gone) return null;
 

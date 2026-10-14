@@ -5,6 +5,8 @@ import { WorkspaceProvider } from '@/store/WorkspaceContext';
 import { AuthGate } from '@/components/auth/AuthGate';
 import { FootballApp } from '@/components/FootballApp';
 import { BootScreen } from '@/components/BootScreen';
+import { ClubLogoScreen } from '@/components/ClubLogoScreen';
+import { WelcomePopup } from '@/components/WelcomePopup';
 import { PublicFormPage } from '@/components/public/PublicFormPage';
 import { PublicSurveyPage } from '@/components/public/PublicSurveyPage';
 
@@ -19,9 +21,15 @@ const formSlug = params.get('f');
 const surveyToken = params.get('s');
 
 export default function App() {
-  // The boot overlay runs once per page load, above the auth gate, so the
-  // login screen is already painted behind it when the crest fades.
-  const [booting, setBooting] = useState(true);
+  // Once per page load, above the auth gate: the FC GROWTH boot screen, then
+  // the club's crest, then (first login only) the welcome popup. Each hands
+  // over as the previous one *starts* fading, with the next already mounted
+  // underneath — so the fades are cross-fades and the app never shows through
+  // in between.
+  const [bootGone, setBootGone] = useState(false);
+  const [crestStarted, setCrestStarted] = useState(false);
+  const [crestLeaving, setCrestLeaving] = useState(false);
+  const [crestGone, setCrestGone] = useState(false);
 
   if (formSlug || surveyToken) {
     // index.html paints the page pitch-green for the boot screen; a form on
@@ -43,10 +51,22 @@ export default function App() {
               because it reads the tenant's real classes. */}
           <WorkspaceProvider>
             <FootballApp />
+            {/* First login on this device: three cards, once. Held back until
+                the intro overlays are gone so its entrance is seen. */}
+            <WelcomePopup ready={crestLeaving} />
           </WorkspaceProvider>
         </AppProvider>
       </AuthGate>
-      {booting && <BootScreen onDone={() => setBooting(false)} />}
+      {!crestGone && (
+        <ClubLogoScreen
+          started={crestStarted}
+          onLeave={() => setCrestLeaving(true)}
+          onDone={() => setCrestGone(true)}
+        />
+      )}
+      {!bootGone && (
+        <BootScreen onLeave={() => setCrestStarted(true)} onDone={() => setBootGone(true)} />
+      )}
     </AuthProvider>
   );
 }
