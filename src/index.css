@@ -134,7 +134,7 @@
     z-index: -2;
     background:
       radial-gradient(ellipse at 25% 40%, #f6fff9 0, transparent 43%),
-      radial-gradient(ellipse at 66% 68%, #178a5b 0, transparent 37%),
+      radial-gradient(ellipse at 66% 68%, #a5f56e 0, transparent 37%),
       radial-gradient(ellipse at 55% 20%, #b8eee6 0, transparent 52%),
       #e5f4ed;
     animation: mesh-drift 13s ease-in-out infinite alternate;

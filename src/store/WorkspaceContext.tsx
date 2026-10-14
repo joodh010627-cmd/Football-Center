@@ -159,6 +159,7 @@ type WorkspaceAction =
   | { type: 'sync/error'; message: string }
   | { type: 'lead/add'; lead: Lead; event: ActivityEvent }
   | { type: 'lead/patch'; leadId: ID; patch: Partial<Lead>; event: ActivityEvent }
+  | { type: 'lead/remove'; leadId: ID }
   | { type: 'form/add'; link: FormLink; event: ActivityEvent }
   | { type: 'form/toggle'; linkId: ID; event: ActivityEvent }
   | { type: 'evaluation/save'; override: EvaluationOverride; event: ActivityEvent }
@@ -235,6 +236,15 @@ function reducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState
         ...state,
         leads: state.leads.map((l) => (l.id === action.leadId ? { ...l, ...action.patch } : l)),
         recorded: [action.event, ...state.recorded],
+      };
+
+    case 'lead/remove':
+      // The database cascades a lead's surveys copies and touches; mirror it.
+      return {
+        ...state,
+        leads: state.leads.filter((l) => l.id !== action.leadId),
+        recipients: state.recipients.filter((r) => r.leadId !== action.leadId),
+        touches: state.touches.filter((t) => t.leadId !== action.leadId),
       };
 
     case 'form/add':
@@ -357,6 +367,8 @@ interface WorkspaceValue {
   /** Resolves with what happened to the 체험 안내 알림톡, or null when none was queued. */
   bookTrial: (leadId: ID, date: ISODate, classId: ID | null) => Promise<EnqueueResult | null>;
   updateLead: (leadId: ID, patch: Partial<Lead>, summary: string) => void;
+  /** Delete the inquiry from the database for good. Owner only (RLS). Resolves false when nothing was deleted. */
+  deleteLead: (leadId: ID) => Promise<boolean>;
 
   addFormLink: (fields: Partial<FormLink>) => FormLink;
   toggleFormLink: (linkId: ID) => void;
@@ -715,6 +727,23 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       );
     },
     [make, persist, ws.leads],
+  );
+
+  const deleteLead = useCallback(
+    async (leadId: ID): Promise<boolean> => {
+      if (ws.mode === 'db') {
+        // .select() so a delete RLS quietly refused (0 rows) is not taken for success.
+        const { data, error } = await supabase.from('leads').delete().eq('id', leadId).select('id');
+        if (error || !data || data.length === 0) {
+          if (error) console.error('[workspace] 문의 삭제', error);
+          dispatch({ type: 'sync/error', message: '문의 삭제에 실패했습니다. 대표 계정만 삭제할 수 있어요.' });
+          return false;
+        }
+      }
+      dispatch({ type: 'lead/remove', leadId });
+      return true;
+    },
+    [ws.mode],
   );
 
   const addFormLink = useCallback(
@@ -1188,6 +1217,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       advanceLead,
       bookTrial,
       updateLead,
+      deleteLead,
       addFormLink,
       toggleFormLink,
       shareFormLink,
@@ -1221,6 +1251,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       advanceLead,
       bookTrial,
       updateLead,
+      deleteLead,
       addFormLink,
       toggleFormLink,
       shareFormLink,

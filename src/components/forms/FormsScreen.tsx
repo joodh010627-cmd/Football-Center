@@ -122,7 +122,7 @@ export function FormsScreen({ onOpenFamily, onOpenPhase, onOpenInvite, onOpenSen
                 onClick={() =>
                   d.key === 'invite' ? onOpenInvite() : setSheet((s) => ({ open: true, kinds: d.kinds, n: s.n + 1 }))
                 }
-                className="pressable relative flex min-h-[112px] flex-col items-start justify-end overflow-hidden rounded-2xl bg-ink p-4 text-left"
+                className="pressable relative flex min-h-[112px] flex-col items-start justify-end overflow-hidden rounded-[10px] bg-ink p-4 text-left"
               >
                 <img src={d.art} alt="" className="absolute inset-0 h-full w-full object-cover" />
                 <span className="absolute inset-0 bg-black/45" />

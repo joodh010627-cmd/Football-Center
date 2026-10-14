@@ -44,7 +44,7 @@ export function WelcomeBanner() {
       {WELCOME_PAGES.map((p, i) => (
         <article
           key={p.headline}
-          className="relative h-[132px] w-[calc(100%-24px)] shrink-0 snap-start overflow-hidden rounded-2xl bg-ink sm:h-[168px]"
+          className="relative h-[132px] w-[calc(100%-24px)] shrink-0 snap-start overflow-hidden rounded-[10px] bg-ink sm:h-[168px]"
         >
           <img src={p.bannerImage ?? p.image} alt="" className="absolute inset-0 h-full w-full object-cover" />
           <span className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/35 to-transparent" />

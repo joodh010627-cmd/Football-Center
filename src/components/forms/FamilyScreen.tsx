@@ -18,6 +18,8 @@ import { Check, ChevronDown, MessageSquare, Phone } from 'lucide-react';
 import type { ID } from '@/types';
 import { useApp } from '@/store/AppContext';
 import { useWorkspace } from '@/store/WorkspaceContext';
+import { useSession } from '@/store/AuthContext';
+import { isOwner } from '@/lib/permissions';
 import { TODAY, addDays, dayOf, diffDays, timeOf } from '@/data/dates';
 import { SOURCE_LABEL, formatPhone } from '@/data/crm';
 import {
@@ -97,6 +99,7 @@ const CALL_RESULTS: Record<CallKind, Array<{ label: string; outcome: TouchOutcom
 export function FamilyScreen({ familyKey, queue = false, backLabel, onBack, onNext }: FamilyScreenProps) {
   const { state } = useApp();
   const ws = useWorkspace();
+  const owner = isOwner(useSession());
   const { families, getFamily, getLead, touches, activity, recipients, surveys } = ws;
 
   const [sheet, setSheet] = useState<null | 'trial' | 'enroll' | 'lost' | 'form'>(null);
@@ -331,6 +334,21 @@ export function FamilyScreen({ familyKey, queue = false, backLabel, onBack, onNe
           <TextLink tone="gray" onClick={() => setSheet('lost')}>
             미등록 처리
           </TextLink>
+        </div>
+      )}
+
+      {lead && !student && owner && (
+        <div className="mt-4 text-center">
+          <button
+            type="button"
+            onClick={() => {
+              if (!window.confirm(`${lead.childName} 문의를 삭제할까요? 받은 응답과 연락 기록까지 지워지고 되돌릴 수 없어요.`)) return;
+              void ws.deleteLead(lead.id).then((ok) => ok && onBack());
+            }}
+            className="text-[13.5px] font-semibold text-error"
+          >
+            문의 삭제
+          </button>
         </div>
       )}
 
